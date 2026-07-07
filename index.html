@@ -34,15 +34,16 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	
 	    <!-- ======================= 🔔 ONESIGNAL PUSH NOTIFICATIONS ======================= -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.init({
-                appId: "fc4e8a1c-2779-4013-9b0b-9d9a029c7f96",
-            });
-        });
-    </script>    
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "fc4e8a1c-2779-4013-9b0b-9d9a029c7f96",
+      serviceWorkerPath: "/wingsconventnagpur/OneSignalSDKWorker.js", // ✅ ADD THIS
+    });
+  });
+</script>    
     <style>
         /* ======================= ALL CSS STYLES ======================= */
         * {
