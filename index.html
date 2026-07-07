@@ -1410,7 +1410,7 @@ function markAllNotificationsRead() {
     showToast(`✅ ${unread.length} marked as read`, 'success');
 }
 
-// ======================= ADD NOTIFICATION =======================
+// ======================= ADD NOTIFICATION (WITH ONESIGNAL) =======================
 function addNotification(title, message, category = 'General', priority = 'Normal') {
     const userName = (currentUser && currentUser.name) ? currentUser.name : 'System';
     
@@ -1437,10 +1437,66 @@ function addNotification(title, message, category = 'General', priority = 'Norma
         attachment: null
     };
     
+    // Save to Supabase notifications table
     window.notifications.unshift(newNotif);
     localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
     updateNotificationBell();
     showToast('🔔 ' + title, 'success');
+    
+    // ✅ Send via OneSignal
+    if (typeof OneSignal !== 'undefined') {
+        try {
+            if (OneSignal.Notifications && OneSignal.Notifications.send) {
+                OneSignal.Notifications.send({
+                    contents: { en: message },
+                    headings: { en: title },
+                    web_push: {
+                        icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico"
+                    }
+                }).then(function(response) {
+                    console.log('✅ OneSignal notification sent:', response);
+                }).catch(function(err) {
+                    console.log('❌ OneSignal error:', err);
+                });
+            } else if (OneSignal.send) {
+                OneSignal.send({
+                    contents: { en: message },
+                    headings: { en: title }
+                }).then(function(response) {
+                    console.log('✅ OneSignal notification sent:', response);
+                });
+            } else {
+                console.log('⚠️ OneSignal send method not available');
+                // Fallback: Service Worker
+                if (navigator.serviceWorker) {
+                    navigator.serviceWorker.ready.then(function(registration) {
+                        registration.showNotification(title, {
+                            body: message,
+                            icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                            badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                            vibrate: [200, 100, 200],
+                            requireInteraction: true
+                        });
+                    });
+                }
+            }
+        } catch(e) {
+            console.log('⚠️ OneSignal send error:', e);
+        }
+    } else {
+        // OneSignal not loaded - Service Worker fallback
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.ready.then(function(registration) {
+                registration.showNotification(title, {
+                    body: message,
+                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                    badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true
+                });
+            });
+        }
+    }
     
     if (priority === 'Important' || priority === 'Urgent' || priority === 'Critical') {
         Swal.fire({
@@ -1485,16 +1541,13 @@ function showToast(msg, type) {
 }
 
 // ======================= 🔥 FIXED: ATTACH BELL EVENTS =======================
-// ======================= 🔥 FINAL FIX: ATTACH BELL EVENTS =======================
 function attachBellEvents() {
     console.log('🔔 attachBellEvents called...');
     
-    // 🔥 METHOD 1: Try to get existing bell button
     let bellBtn = document.getElementById('notificationBellBtn');
     
     if (!bellBtn) {
         console.warn('⚠️ Bell button not found, creating new one...');
-        // If bell doesn't exist, create it via PART 22
         if (typeof createNotificationBell === 'function') {
             createNotificationBell();
         }
@@ -1505,7 +1558,6 @@ function attachBellEvents() {
         }
     }
     
-    // 🔥 METHOD 2: Remove all existing listeners by replacing with clone
     const parent = bellBtn.parentNode;
     if (parent) {
         const newBellBtn = bellBtn.cloneNode(true);
@@ -1514,7 +1566,6 @@ function attachBellEvents() {
         console.log('✅ Bell button cloned and replaced');
     }
     
-    // 🔥 METHOD 3: Direct click handler with NO dependencies
     bellBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         e.preventDefault();
@@ -1526,7 +1577,6 @@ function attachBellEvents() {
             return;
         }
         
-        // Toggle dropdown
         const isOpen = dropdown.style.display === 'block' || dropdown.classList.contains('show');
         
         if (isOpen) {
@@ -1538,25 +1588,22 @@ function attachBellEvents() {
             dropdown.classList.add('show');
             console.log('🔔 Dropdown opened');
             
-            // 🔥 CRITICAL: Load notifications
             console.log('📋 Calling loadBellNotifications...');
             if (typeof loadBellNotifications === 'function') {
                 loadBellNotifications();
                 console.log('✅ loadBellNotifications called');
             } else {
                 console.warn('⚠️ loadBellNotifications not found!');
-                // Fallback: Try to load from PART 22
                 if (typeof window.loadBellNotifications === 'function') {
                     window.loadBellNotifications();
                     console.log('✅ window.loadBellNotifications called');
                 }
             }
         }
-    }, true); // true = capture phase
+    }, true);
     
     console.log('✅ Bell click handler attached (FINAL FIX)');
     
-    // 🔥 METHOD 4: Close dropdown on outside click
     document.addEventListener('click', function(e) {
         const container = document.getElementById('notificationBellContainer');
         const dropdown = document.getElementById('notificationDropdown');
@@ -1566,7 +1613,6 @@ function attachBellEvents() {
         }
     });
     
-    // 🔥 METHOD 5: Mark all read button
     const markAllBtn = document.getElementById('markAllReadBtn');
     if (markAllBtn) {
         markAllBtn.addEventListener('click', function(e) {
@@ -1577,7 +1623,6 @@ function attachBellEvents() {
         });
     }
     
-    // 🔥 METHOD 6: View all button
     const viewAllBtn = document.getElementById('viewAllNotifBtn');
     if (viewAllBtn) {
         viewAllBtn.addEventListener('click', function(e) {
@@ -1595,32 +1640,27 @@ function attachBellEvents() {
     
     console.log('✅ All bell events attached successfully!');
 }
+
 // ======================= INIT NOTIFICATION BELL =======================
-// ======================= 🔥 FINAL FIX: INIT NOTIFICATION BELL =======================
 async function initNotificationBell() {
     console.log('🔔 Initializing notification bell...');
     
-    // Step 1: Load notifications from Supabase
     await loadNotificationsFromSupabase();
     
-    // Step 2: Wait for DOM to be fully ready
     if (document.readyState === 'loading') {
         await new Promise(resolve => {
             document.addEventListener('DOMContentLoaded', resolve);
         });
     }
     
-    // Step 3: Small delay to ensure all elements are rendered
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    // Step 4: Check if bell exists, if not create it
     let bellBtn = document.getElementById('notificationBellBtn');
     if (!bellBtn) {
         console.log('🔔 Bell not found, creating...');
         if (typeof createNotificationBell === 'function') {
             createNotificationBell();
         }
-        // Wait again
         await new Promise(resolve => setTimeout(resolve, 200));
         bellBtn = document.getElementById('notificationBellBtn');
     }
@@ -1630,10 +1670,8 @@ async function initNotificationBell() {
         return;
     }
     
-    // Step 5: DIRECT ATTACH - Same as console method
     console.log('🔔 Attaching bell click handler (DIRECT METHOD)...');
     
-    // Remove all existing listeners by cloning
     const parent = bellBtn.parentNode;
     if (parent) {
         const newBellBtn = bellBtn.cloneNode(true);
@@ -1642,7 +1680,6 @@ async function initNotificationBell() {
         console.log('✅ Bell cloned successfully');
     }
     
-    // Step 6: Attach click handler - EXACT SAME as console method
     bellBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         e.preventDefault();
@@ -1662,14 +1699,12 @@ async function initNotificationBell() {
         } else {
             dropdown.style.display = 'block';
             dropdown.classList.add('show');
-            // ✅ CRITICAL: Load notifications
             console.log('📋 Loading notifications...');
             if (typeof loadBellNotifications === 'function') {
                 loadBellNotifications();
                 console.log('✅ loadBellNotifications called');
             } else {
                 console.warn('⚠️ loadBellNotifications not found, using fallback');
-                // Fallback: Try to load from global
                 if (typeof window.loadBellNotifications === 'function') {
                     window.loadBellNotifications();
                 }
@@ -1680,7 +1715,6 @@ async function initNotificationBell() {
     
     console.log('✅ Bell click handler attached (DIRECT METHOD)');
     
-    // Step 7: Close dropdown on outside click
     document.addEventListener('click', function(e) {
         const container = document.getElementById('notificationBellContainer');
         const dropdown = document.getElementById('notificationDropdown');
@@ -1690,7 +1724,6 @@ async function initNotificationBell() {
         }
     });
     
-    // Step 8: Mark all read button
     const markAllBtn = document.getElementById('markAllReadBtn');
     if (markAllBtn) {
         markAllBtn.addEventListener('click', function(e) {
@@ -1701,7 +1734,6 @@ async function initNotificationBell() {
         });
     }
     
-    // Step 9: View all button
     const viewAllBtn = document.getElementById('viewAllNotifBtn');
     if (viewAllBtn) {
         viewAllBtn.addEventListener('click', function(e) {
@@ -1717,10 +1749,8 @@ async function initNotificationBell() {
         });
     }
     
-    // Step 10: Update bell badge
     updateNotificationBell();
     
-    // Step 11: Auto-refresh every 30 seconds
     if (notificationRefreshInterval) {
         clearInterval(notificationRefreshInterval);
     }
@@ -1732,6 +1762,7 @@ async function initNotificationBell() {
     console.log('✅ Notification bell initialized successfully!');
     console.log('👉 Click the bell icon now to test.');
 }
+
 // ======================= OPEN NOTIFICATION MODULE =======================
 function openNotificationModule() {
     document.getElementById('dashboardView').style.display = 'none';
@@ -1991,6 +2022,7 @@ function showSendNotificationForm() {
     document.body.appendChild(modal);
 }
 
+// ======================= SEND NOTIFICATION FROM MODAL (WITH INSTANT UI UPDATE) =======================
 function sendNotificationFromModal(modalId) {
     const title = document.getElementById(`notifTitle_${modalId}`)?.value?.trim();
     const message = document.getElementById(`notifMessage_${modalId}`)?.value?.trim();
@@ -2003,6 +2035,7 @@ function sendNotificationFromModal(modalId) {
         return;
     }
     
+    // ===== SAVE TO SUPABASE =====
     const newNotif = {
         id: 'NTF' + Date.now().toString().slice(-6),
         title: title,
@@ -2029,6 +2062,17 @@ function sendNotificationFromModal(modalId) {
     window.notifications.unshift(newNotif);
     localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
     
+    // ✅ UPDATE UI - INSTANTLY
+    updateNotificationBell();          // Update bell badge
+    if (isBellOpen) {                  // If dropdown is open
+        loadBellNotifications();        // Update dropdown list
+    }
+    const moduleContent = document.getElementById('moduleContent');
+    if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
+        loadNotificationsModule();     // Update module view
+    }
+    
+    // ===== SAVE TO SUPABASE (BACKGROUND) =====
     const supabase = getSupabaseClient();
     if (supabase && navigator.onLine) {
         const dbData = {
@@ -2060,9 +2104,28 @@ function sendNotificationFromModal(modalId) {
             });
     }
     
+    // ===== SEND VIA ONESIGNAL =====
+    if (typeof OneSignal !== 'undefined') {
+        try {
+            if (OneSignal.Notifications && OneSignal.Notifications.send) {
+                OneSignal.Notifications.send({
+                    contents: { en: message },
+                    headings: { en: title },
+                    web_push: {
+                        icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico"
+                    }
+                }).then(function(response) {
+                    console.log('✅ OneSignal notification sent:', response);
+                }).catch(function(err) {
+                    console.log('❌ OneSignal error:', err);
+                });
+            }
+        } catch(e) {
+            console.log('⚠️ OneSignal send error:', e);
+        }
+    }
+    
     closeNotifModal(modalId);
-    loadNotificationsModule();
-    updateNotificationBell();
     
     showToast(`✅ Notification "${title}" sent successfully!`, 'success');
     
@@ -2113,7 +2176,10 @@ console.log('   ✅ Mark All Read');
 console.log('   ✅ Send Notification (Saves to Supabase)');
 console.log('   ✅ Auto-Refresh Every 30 Seconds');
 console.log('   ✅ 🔥 FIXED: Bell click handler works properly');
-console.log('   ✅ 🔥 FIXED: Notification List displays properly');       
+console.log('   ✅ 🔥 FIXED: Notification List displays properly');
+console.log('   ✅ 🔥 NEW: OneSignal Push Notifications Integration');
+console.log('   ✅ 🔥 NEW: Admin notification sends via OneSignal');
+console.log('   ✅ 🔥 NEW: Instant Bell Count Update on Send');     
 // ======================= PART 1 ENDS HERE =======================
 
 // ======================= FIX: SUPABASE CLIENT & CURRENTUSER CHECKS =======================
