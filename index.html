@@ -1045,6 +1045,12 @@ let currentUser = null;
 let notificationRefreshInterval = null;
 let notificationListCache = [];
 
+// ✅ FIX: Initialize window.notifications at start
+if (typeof window.notifications === 'undefined') {
+    window.notifications = [];
+    console.log('✅ window.notifications initialized');
+}
+
 // ======================= GET SUPABASE CLIENT =======================
 function getSupabaseClient() {
     if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) return window.supabaseClient;
@@ -1410,8 +1416,16 @@ function markAllNotificationsRead() {
     showToast(`✅ ${unread.length} marked as read`, 'success');
 }
 
-// ======================= ADD NOTIFICATION (WITH ONESIGNAL) =======================
+// ======================= ADD NOTIFICATION (FIXED - WITH INITIALIZATION CHECK) =======================
 function addNotification(title, message, category = 'General', priority = 'Normal') {
+    console.log('📝 addNotification called:', title);
+    
+    // ✅ FIX: Ensure window.notifications exists
+    if (!window.notifications) {
+        window.notifications = [];
+        console.log('✅ window.notifications initialized');
+    }
+    
     const userName = (currentUser && currentUser.name) ? currentUser.name : 'System';
     
     const newNotif = {
@@ -1437,13 +1451,16 @@ function addNotification(title, message, category = 'General', priority = 'Norma
         attachment: null
     };
     
-    // Save to Supabase notifications table
+    // ✅ FIX: Add to array
     window.notifications.unshift(newNotif);
+    console.log('📊 Total notifications now:', window.notifications.length);
+    
+    // Save to localStorage
     localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
     updateNotificationBell();
     showToast('🔔 ' + title, 'success');
     
-    // ✅ Send via OneSignal
+    // Send via OneSignal
     if (typeof OneSignal !== 'undefined') {
         try {
             if (OneSignal.Notifications && OneSignal.Notifications.send) {
@@ -1458,43 +1475,9 @@ function addNotification(title, message, category = 'General', priority = 'Norma
                 }).catch(function(err) {
                     console.log('❌ OneSignal error:', err);
                 });
-            } else if (OneSignal.send) {
-                OneSignal.send({
-                    contents: { en: message },
-                    headings: { en: title }
-                }).then(function(response) {
-                    console.log('✅ OneSignal notification sent:', response);
-                });
-            } else {
-                console.log('⚠️ OneSignal send method not available');
-                // Fallback: Service Worker
-                if (navigator.serviceWorker) {
-                    navigator.serviceWorker.ready.then(function(registration) {
-                        registration.showNotification(title, {
-                            body: message,
-                            icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                            badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                            vibrate: [200, 100, 200],
-                            requireInteraction: true
-                        });
-                    });
-                }
             }
         } catch(e) {
             console.log('⚠️ OneSignal send error:', e);
-        }
-    } else {
-        // OneSignal not loaded - Service Worker fallback
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.ready.then(function(registration) {
-                registration.showNotification(title, {
-                    body: message,
-                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                    badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                    vibrate: [200, 100, 200],
-                    requireInteraction: true
-                });
-            });
         }
     }
     
@@ -2022,33 +2005,41 @@ function showSendNotificationForm() {
     document.body.appendChild(modal);
 }
 
-// ======================= SEND NOTIFICATION FROM MODAL (WITH INSTANT UI UPDATE) =======================
+// ======================= SEND NOTIFICATION FROM MODAL (FIXED - WITH INSTANT UI UPDATE) =======================
 function sendNotificationFromModal(modalId) {
+    console.log('📤 sendNotificationFromModal STARTED');
+    
     const title = document.getElementById(`notifTitle_${modalId}`)?.value?.trim();
     const message = document.getElementById(`notifMessage_${modalId}`)?.value?.trim();
     const category = document.getElementById(`notifCategory_${modalId}`)?.value || 'General';
     const priority = document.getElementById(`notifPriority_${modalId}`)?.value || 'Normal';
     const target = document.getElementById(`notifTarget_${modalId}`)?.value || 'all';
     
+    console.log('📝 Title:', title, 'Message:', message);
+    
     if (!title || !message) {
         showToast('⚠️ Title and message are required', 'error');
         return;
     }
     
-    // ===== SAVE TO SUPABASE =====
+    // ✅ CRITICAL FIX: Force create window.notifications
+    window.notifications = window.notifications || [];
+    console.log('🔍 window.notifications created/checked:', window.notifications);
+    
+    // ✅ Create notification
     const newNotif = {
         id: 'NTF' + Date.now().toString().slice(-6),
         title: title,
         message: message,
-        senderRole: currentUser.role,
-        senderId: currentUser.id,
-        senderName: currentUser.name,
+        senderRole: currentUser?.role || 'admin',
+        senderId: currentUser?.id || 'system',
+        senderName: currentUser?.name || 'System',
         targetType: 'role',
-        targetRole: target,
+        targetRole: target || 'all',
         targetClass: null,
         targetUser: null,
-        category: category,
-        priority: priority,
+        category: category || 'General',
+        priority: priority || 'Normal',
         expiryDate: null,
         autoHide: false,
         read: false,
@@ -2059,20 +2050,40 @@ function sendNotificationFromModal(modalId) {
         attachment: null
     };
     
-    window.notifications.unshift(newNotif);
-    localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
+    console.log('📦 New notification created:', newNotif);
     
-    // ✅ UPDATE UI - INSTANTLY
-    updateNotificationBell();          // Update bell badge
-    if (isBellOpen) {                  // If dropdown is open
-        loadBellNotifications();        // Update dropdown list
+    // ✅ Add to array
+    window.notifications.push(newNotif);
+    console.log('📊 After push, length:', window.notifications.length);
+    console.log('📊 Full array:', window.notifications);
+    
+    // ✅ Save to localStorage
+    localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
+    console.log('💾 Saved to localStorage');
+    
+    // ✅ Force update badge
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+        badge.style.display = 'flex';
+        badge.textContent = window.notifications.length;
+        console.log('🔔 Badge updated to:', badge.textContent);
     }
+    
+    // ✅ Update bell
+    updateNotificationBell();
+    
+    // ✅ Update dropdown if open
+    if (isBellOpen) {
+        loadBellNotifications();
+    }
+    
+    // ✅ Update module if open
     const moduleContent = document.getElementById('moduleContent');
     if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
-        loadNotificationsModule();     // Update module view
+        loadNotificationsModule();
     }
     
-    // ===== SAVE TO SUPABASE (BACKGROUND) =====
+    // ✅ Save to Supabase
     const supabase = getSupabaseClient();
     if (supabase && navigator.onLine) {
         const dbData = {
@@ -2104,7 +2115,7 @@ function sendNotificationFromModal(modalId) {
             });
     }
     
-    // ===== SEND VIA ONESIGNAL =====
+    // ✅ OneSignal
     if (typeof OneSignal !== 'undefined') {
         try {
             if (OneSignal.Notifications && OneSignal.Notifications.send) {
@@ -2126,25 +2137,11 @@ function sendNotificationFromModal(modalId) {
     }
     
     closeNotifModal(modalId);
-    
     showToast(`✅ Notification "${title}" sent successfully!`, 'success');
     
-    if (priority === 'Important' || priority === 'Urgent' || priority === 'Critical') {
-        Swal.fire({
-            icon: priority === 'Critical' ? 'error' : 'warning',
-            title: '📢 ' + title,
-            text: message,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#2563eb'
-        });
-    }
+    console.log('✅ sendNotificationFromModal COMPLETE');
+    console.log('📊 Final count:', window.notifications.length);
 }
-
-function closeNotifModal(modalId) {
-    let modal = document.getElementById(modalId);
-    if (modal) modal.remove();
-}
-
 // ======================= EXPOSE FUNCTIONS GLOBALLY =======================
 window.getUserNotifications = getUserNotifications;
 window.updateNotificationBell = updateNotificationBell;
@@ -2179,7 +2176,8 @@ console.log('   ✅ 🔥 FIXED: Bell click handler works properly');
 console.log('   ✅ 🔥 FIXED: Notification List displays properly');
 console.log('   ✅ 🔥 NEW: OneSignal Push Notifications Integration');
 console.log('   ✅ 🔥 NEW: Admin notification sends via OneSignal');
-console.log('   ✅ 🔥 NEW: Instant Bell Count Update on Send');     
+console.log('   ✅ 🔥 NEW: Instant Bell Count Update on Send');
+console.log('   ✅ 🔥 FIXED: window.notifications initialized check');     
 // ======================= PART 1 ENDS HERE =======================
 
 // ======================= FIX: SUPABASE CLIENT & CURRENTUSER CHECKS =======================
