@@ -1416,11 +1416,11 @@ function markAllNotificationsRead() {
     showToast(`✅ ${unread.length} marked as read`, 'success');
 }
 
-// ======================= ADD NOTIFICATION (FIXED - WITH INITIALIZATION CHECK) =======================
+// ======================= ADD NOTIFICATION (FIXED - v17 COMPATIBLE) =======================
 function addNotification(title, message, category = 'General', priority = 'Normal') {
     console.log('📝 addNotification called:', title);
     
-    // ✅ FIX: Ensure window.notifications exists
+    // Ensure window.notifications exists
     if (!window.notifications) {
         window.notifications = [];
         console.log('✅ window.notifications initialized');
@@ -1451,19 +1451,16 @@ function addNotification(title, message, category = 'General', priority = 'Norma
         attachment: null
     };
     
-    // ✅ FIX: Add to array
     window.notifications.unshift(newNotif);
-    console.log('📊 Total notifications now:', window.notifications.length);
-    
-    // Save to localStorage
     localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
     updateNotificationBell();
     showToast('🔔 ' + title, 'success');
     
-    // Send via OneSignal
+    // ✅ SEND VIA ONESIGNAL (v17 COMPATIBLE)
     if (typeof OneSignal !== 'undefined') {
+        console.log('📤 Sending via OneSignal...');
         try {
-            if (OneSignal.Notifications && OneSignal.Notifications.send) {
+            if (OneSignal.Notifications && typeof OneSignal.Notifications.send === 'function') {
                 OneSignal.Notifications.send({
                     contents: { en: message },
                     headings: { en: title },
@@ -1471,13 +1468,69 @@ function addNotification(title, message, category = 'General', priority = 'Norma
                         icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico"
                     }
                 }).then(function(response) {
-                    console.log('✅ OneSignal notification sent:', response);
+                    console.log('✅ OneSignal notification sent successfully:', response);
                 }).catch(function(err) {
-                    console.log('❌ OneSignal error:', err);
+                    console.log('❌ OneSignal send error:', err);
+                    // Fallback: Service Worker
+                    if (navigator.serviceWorker) {
+                        navigator.serviceWorker.ready.then(function(registration) {
+                            registration.showNotification(title, {
+                                body: message,
+                                icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                                badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                                vibrate: [200, 100, 200],
+                                requireInteraction: true
+                            });
+                            console.log('✅ Fallback notification sent via Service Worker');
+                        });
+                    }
                 });
+            } else {
+                console.log('⚠️ OneSignal.Notifications.send not available');
+                // Fallback: Service Worker
+                if (navigator.serviceWorker) {
+                    navigator.serviceWorker.ready.then(function(registration) {
+                        registration.showNotification(title, {
+                            body: message,
+                            icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                            badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                            vibrate: [200, 100, 200],
+                            requireInteraction: true
+                        });
+                        console.log('✅ Fallback notification sent via Service Worker');
+                    });
+                }
             }
         } catch(e) {
-            console.log('⚠️ OneSignal send error:', e);
+            console.log('⚠️ OneSignal error:', e);
+            // Fallback: Service Worker
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.ready.then(function(registration) {
+                    registration.showNotification(title, {
+                        body: message,
+                        icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                        badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                        vibrate: [200, 100, 200],
+                        requireInteraction: true
+                    });
+                    console.log('✅ Fallback notification sent via Service Worker');
+                });
+            }
+        }
+    } else {
+        console.log('❌ OneSignal not loaded');
+        // Fallback: Service Worker
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.ready.then(function(registration) {
+                registration.showNotification(title, {
+                    body: message,
+                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                    badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true
+                });
+                console.log('✅ Fallback notification sent via Service Worker');
+            });
         }
     }
     
@@ -1523,7 +1576,7 @@ function showToast(msg, type) {
     }
 }
 
-// ======================= 🔥 FIXED: ATTACH BELL EVENTS =======================
+// ======================= ATTACH BELL EVENTS =======================
 function attachBellEvents() {
     console.log('🔔 attachBellEvents called...');
     
@@ -1921,6 +1974,67 @@ function refreshNotifications() {
     });
 }
 
+// ======================= GENERATE USER OPTIONS FOR SPECIFIC USER =======================
+function generateUserOptions() {
+    let options = '';
+    
+    // Get all users from users table
+    if (window.users && window.users.length > 0) {
+        for (let user of window.users) {
+            let roleDisplay = user.role_display || user.role || 'user';
+            options += `<option value="${user.id}">${user.name} (${roleDisplay})</option>`;
+        }
+    }
+    
+    // Also get from students (if not already in users)
+    if (window.students && window.students.length > 0) {
+        for (let student of window.students) {
+            let exists = false;
+            if (window.users) {
+                for (let user of window.users) {
+                    if (user.name === student.name || user.id === student.id) {
+                        exists = true;
+                        break;
+                    }
+                }
+            }
+            if (!exists) {
+                options += `<option value="${student.id}">${student.name} (Student)</option>`;
+            }
+        }
+    }
+    
+    // Also get from employees (if not already added)
+    if (window.employees && window.employees.length > 0) {
+        for (let emp of window.employees) {
+            let exists = false;
+            if (window.users) {
+                for (let user of window.users) {
+                    if (user.name === emp.name || user.id === emp.id) {
+                        exists = true;
+                        break;
+                    }
+                }
+            }
+            if (!exists) {
+                let roleDisplay = emp.designation || emp.role || 'Employee';
+                options += `<option value="${emp.id}">${emp.name} (${roleDisplay})</option>`;
+            }
+        }
+    }
+    
+    return options;
+}
+
+// ======================= TOGGLE SPECIFIC USER SECTION =======================
+function toggleSpecificUserSection(modalId) {
+    const target = document.getElementById(`notifTarget_${modalId}`)?.value;
+    const section = document.getElementById(`specificUserSection_${modalId}`);
+    if (section) {
+        section.style.display = target === 'specific' ? 'block' : 'none';
+    }
+}
+
 // ======================= SHOW SEND NOTIFICATION FORM =======================
 function showSendNotificationForm() {
     if (!currentUser || typeof currentUser === 'undefined' || !currentUser.role) {
@@ -1928,9 +2042,45 @@ function showSendNotificationForm() {
         return;
     }
     
-    if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
-        showToast('⛔ Only Admins and Teachers can send notifications', 'error');
+    // ✅ ROLE-BASED PERMISSION CHECK
+    const role = currentUser.role;
+    let allowedTargets = [];
+    
+    if (role === 'admin') {
+        allowedTargets = ['all', 'admin', 'teacher', 'student', 'cashier', 'accountant', 'specific'];
+    } else if (role === 'teacher') {
+        allowedTargets = ['all', 'student', 'admin', 'specific'];
+    } else if (role === 'cashier') {
+        allowedTargets = ['all', 'student', 'admin', 'specific'];
+    } else if (role === 'accountant') {
+        allowedTargets = ['all', 'admin', 'teacher', 'cashier', 'specific'];
+    } else {
+        showToast('⛔ You do not have permission to send notifications', 'error');
         return;
+    }
+    
+    // ✅ Generate target options based on role
+    let targetOptions = '';
+    if (allowedTargets.includes('all')) {
+        targetOptions += `<option value="all">📢 All Users</option>`;
+    }
+    if (allowedTargets.includes('admin')) {
+        targetOptions += `<option value="admin">👑 Administrators</option>`;
+    }
+    if (allowedTargets.includes('teacher')) {
+        targetOptions += `<option value="teacher">👩‍🏫 Teachers</option>`;
+    }
+    if (allowedTargets.includes('student')) {
+        targetOptions += `<option value="student">🧑‍🎓 Students</option>`;
+    }
+    if (allowedTargets.includes('cashier')) {
+        targetOptions += `<option value="cashier">💰 Cashiers</option>`;
+    }
+    if (allowedTargets.includes('accountant')) {
+        targetOptions += `<option value="accountant">📊 Accountants</option>`;
+    }
+    if (allowedTargets.includes('specific')) {
+        targetOptions += `<option value="specific">👤 Specific User</option>`;
     }
     
     let modalId = 'notifModal_' + Date.now();
@@ -1978,12 +2128,15 @@ function showSendNotificationForm() {
                 </div>
                 <div style="margin-bottom:16px;">
                     <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">👥 Send To</label>
-                    <select id="notifTarget_${modalId}" class="form-control">
-                        <option value="all">📢 All Users</option>
-                        <option value="admin">👑 Administrators</option>
-                        <option value="teacher">👩‍🏫 Teachers</option>
-                        <option value="student">🧑‍🎓 Students</option>
-                        <option value="cashier">💰 Cashiers</option>
+                    <select id="notifTarget_${modalId}" class="form-control" onchange="toggleSpecificUserSection('${modalId}')">
+                        ${targetOptions}
+                    </select>
+                </div>
+                <div id="specificUserSection_${modalId}" style="display:none; margin-bottom:16px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">👤 Select User</label>
+                    <select id="specificUserSelect_${modalId}" class="form-control">
+                        <option value="">-- Select User --</option>
+                        ${generateUserOptions()}
                     </select>
                 </div>
                 <div style="background:#f0fdf4; padding:10px; border-radius:12px; margin-top:10px;">
@@ -2005,41 +2158,47 @@ function showSendNotificationForm() {
     document.body.appendChild(modal);
 }
 
-// ======================= SEND NOTIFICATION FROM MODAL (FIXED - WITH INSTANT UI UPDATE) =======================
+// ======================= SEND NOTIFICATION FROM MODAL (FIXED - v17 COMPATIBLE) =======================
 function sendNotificationFromModal(modalId) {
-    console.log('📤 sendNotificationFromModal STARTED');
+    console.log('📤 sendNotificationFromModal called...');
     
     const title = document.getElementById(`notifTitle_${modalId}`)?.value?.trim();
     const message = document.getElementById(`notifMessage_${modalId}`)?.value?.trim();
     const category = document.getElementById(`notifCategory_${modalId}`)?.value || 'General';
     const priority = document.getElementById(`notifPriority_${modalId}`)?.value || 'Normal';
     const target = document.getElementById(`notifTarget_${modalId}`)?.value || 'all';
-    
-    console.log('📝 Title:', title, 'Message:', message);
+    const specificUserId = document.getElementById(`specificUserSelect_${modalId}`)?.value || null;
     
     if (!title || !message) {
         showToast('⚠️ Title and message are required', 'error');
         return;
     }
     
-    // ✅ CRITICAL FIX: Force create window.notifications
-    window.notifications = window.notifications || [];
-    console.log('🔍 window.notifications created/checked:', window.notifications);
+    // ✅ If "specific" is selected but no user selected
+    if (target === 'specific' && !specificUserId) {
+        showToast('⚠️ Please select a user', 'error');
+        return;
+    }
     
-    // ✅ Create notification
+    // ✅ Ensure window.notifications exists
+    if (!window.notifications) {
+        window.notifications = [];
+        console.log('✅ window.notifications initialized');
+    }
+    
     const newNotif = {
         id: 'NTF' + Date.now().toString().slice(-6),
         title: title,
         message: message,
-        senderRole: currentUser?.role || 'admin',
-        senderId: currentUser?.id || 'system',
-        senderName: currentUser?.name || 'System',
-        targetType: 'role',
-        targetRole: target || 'all',
+        senderRole: currentUser.role,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        targetType: target === 'specific' ? 'user' : 'role',
+        targetRole: target === 'specific' ? null : target,
+        targetUser: target === 'specific' ? specificUserId : null,
         targetClass: null,
-        targetUser: null,
-        category: category || 'General',
-        priority: priority || 'Normal',
+        category: category,
+        priority: priority,
         expiryDate: null,
         autoHide: false,
         read: false,
@@ -2050,40 +2209,120 @@ function sendNotificationFromModal(modalId) {
         attachment: null
     };
     
-    console.log('📦 New notification created:', newNotif);
-    
-    // ✅ Add to array
-    window.notifications.push(newNotif);
-    console.log('📊 After push, length:', window.notifications.length);
-    console.log('📊 Full array:', window.notifications);
-    
-    // ✅ Save to localStorage
+    window.notifications.unshift(newNotif);
     localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
-    console.log('💾 Saved to localStorage');
-    
-    // ✅ Force update badge
-    const badge = document.getElementById('notificationBadge');
-    if (badge) {
-        badge.style.display = 'flex';
-        badge.textContent = window.notifications.length;
-        console.log('🔔 Badge updated to:', badge.textContent);
-    }
-    
-    // ✅ Update bell
     updateNotificationBell();
     
-    // ✅ Update dropdown if open
+    // ✅ UPDATE DROPDOWN IF OPEN
     if (isBellOpen) {
         loadBellNotifications();
     }
     
-    // ✅ Update module if open
+    // ✅ UPDATE MODULE IF OPEN
     const moduleContent = document.getElementById('moduleContent');
     if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
         loadNotificationsModule();
     }
     
-    // ✅ Save to Supabase
+    // ✅ SEND VIA ONESIGNAL (v17 COMPATIBLE)
+    if (typeof OneSignal !== 'undefined') {
+        try {
+            let payload = {
+                contents: { en: message },
+                headings: { en: title },
+                web_push: {
+                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico"
+                }
+            };
+            
+            // ✅ If specific user, use include_aliases
+            if (target === 'specific' && specificUserId) {
+                payload.include_aliases = { external_id: [specificUserId] };
+                console.log('📤 Sending to specific user:', specificUserId);
+            } else {
+                // Map target to segment
+                let segment = 'All';
+                if (target === 'admin') segment = 'Admins';
+                else if (target === 'teacher') segment = 'Teachers';
+                else if (target === 'student') segment = 'Students';
+                else if (target === 'cashier') segment = 'Cashiers';
+                else if (target === 'accountant') segment = 'Accountants';
+                else segment = 'All';
+                payload.included_segments = [segment];
+                console.log('📤 Sending to segment:', segment);
+            }
+            
+            if (OneSignal.Notifications && typeof OneSignal.Notifications.send === 'function') {
+                OneSignal.Notifications.send(payload)
+                    .then(function(response) {
+                        console.log('✅ OneSignal notification sent:', response);
+                    })
+                    .catch(function(err) {
+                        console.log('❌ OneSignal error:', err);
+                        // Fallback: Service Worker
+                        if (navigator.serviceWorker) {
+                            navigator.serviceWorker.ready.then(function(registration) {
+                                registration.showNotification(title, {
+                                    body: message,
+                                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                                    badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                                    vibrate: [200, 100, 200],
+                                    requireInteraction: true
+                                });
+                                console.log('✅ Fallback notification sent via Service Worker');
+                            });
+                        }
+                    });
+            } else {
+                console.log('⚠️ OneSignal.Notifications.send not available');
+                // Fallback: Service Worker
+                if (navigator.serviceWorker) {
+                    navigator.serviceWorker.ready.then(function(registration) {
+                        registration.showNotification(title, {
+                            body: message,
+                            icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                            badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                            vibrate: [200, 100, 200],
+                            requireInteraction: true
+                        });
+                        console.log('✅ Fallback notification sent via Service Worker');
+                    });
+                }
+            }
+        } catch(e) {
+            console.log('⚠️ OneSignal error:', e);
+            // Fallback: Service Worker
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.ready.then(function(registration) {
+                    registration.showNotification(title, {
+                        body: message,
+                        icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                        badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                        vibrate: [200, 100, 200],
+                        requireInteraction: true
+                    });
+                    console.log('✅ Fallback notification sent via Service Worker');
+                });
+            }
+        }
+    } else {
+        console.log('❌ OneSignal not loaded');
+        // Fallback: Service Worker
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.ready.then(function(registration) {
+                registration.showNotification(title, {
+                    body: message,
+                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                    badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true
+                });
+                console.log('✅ Fallback notification sent via Service Worker');
+            });
+        }
+    }
+    
+    // ✅ SAVE TO SUPABASE (BACKGROUND)
     const supabase = getSupabaseClient();
     if (supabase && navigator.onLine) {
         const dbData = {
@@ -2095,14 +2334,9 @@ function sendNotificationFromModal(modalId) {
             sender_name: newNotif.senderName,
             target_type: newNotif.targetType,
             target_role: newNotif.targetRole,
-            target_class_id: newNotif.targetClass,
             target_user_id: newNotif.targetUser,
             category: newNotif.category,
             priority: newNotif.priority,
-            expiry_date: newNotif.expiryDate,
-            auto_hide: newNotif.autoHide,
-            read: newNotif.read,
-            read_at: newNotif.readAt,
             date: newNotif.date,
             created_at: newNotif.createdAt,
             updated_at: new Date().toISOString()
@@ -2115,33 +2349,25 @@ function sendNotificationFromModal(modalId) {
             });
     }
     
-    // ✅ OneSignal
-    if (typeof OneSignal !== 'undefined') {
-        try {
-            if (OneSignal.Notifications && OneSignal.Notifications.send) {
-                OneSignal.Notifications.send({
-                    contents: { en: message },
-                    headings: { en: title },
-                    web_push: {
-                        icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico"
-                    }
-                }).then(function(response) {
-                    console.log('✅ OneSignal notification sent:', response);
-                }).catch(function(err) {
-                    console.log('❌ OneSignal error:', err);
-                });
-            }
-        } catch(e) {
-            console.log('⚠️ OneSignal send error:', e);
-        }
-    }
-    
     closeNotifModal(modalId);
     showToast(`✅ Notification "${title}" sent successfully!`, 'success');
     
-    console.log('✅ sendNotificationFromModal COMPLETE');
-    console.log('📊 Final count:', window.notifications.length);
+    if (priority === 'Important' || priority === 'Urgent' || priority === 'Critical') {
+        Swal.fire({
+            icon: priority === 'Critical' ? 'error' : 'warning',
+            title: '📢 ' + title,
+            text: message,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#2563eb'
+        });
+    }
 }
+
+function closeNotifModal(modalId) {
+    let modal = document.getElementById(modalId);
+    if (modal) modal.remove();
+}
+
 // ======================= EXPOSE FUNCTIONS GLOBALLY =======================
 window.getUserNotifications = getUserNotifications;
 window.updateNotificationBell = updateNotificationBell;
@@ -2163,6 +2389,8 @@ window.deleteNotification = deleteNotification;
 window.refreshNotifications = refreshNotifications;
 window.openNotificationModule = openNotificationModule;
 window.loadNotificationsFromSupabase = loadNotificationsFromSupabase;
+window.generateUserOptions = generateUserOptions;
+window.toggleSpecificUserSection = toggleSpecificUserSection;
 
 console.log('✅ 🔔 NOTIFICATION BELL COMPLETE - FULLY FIXED!');
 console.log('📌 Features:');
@@ -2174,10 +2402,11 @@ console.log('   ✅ Send Notification (Saves to Supabase)');
 console.log('   ✅ Auto-Refresh Every 30 Seconds');
 console.log('   ✅ 🔥 FIXED: Bell click handler works properly');
 console.log('   ✅ 🔥 FIXED: Notification List displays properly');
-console.log('   ✅ 🔥 NEW: OneSignal Push Notifications Integration');
-console.log('   ✅ 🔥 NEW: Admin notification sends via OneSignal');
-console.log('   ✅ 🔥 NEW: Instant Bell Count Update on Send');
-console.log('   ✅ 🔥 FIXED: window.notifications initialized check');     
+console.log('   ✅ 🔥 NEW: OneSignal v17+ Push Notifications Integration');
+console.log('   ✅ 🔥 NEW: Role-based permissions (Admin/Teacher/Cashier/Accountant)');
+console.log('   ✅ 🔥 NEW: Specific User targeting');
+console.log('   ✅ 🔥 NEW: Service Worker fallback');
+console.log('   ✅ 🔥 NEW: Instant Bell Count Update on Send');     
 // ======================= PART 1 ENDS HERE =======================
 
 // ======================= FIX: SUPABASE CLIENT & CURRENTUSER CHECKS =======================
