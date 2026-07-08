@@ -2137,10 +2137,68 @@ function sendNotificationFromModal(modalId) {
         loadNotificationsModule();
     }
     
-    // ===== SEND VIA SERVICE WORKER (NO ONESIGNAL) =====
-    sendViaServiceWorker(title, message);
+    // ============================================================
+    // ✅ DIRECT BROWSER NOTIFICATION (MOST RELIABLE)
+    // ============================================================
+    console.log('📤 Sending direct browser notification...');
     
-    // ===== SAVE TO SUPABASE =====
+    if (Notification.permission === 'granted') {
+        try {
+            var notif = new Notification(title, {
+                body: message,
+                icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+            });
+            console.log('✅ Direct browser notification sent');
+            
+            // Auto close after 5 seconds
+            setTimeout(function() {
+                if (notif) notif.close();
+            }, 5000);
+        } catch(e) {
+            console.log('❌ Notification error:', e);
+        }
+    } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(function(perm) {
+            if (perm === 'granted') {
+                var notif = new Notification(title, {
+                    body: message,
+                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                });
+                console.log('✅ Direct browser notification sent after permission');
+            } else {
+                console.log('❌ Permission denied');
+            }
+        });
+    } else {
+        console.log('❌ Permission denied - ' + Notification.permission);
+    }
+    
+    // ============================================================
+    // ✅ SEND VIA SERVICE WORKER (BACKUP)
+    // ============================================================
+    if (typeof sendViaServiceWorker === 'function') {
+        sendViaServiceWorker(title, message);
+    } else {
+        console.log('⚠️ sendViaServiceWorker function not found');
+        // Fallback: Direct Service Worker
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.ready.then(function(registration) {
+                registration.showNotification(title, {
+                    body: message,
+                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico',
+                    badge: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true,
+                    tag: 'wings-notification-' + Date.now()
+                });
+                console.log('✅ Fallback Service Worker notification sent');
+            });
+        }
+    }
+    
+    // ============================================================
+    // ✅ SAVE TO SUPABASE
+    // ============================================================
     const supabase = getSupabaseClient();
     if (supabase && navigator.onLine) {
         const dbData = {
