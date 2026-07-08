@@ -1382,7 +1382,7 @@ function markAllNotificationsRead() {
     showToast(`✅ ${unread.length} marked as read`, 'success');
 }
 
-// ======================= ADD NOTIFICATION (WITH SERVICE WORKER - NO ONESIGNAL) =======================
+// ======================= ✅ FIXED: ADD NOTIFICATION (DIRECT POP-UP - NO SERVICE WORKER) =======================
 function addNotification(title, message, category = 'General', priority = 'Normal') {
     console.log('📝 addNotification called:', title);
     
@@ -1422,8 +1422,62 @@ function addNotification(title, message, category = 'General', priority = 'Norma
     updateNotificationBell();
     showToast('🔔 ' + title, 'success');
     
-    // ✅ SEND VIA SERVICE WORKER (NO ONESIGNAL)
-    sendViaServiceWorker(title, message);
+    // ============================================================
+    // ✅ DIRECT BROWSER NOTIFICATION (NO SERVICE WORKER)
+    // ============================================================
+    if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+            try {
+                const notif = new Notification(title, {
+                    body: message,
+                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                });
+                console.log('✅ Direct notification shown!');
+            } catch(e) {
+                console.log('❌ Notification error:', e);
+            }
+        } else if (Notification.permission === 'default') {
+            Notification.requestPermission().then(function(perm) {
+                if (perm === 'granted') {
+                    const notif = new Notification(title, {
+                        body: message,
+                        icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                    });
+                    console.log('✅ Notification shown after permission!');
+                }
+            });
+        } else {
+            console.log('❌ Notification permission denied. Current:', Notification.permission);
+        }
+    }
+    
+    // ✅ SAVE TO SUPABASE
+    const supabase = getSupabaseClient();
+    if (supabase && navigator.onLine) {
+        const dbData = {
+            id: newNotif.id,
+            title: newNotif.title,
+            message: newNotif.message,
+            sender_role: newNotif.senderRole,
+            sender_id: newNotif.senderId,
+            sender_name: newNotif.senderName,
+            target_role: newNotif.targetRole,
+            category: newNotif.category,
+            priority: newNotif.priority,
+            date: newNotif.date,
+            created_at: newNotif.createdAt,
+            updated_at: new Date().toISOString()
+        };
+        
+        supabase.from('notifications').upsert(dbData, { onConflict: 'id' })
+            .then(function(result) {
+                if (result.error) {
+                    console.error('Save error:', result.error);
+                } else {
+                    console.log('✅ Saved to Supabase');
+                }
+            });
+    }
     
     if (priority === 'Important' || priority === 'Urgent' || priority === 'Critical') {
         Swal.fire({
@@ -1436,35 +1490,119 @@ function addNotification(title, message, category = 'General', priority = 'Norma
     }
 }
 
-// ======================= SEND VIA SERVICE WORKER =======================
-function sendViaServiceWorker(title, message) {
-    console.log('📤 sendViaServiceWorker called...');
+// ======================= ✅ FIXED: SEND NOTIFICATION FROM MODAL (DIRECT POP-UP) =======================
+function sendNotificationFromModal(modalId) {
+    console.log('📤 sendNotificationFromModal called...');
     
-    if (!navigator.serviceWorker) {
-        console.log('❌ Service Worker not supported');
+    var title = document.getElementById('notifTitle_' + modalId)?.value;
+    var message = document.getElementById('notifMessage_' + modalId)?.value;
+    var target = document.getElementById('notifTarget_' + modalId)?.value || 'all';
+    var priority = document.getElementById('notifPriority_' + modalId)?.value || 'Normal';
+    var category = document.getElementById('notifCategory_' + modalId)?.value || 'General';
+    
+    if (!title || !message) {
+        showToast('⚠️ Title and message are required', 'error');
         return;
     }
     
-    navigator.serviceWorker.ready.then(function(registration) {
-        console.log('✅ Service Worker ready, showing notification...');
-        registration.showNotification(title, {
-            body: message,
-            icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico',
-            badge: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico',
-            vibrate: [200, 100, 200],
-            requireInteraction: true,
-            tag: 'wings-notification-' + Date.now(),
-            data: {
-                url: 'https://karanpatilpatil37.github.io/wingsconventnagpur/'
+    // Save to notifications array
+    if (!window.notifications) {
+        window.notifications = [];
+    }
+    
+    var newNotif = {
+        id: 'NTF' + Date.now(),
+        title: title,
+        message: message,
+        senderRole: currentUser.role,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        targetRole: target,
+        category: category,
+        priority: priority,
+        read: false,
+        date: new Date().toISOString().split('T')[0],
+        createdAt: new Date().toISOString()
+    };
+    
+    window.notifications.unshift(newNotif);
+    localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
+    updateNotificationBell();
+    
+    // Update UI
+    if (isBellOpen) {
+        loadBellNotifications();
+    }
+    var moduleContent = document.getElementById('moduleContent');
+    if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
+        loadNotificationsModule();
+    }
+    
+    // ============================================================
+    // ✅ DIRECT BROWSER NOTIFICATION (NO SERVICE WORKER)
+    // ============================================================
+    console.log('📤 Showing notification directly...');
+    
+    if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+            try {
+                var notif = new Notification(title, {
+                    body: message,
+                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                });
+                console.log('✅ Direct notification shown!');
+            } catch(e) {
+                console.log('❌ Notification error:', e);
             }
-        }).then(function() {
-            console.log('✅ Service Worker notification shown successfully!');
-        }).catch(function(err) {
-            console.log('❌ Service Worker notification error:', err);
-        });
-    }).catch(function(err) {
-        console.log('❌ Service Worker not ready:', err);
-    });
+        } else if (Notification.permission === 'default') {
+            Notification.requestPermission().then(function(perm) {
+                if (perm === 'granted') {
+                    var notif = new Notification(title, {
+                        body: message,
+                        icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                    });
+                    console.log('✅ Notification shown after permission!');
+                }
+            });
+        } else {
+            console.log('❌ Permission denied. Current:', Notification.permission);
+        }
+    } else {
+        console.log('❌ Notification API not supported');
+    }
+    
+    // ============================================================
+    // ✅ SAVE TO SUPABASE
+    // ============================================================
+    var supabase = getSupabaseClient();
+    if (supabase && navigator.onLine) {
+        var dbData = {
+            id: newNotif.id,
+            title: newNotif.title,
+            message: newNotif.message,
+            sender_role: newNotif.senderRole,
+            sender_id: newNotif.senderId,
+            sender_name: newNotif.senderName,
+            target_role: newNotif.targetRole,
+            category: newNotif.category,
+            priority: newNotif.priority,
+            date: newNotif.date,
+            created_at: newNotif.createdAt,
+            updated_at: new Date().toISOString()
+        };
+        
+        supabase.from('notifications').upsert(dbData, { onConflict: 'id' })
+            .then(function(result) {
+                if (result.error) {
+                    console.error('Save error:', result.error);
+                } else {
+                    console.log('✅ Saved to Supabase');
+                }
+            });
+    }
+    
+    closeNotifModal(modalId);
+    showToast('✅ Notification "' + title + '" sent!', 'success');
 }
 
 // ======================= HELPER FUNCTIONS =======================
@@ -1719,6 +1857,31 @@ async function initNotificationBell() {
     
     console.log('✅ Notification bell initialized successfully!');
     console.log('👉 Click the bell icon now to test.');
+}
+
+// ======================= ✅ REQUEST PERMISSION ON LOGIN =======================
+function requestNotificationPermission() {
+    console.log('🔔 requestNotificationPermission called...');
+    
+    if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().then(function(permission) {
+                if (permission === 'granted') {
+                    console.log('✅ Notification permission granted');
+                    showToast('🔔 Notifications enabled!', 'success');
+                } else {
+                    console.log('❌ Notification permission denied');
+                    showToast('⚠️ Please allow notifications in browser settings', 'warning');
+                }
+            });
+        } else if (Notification.permission === 'granted') {
+            console.log('✅ Notification permission already granted');
+        } else {
+            console.log('❌ Notification permission denied. Please allow from browser settings.');
+        }
+    } else {
+        console.log('❌ Notification API not supported');
+    }
 }
 
 // ======================= OPEN NOTIFICATION MODULE =======================
@@ -2075,116 +2238,12 @@ function showSendNotificationForm() {
     document.body.appendChild(modal);
 }
 
-// ======================= SEND NOTIFICATION FROM MODAL (WITH SERVICE WORKER - NO ONESIGNAL) =======================
-function sendNotificationFromModal(modalId) {
-    console.log('📤 sendNotificationFromModal called...');
-    
-    var title = document.getElementById('notifTitle_' + modalId)?.value;
-    var message = document.getElementById('notifMessage_' + modalId)?.value;
-    var target = document.getElementById('notifTarget_' + modalId)?.value || 'all';
-    var priority = document.getElementById('notifPriority_' + modalId)?.value || 'Normal';
-    var category = document.getElementById('notifCategory_' + modalId)?.value || 'General';
-    
-    if (!title || !message) {
-        showToast('⚠️ Title and message are required', 'error');
-        return;
-    }
-    
-    // Save to notifications array
-    if (!window.notifications) {
-        window.notifications = [];
-    }
-    
-    var newNotif = {
-        id: 'NTF' + Date.now(),
-        title: title,
-        message: message,
-        senderRole: currentUser.role,
-        senderId: currentUser.id,
-        senderName: currentUser.name,
-        targetRole: target,
-        category: category,
-        priority: priority,
-        read: false,
-        date: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString()
-    };
-    
-    window.notifications.unshift(newNotif);
-    localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
-    updateNotificationBell();
-    
-    // Update UI
-    if (isBellOpen) {
-        loadBellNotifications();
-    }
-    var moduleContent = document.getElementById('moduleContent');
-    if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
-        loadNotificationsModule();
-    }
-    
-    // ============================================================
-    // ✅ SHOW NOTIFICATION - DIRECT BROWSER NOTIFICATION
-    // ============================================================
-    console.log('📤 Showing notification...');
-    
-    if (Notification.permission === 'granted') {
-        try {
-            var notif = new Notification(title, {
-                body: message,
-                icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
-            });
-            console.log('✅ Notification shown!');
-        } catch(e) {
-            console.log('❌ Error:', e);
-        }
-    } else {
-        console.log('❌ Permission not granted. Current:', Notification.permission);
-        // Request permission
-        Notification.requestPermission().then(function(perm) {
-            if (perm === 'granted') {
-                var notif = new Notification(title, {
-                    body: message,
-                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
-                });
-                console.log('✅ Notification shown after permission!');
-            }
-        });
-    }
-    
-    // ============================================================
-    // ✅ SAVE TO SUPABASE
-    // ============================================================
-    var supabase = getSupabaseClient();
-    if (supabase && navigator.onLine) {
-        var dbData = {
-            id: newNotif.id,
-            title: newNotif.title,
-            message: newNotif.message,
-            sender_role: newNotif.senderRole,
-            sender_id: newNotif.senderId,
-            sender_name: newNotif.senderName,
-            target_role: newNotif.targetRole,
-            category: newNotif.category,
-            priority: newNotif.priority,
-            date: newNotif.date,
-            created_at: newNotif.createdAt,
-            updated_at: new Date().toISOString()
-        };
-        
-        supabase.from('notifications').upsert(dbData, { onConflict: 'id' })
-            .then(function(result) {
-                if (result.error) {
-                    console.error('Save error:', result.error);
-                } else {
-                    console.log('✅ Saved to Supabase');
-                }
-            });
-    }
-    
-    closeNotifModal(modalId);
-    showToast('✅ Notification "' + title + '" sent!', 'success');
+// ======================= CLOSE NOTIFICATION MODAL =======================
+function closeNotifModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.remove();
 }
+
 // ======================= EXPOSE FUNCTIONS GLOBALLY =======================
 window.getUserNotifications = getUserNotifications;
 window.updateNotificationBell = updateNotificationBell;
@@ -2207,9 +2266,10 @@ window.openNotificationModule = openNotificationModule;
 window.loadNotificationsFromSupabase = loadNotificationsFromSupabase;
 window.generateUserOptions = generateUserOptions;
 window.toggleSpecificUserSection = toggleSpecificUserSection;
-window.sendViaServiceWorker = sendViaServiceWorker;
+window.requestNotificationPermission = requestNotificationPermission;
+window.addNotification = addNotification;
 
-console.log('✅ 🔔 NOTIFICATION BELL COMPLETE - FULLY FIXED!');
+console.log('✅ 🔔 NOTIFICATION BELL COMPLETE - FULLY FIXED WITH POP-UP!');
 console.log('📌 Features:');
 console.log('   ✅ Data from Supabase notifications table');
 console.log('   ✅ Bell Icon with Unread Count');
@@ -2219,8 +2279,10 @@ console.log('   ✅ Send Notification (Saves to Supabase)');
 console.log('   ✅ Auto-Refresh Every 30 Seconds');
 console.log('   ✅ 🔥 FIXED: Bell click handler works properly');
 console.log('   ✅ 🔥 FIXED: Notification List displays properly');
-console.log('   ✅ 🔥 NEW: Service Worker Notification (No OneSignal)');
+console.log('   ✅ 🔥 FIXED: Direct Browser Notification Pop-up (NO Service Worker)');
 console.log('   ✅ 🔥 NEW: Instant Bell Count Update on Send');
+console.log('   ✅ 🔥 NEW: Permission Request on Login');
+
 // ======================= PART 1 ENDS HERE =======================
 // ======================= FIX: SUPABASE CLIENT & CURRENTUSER CHECKS =======================
 // ======================= FIX 1: GET SUPABASE CLIENT PROPERLY =======================
