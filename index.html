@@ -2174,7 +2174,6 @@ function sendNotificationFromModal(modalId) {
         return;
     }
     
-    // ✅ If "specific" is selected but no user selected
     if (target === 'specific' && !specificUserId) {
         showToast('⚠️ Please select a user', 'error');
         return;
@@ -2224,105 +2223,86 @@ function sendNotificationFromModal(modalId) {
         loadNotificationsModule();
     }
     
-    // ✅ SEND VIA ONESIGNAL (v17 COMPATIBLE)
-    if (typeof OneSignal !== 'undefined') {
-        try {
-            let payload = {
-                contents: { en: message },
-                headings: { en: title },
-                web_push: {
-                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico"
+    // ============================================================
+    // ✅ STEP 1: SEND VIA SERVICE WORKER (PRIORITY)
+    // ============================================================
+    let serviceWorkerSuccess = false;
+    
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.ready.then(function(registration) {
+            registration.showNotification(title, {
+                body: message,
+                icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
+                vibrate: [200, 100, 200],
+                requireInteraction: true,
+                data: {
+                    url: "https://karanpatilpatil37.github.io/wingsconventnagpur/"
                 }
-            };
-            
-            // ✅ If specific user, use include_aliases
-            if (target === 'specific' && specificUserId) {
-                payload.include_aliases = { external_id: [specificUserId] };
-                console.log('📤 Sending to specific user:', specificUserId);
-            } else {
-                // Map target to segment
-                let segment = 'All';
-                if (target === 'admin') segment = 'Admins';
-                else if (target === 'teacher') segment = 'Teachers';
-                else if (target === 'student') segment = 'Students';
-                else if (target === 'cashier') segment = 'Cashiers';
-                else if (target === 'accountant') segment = 'Accountants';
-                else segment = 'All';
-                payload.included_segments = [segment];
-                console.log('📤 Sending to segment:', segment);
-            }
-            
-            if (OneSignal.Notifications && typeof OneSignal.Notifications.send === 'function') {
-                OneSignal.Notifications.send(payload)
-                    .then(function(response) {
-                        console.log('✅ OneSignal notification sent:', response);
-                    })
-                    .catch(function(err) {
-                        console.log('❌ OneSignal error:', err);
-                        // Fallback: Service Worker
-                        if (navigator.serviceWorker) {
-                            navigator.serviceWorker.ready.then(function(registration) {
-                                registration.showNotification(title, {
-                                    body: message,
-                                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                                    badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                                    vibrate: [200, 100, 200],
-                                    requireInteraction: true
-                                });
-                                console.log('✅ Fallback notification sent via Service Worker');
-                            });
-                        }
-                    });
-            } else {
-                console.log('⚠️ OneSignal.Notifications.send not available');
-                // Fallback: Service Worker
-                if (navigator.serviceWorker) {
-                    navigator.serviceWorker.ready.then(function(registration) {
-                        registration.showNotification(title, {
-                            body: message,
-                            icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                            badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                            vibrate: [200, 100, 200],
-                            requireInteraction: true
-                        });
-                        console.log('✅ Fallback notification sent via Service Worker');
-                    });
-                }
-            }
-        } catch(e) {
-            console.log('⚠️ OneSignal error:', e);
-            // Fallback: Service Worker
-            if (navigator.serviceWorker) {
-                navigator.serviceWorker.ready.then(function(registration) {
-                    registration.showNotification(title, {
-                        body: message,
-                        icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                        badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                        vibrate: [200, 100, 200],
-                        requireInteraction: true
-                    });
-                    console.log('✅ Fallback notification sent via Service Worker');
-                });
-            }
-        }
-    } else {
-        console.log('❌ OneSignal not loaded');
-        // Fallback: Service Worker
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.ready.then(function(registration) {
-                registration.showNotification(title, {
-                    body: message,
-                    icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                    badge: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico",
-                    vibrate: [200, 100, 200],
-                    requireInteraction: true
-                });
-                console.log('✅ Fallback notification sent via Service Worker');
             });
+            serviceWorkerSuccess = true;
+            console.log('✅ Service Worker notification sent successfully!');
+        }).catch(function(err) {
+            console.log('❌ Service Worker error:', err);
+            // ✅ Service Worker fail ho to OneSignal try karein
+            sendViaOneSignal();
+        });
+    } else {
+        console.log('❌ Service Worker not supported, trying OneSignal...');
+        sendViaOneSignal();
+    }
+    
+    // ============================================================
+    // ✅ STEP 2: SEND VIA ONESIGNAL (FALLBACK)
+    // ============================================================
+    function sendViaOneSignal() {
+        if (typeof OneSignal !== 'undefined') {
+            try {
+                let payload = {
+                    contents: { en: message },
+                    headings: { en: title },
+                    web_push: {
+                        icon: "https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico"
+                    }
+                };
+                
+                if (target === 'specific' && specificUserId) {
+                    payload.include_aliases = { external_id: [specificUserId] };
+                    console.log('📤 Sending to specific user:', specificUserId);
+                } else {
+                    let segment = 'All';
+                    if (target === 'admin') segment = 'Admins';
+                    else if (target === 'teacher') segment = 'Teachers';
+                    else if (target === 'student') segment = 'Students';
+                    else if (target === 'cashier') segment = 'Cashiers';
+                    else if (target === 'accountant') segment = 'Accountants';
+                    else segment = 'All';
+                    payload.included_segments = [segment];
+                    console.log('📤 Sending to segment:', segment);
+                }
+                
+                if (OneSignal.Notifications && typeof OneSignal.Notifications.send === 'function') {
+                    OneSignal.Notifications.send(payload)
+                        .then(function(response) {
+                            console.log('✅ OneSignal notification sent:', response);
+                        })
+                        .catch(function(err) {
+                            console.log('❌ OneSignal error:', err);
+                        });
+                } else {
+                    console.log('⚠️ OneSignal.Notifications.send not available');
+                }
+            } catch(e) {
+                console.log('⚠️ OneSignal error:', e);
+            }
+        } else {
+            console.log('❌ OneSignal not loaded');
         }
     }
     
-    // ✅ SAVE TO SUPABASE (BACKGROUND)
+    // ============================================================
+    // ✅ STEP 3: SAVE TO SUPABASE (BACKGROUND)
+    // ============================================================
     const supabase = getSupabaseClient();
     if (supabase && navigator.onLine) {
         const dbData = {
@@ -2367,7 +2347,6 @@ function closeNotifModal(modalId) {
     let modal = document.getElementById(modalId);
     if (modal) modal.remove();
 }
-
 // ======================= EXPOSE FUNCTIONS GLOBALLY =======================
 window.getUserNotifications = getUserNotifications;
 window.updateNotificationBell = updateNotificationBell;
