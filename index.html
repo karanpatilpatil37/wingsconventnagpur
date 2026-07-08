@@ -1002,7 +1002,7 @@ console.log('   ✅ Cropper.js');
 console.log('   ✅ html2pdf.js');
 console.log('   ✅ Supabase JS');
 
-// ======================= 🔔 NOTIFICATION BELL - PURE SUPABASE (FULLY FIXED) =======================
+// ======================= 🔔 NOTIFICATION BELL - ROLE BASED (FULLY FIXED) =======================
 // ======================= GLOBAL VARIABLES =======================
 let notificationUnreadCount = 0;
 let isBellOpen = false;
@@ -1086,8 +1086,9 @@ async function loadNotificationsFromSupabase() {
                     senderName: notif.sender_name || 'System',
                     targetType: notif.target_type || 'all',
                     targetRole: notif.target_role || 'all',
-                    targetClass: notif.target_class_id || null,
                     targetUser: notif.target_user_id || null,
+                    targetUserName: notif.target_user_name || null,
+                    targetClass: notif.target_class_id || null,
                     category: notif.category || 'General',
                     priority: notif.priority || 'Normal',
                     expiryDate: notif.expiry_date || null,
@@ -1135,7 +1136,7 @@ async function loadNotificationsFromSupabase() {
     }
 }
 
-// ======================= GET USER NOTIFICATIONS =======================
+// ======================= ✅ ROLE-BASED: GET USER NOTIFICATIONS =======================
 function getUserNotifications() {
     console.log('👤 getUserNotifications called...');
     console.log('👤 currentUser:', currentUser);
@@ -1156,7 +1157,76 @@ function getUserNotifications() {
     console.log(`🔍 Filtering notifications for role: ${currentUser.role}`);
     
     for (let n of window.notifications) {
+        let show = false;
+        const targetRole = n.targetRole || 'all';
+        const targetUser = n.targetUser || null;
+        
+        // ========== ADMIN: Show ALL notifications ==========
         if (currentUser.role === 'admin') {
+            show = true;
+        }
+        // ========== TEACHER: Show All, Teacher, Student (if assigned), Admin ==========
+        else if (currentUser.role === 'teacher') {
+            if (targetRole === 'all' || targetRole === 'teacher' || targetRole === 'admin') {
+                show = true;
+            } else if (targetRole === 'student') {
+                // Check if teacher is assigned to this student's class
+                const teacher = window.employees ? window.employees.find(e => e.name === currentUser.name) : null;
+                const myClass = teacher?.classTeacher || '';
+                // Check if student is in teacher's class
+                if (n.targetClass) {
+                    if (n.targetClass === myClass) {
+                        show = true;
+                    }
+                } else if (targetUser && targetUser === currentUser.id) {
+                    show = true;
+                } else if (targetUser && targetUser === currentUser.name) {
+                    show = true;
+                }
+            } else if (targetRole === 'specific' && targetUser === currentUser.id) {
+                show = true;
+            }
+        }
+        // ========== STUDENT: Show All, Student, Class ==========
+        else if (currentUser.role === 'student') {
+            if (targetRole === 'all' || targetRole === 'student') {
+                if (!targetUser || targetUser === currentUser.id || targetUser === currentUser.name) {
+                    show = true;
+                }
+            } else if (targetRole === 'class' && n.targetClass) {
+                const student = window.students ? window.students.find(s => s.name === currentUser.name) : null;
+                const myClass = student ? `${student.cls} ${student.sec}` : '';
+                if (n.targetClass === myClass) {
+                    show = true;
+                }
+            } else if (targetRole === 'specific' && targetUser === currentUser.id) {
+                show = true;
+            }
+        }
+        // ========== CASHIER: Show All, Cashier, Student ==========
+        else if (currentUser.role === 'cashier') {
+            if (targetRole === 'all' || targetRole === 'cashier' || targetRole === 'student') {
+                if (targetRole === 'student' && targetUser && targetUser !== currentUser.id) {
+                    // Cashier can see all student notifications
+                    show = true;
+                } else if (targetRole !== 'student') {
+                    show = true;
+                }
+            } else if (targetRole === 'specific' && targetUser === currentUser.id) {
+                show = true;
+            }
+        }
+        // ========== ACCOUNTANT: Show All, Accountant, Admin, Teacher, Cashier ==========
+        else if (currentUser.role === 'accountant') {
+            if (targetRole === 'all' || targetRole === 'accountant' || 
+                targetRole === 'admin' || targetRole === 'teacher' || targetRole === 'cashier') {
+                show = true;
+            } else if (targetRole === 'specific' && targetUser === currentUser.id) {
+                show = true;
+            }
+        }
+        
+        if (show) {
             userNotifs.push({
                 id: n.id,
                 title: n.title,
@@ -1167,32 +1237,10 @@ function getUserNotifications() {
                 category: n.category || 'General',
                 priority: n.priority || 'Normal',
                 senderName: n.senderName || 'System',
-                targetRole: n.targetRole || 'all'
+                targetRole: n.targetRole || 'all',
+                targetUser: n.targetUser || null,
+                targetUserName: n.targetUserName || null
             });
-        } else {
-            let show = false;
-            const targetRole = n.targetRole || 'all';
-            if (targetRole === 'all') show = true;
-            else if (targetRole === currentUser.role) show = true;
-            else if (currentUser.role === 'student' && targetRole === 'student') show = true;
-            else if (currentUser.role === 'teacher' && targetRole === 'teacher') show = true;
-            else if (currentUser.role === 'cashier' && targetRole === 'cashier') show = true;
-            else if (currentUser.role === 'accountant' && targetRole === 'accountant') show = true;
-            
-            if (show) {
-                userNotifs.push({
-                    id: n.id,
-                    title: n.title,
-                    message: n.message,
-                    date: n.date || n.createdAt || new Date().toISOString(),
-                    read: n.read || false,
-                    icon: 'fa-bell',
-                    category: n.category || 'General',
-                    priority: n.priority || 'Normal',
-                    senderName: n.senderName || 'System',
-                    targetRole: n.targetRole || 'all'
-                });
-            }
         }
     }
     
@@ -1278,6 +1326,14 @@ function loadBellNotifications() {
     let html = '';
     for (let n of recentNotifs) {
         const isRead = n.read;
+        let targetBadge = '';
+        if (n.targetRole && n.targetRole !== 'all') {
+            targetBadge = `<span style="background:#8b5cf6; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:6px;">🎯 ${n.targetRole}</span>`;
+        }
+        if (n.targetUserName) {
+            targetBadge += `<span style="background:#10b981; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:4px;">👤 ${n.targetUserName}</span>`;
+        }
+        
         html += `
             <div class="notification-item ${!isRead ? 'unread' : ''}" onclick="markNotificationReadFromBell('${n.id}')" style="
                 padding: 10px 16px;
@@ -1291,8 +1347,8 @@ function loadBellNotifications() {
                         <i class="fas ${n.icon || 'fa-bell'}" style="color:${n.read ? 'var(--text-secondary, #64748b)' : 'white'}; font-size:14px;"></i>
                     </div>
                     <div style="flex:1; min-width:0;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span class="notif-title" style="font-size:13px; font-weight:600; ${!isRead ? 'color:#2563eb;' : ''}">${escapeHtml(n.title)}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                            <span class="notif-title" style="font-size:13px; font-weight:600; ${!isRead ? 'color:#2563eb;' : ''}">${escapeHtml(n.title)} ${targetBadge}</span>
                             ${!isRead ? '<span style="background:#2563eb; width:8px; height:8px; border-radius:50%; flex-shrink:0;"></span>' : ''}
                         </div>
                         <div class="notif-desc" style="font-size:12px; color:var(--text-secondary, #64748b); margin-top:2px;">${escapeHtml((n.message || '').substring(0, 60))}${(n.message || '').length > 60 ? '...' : ''}</div>
@@ -1382,11 +1438,10 @@ function markAllNotificationsRead() {
     showToast(`✅ ${unread.length} marked as read`, 'success');
 }
 
-// ======================= ✅ FIXED: ADD NOTIFICATION (DIRECT POP-UP - NO SERVICE WORKER) =======================
-function addNotification(title, message, category = 'General', priority = 'Normal') {
-    console.log('📝 addNotification called:', title);
+// ======================= ✅ ROLE-BASED: ADD NOTIFICATION (DIRECT POP-UP) =======================
+function addNotification(title, message, category = 'General', priority = 'Normal', targetRole = 'all', targetUserId = null, targetUserName = null) {
+    console.log('📝 addNotification called:', title, 'Target:', targetRole);
     
-    // Ensure window.notifications exists
     if (!window.notifications) {
         window.notifications = [];
         console.log('✅ window.notifications initialized');
@@ -1401,10 +1456,11 @@ function addNotification(title, message, category = 'General', priority = 'Norma
         senderRole: currentUser?.role || 'admin',
         senderId: currentUser?.id || 'system',
         senderName: userName,
-        targetType: 'all',
-        targetRole: 'all',
+        targetType: 'role',
+        targetRole: targetRole || 'all',
+        targetUser: targetUserId || null,
+        targetUserName: targetUserName || null,
         targetClass: null,
-        targetUser: null,
         category: category,
         priority: priority,
         expiryDate: null,
@@ -1424,15 +1480,26 @@ function addNotification(title, message, category = 'General', priority = 'Norma
     
     // ============================================================
     // ✅ DIRECT BROWSER NOTIFICATION (NO SERVICE WORKER)
+    // 🔥 FIX: Check if current user is the target
     // ============================================================
-    if ('Notification' in window) {
+    let shouldShowPopup = false;
+    
+    if (targetRole === 'all') {
+        shouldShowPopup = true;
+    } else if (targetUserId && targetUserId === currentUser?.id) {
+        shouldShowPopup = true;
+    } else if (targetRole === currentUser?.role) {
+        shouldShowPopup = true;
+    }
+    
+    if (shouldShowPopup && 'Notification' in window) {
         if (Notification.permission === 'granted') {
             try {
                 const notif = new Notification(title, {
                     body: message,
                     icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
                 });
-                console.log('✅ Direct notification shown!');
+                console.log('✅ Direct notification shown to:', currentUser?.name);
             } catch(e) {
                 console.log('❌ Notification error:', e);
             }
@@ -1449,6 +1516,8 @@ function addNotification(title, message, category = 'General', priority = 'Norma
         } else {
             console.log('❌ Notification permission denied. Current:', Notification.permission);
         }
+    } else {
+        console.log('ℹ️ Notification not shown to:', currentUser?.name, 'Target:', targetRole);
     }
     
     // ✅ SAVE TO SUPABASE
@@ -1462,6 +1531,8 @@ function addNotification(title, message, category = 'General', priority = 'Norma
             sender_id: newNotif.senderId,
             sender_name: newNotif.senderName,
             target_role: newNotif.targetRole,
+            target_user_id: newNotif.targetUser,
+            target_user_name: newNotif.targetUserName,
             category: newNotif.category,
             priority: newNotif.priority,
             date: newNotif.date,
@@ -1490,7 +1561,226 @@ function addNotification(title, message, category = 'General', priority = 'Norma
     }
 }
 
-// ======================= ✅ FIXED: SEND NOTIFICATION FROM MODAL (DIRECT POP-UP) =======================
+// ======================= ✅ ROLE-BASED: SHOW SEND NOTIFICATION FORM =======================
+function showSendNotificationForm() {
+    if (!currentUser || typeof currentUser === 'undefined' || !currentUser.role) {
+        showToast('⚠️ Please login first', 'error');
+        return;
+    }
+    
+    const role = currentUser.role;
+    let allowedTargets = [];
+    
+    // ========== ROLE-BASED TARGETS ==========
+    if (role === 'admin') {
+        allowedTargets = ['all', 'admin', 'teacher', 'student', 'cashier', 'accountant', 'specific'];
+    } else if (role === 'teacher') {
+        allowedTargets = ['all', 'student', 'admin', 'specific'];
+    } else if (role === 'cashier') {
+        allowedTargets = ['all', 'student', 'admin', 'specific'];
+    } else if (role === 'accountant') {
+        allowedTargets = ['all', 'admin', 'teacher', 'cashier', 'specific'];
+    } else {
+        showToast('⛔ You do not have permission to send notifications', 'error');
+        return;
+    }
+    
+    // ========== GENERATE TARGET OPTIONS ==========
+    let targetOptions = '';
+    if (allowedTargets.includes('all')) {
+        targetOptions += `<option value="all">📢 All Users</option>`;
+    }
+    if (allowedTargets.includes('admin')) {
+        targetOptions += `<option value="admin">👑 Administrators</option>`;
+    }
+    if (allowedTargets.includes('teacher')) {
+        targetOptions += `<option value="teacher">👩‍🏫 Teachers</option>`;
+    }
+    if (allowedTargets.includes('student')) {
+        targetOptions += `<option value="student">🧑‍🎓 Students</option>`;
+    }
+    if (allowedTargets.includes('cashier')) {
+        targetOptions += `<option value="cashier">💰 Cashiers</option>`;
+    }
+    if (allowedTargets.includes('accountant')) {
+        targetOptions += `<option value="accountant">📊 Accountants</option>`;
+    }
+    if (allowedTargets.includes('specific')) {
+        targetOptions += `<option value="specific">👤 Specific User</option>`;
+    }
+    
+    // ========== GENERATE USER LIST FOR SPECIFIC USER ==========
+    function generateUserOptionsForRole(senderRole) {
+        let options = '';
+        let users = [];
+        let userMap = {};
+        
+        // Collect all users from different sources
+        if (window.users && window.users.length > 0) {
+            for (let user of window.users) {
+                if (user.id === currentUser.id) continue;
+                let canSend = false;
+                if (senderRole === 'admin') {
+                    canSend = true;
+                } else if (senderRole === 'teacher' || senderRole === 'cashier') {
+                    if (user.role === 'student' || user.role === 'admin') {
+                        canSend = true;
+                    }
+                } else if (senderRole === 'accountant') {
+                    if (user.role === 'admin' || user.role === 'teacher' || user.role === 'cashier') {
+                        canSend = true;
+                    }
+                }
+                if (canSend && !userMap[user.id]) {
+                    userMap[user.id] = true;
+                    let roleDisplay = user.role_display || user.role || 'user';
+                    users.push({ id: user.id, name: user.name, role: roleDisplay });
+                }
+            }
+        }
+        
+        // Add students
+        if (window.students && window.students.length > 0) {
+            for (let student of window.students) {
+                if (student.id === currentUser.id) continue;
+                if (!userMap[student.id]) {
+                    let canSend = false;
+                    if (senderRole === 'admin') canSend = true;
+                    else if (senderRole === 'teacher' || senderRole === 'cashier') canSend = true;
+                    if (canSend) {
+                        userMap[student.id] = true;
+                        users.push({ id: student.id, name: student.name, role: 'Student' });
+                    }
+                }
+            }
+        }
+        
+        // Add employees
+        if (window.employees && window.employees.length > 0) {
+            for (let emp of window.employees) {
+                if (emp.id === currentUser.id) continue;
+                if (!userMap[emp.id]) {
+                    let canSend = false;
+                    if (senderRole === 'admin') canSend = true;
+                    else if (senderRole === 'accountant') {
+                        if (emp.department === 'Accounts' || emp.department === 'Teaching' || emp.department === 'Transport') {
+                            canSend = true;
+                        }
+                    }
+                    if (canSend) {
+                        userMap[emp.id] = true;
+                        let roleDisplay = emp.designation || emp.role || 'Employee';
+                        users.push({ id: emp.id, name: emp.name, role: roleDisplay });
+                    }
+                }
+            }
+        }
+        
+        // Sort users by name
+        users.sort((a, b) => a.name.localeCompare(b.name));
+        
+        for (let u of users) {
+            options += `<option value="${u.id}">${u.name} (${u.role})</option>`;
+        }
+        
+        if (!options) {
+            options = '<option value="">-- No users available --</option>';
+        }
+        return options;
+    }
+    
+    let modalId = 'notifModal_' + Date.now();
+    let modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = modalId;
+    
+    // Store user options for specific user
+    window._userOptionsForModal = generateUserOptionsForRole(role);
+    
+    modal.innerHTML = `
+        <div style="background:var(--bg-surface); border-radius:28px; max-width:550px; width:95%; max-height:90vh; overflow-y:auto; padding:0;">
+            <div style="background:linear-gradient(135deg,#2563eb,#1e40af); padding:16px 20px; border-radius:28px 28px 0 0; display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="color:white; margin:0; font-size:18px;"><i class="fas fa-bell"></i> Send Notification</h2>
+                <button onclick="closeNotifModal('${modalId}')" style="background:rgba(255,255,255,0.2); border:none; color:white; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:20px;">&times;</button>
+            </div>
+            <div style="padding:20px;">
+                <!-- Sender Info -->
+                <div style="background:#f0fdf4; padding:10px; border-radius:12px; margin-bottom:16px;">
+                    <i class="fas fa-user-shield" style="color:#10b981;"></i>
+                    <span style="font-size:12px; color:#065f46;">
+                        Sending as <strong>${currentUser.name}</strong> (${currentUser.role})
+                    </span>
+                    <span style="margin-left:10px; font-size:10px; background:#dbeafe; padding:2px 10px; border-radius:20px; color:#1e40af;">
+                        🔑 ${role}
+                    </span>
+                </div>
+                
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📌 Title *</label>
+                    <input id="notifTitle_${modalId}" class="form-control" placeholder="Enter notification title">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📝 Message *</label>
+                    <textarea id="notifMessage_${modalId}" class="form-control" rows="3" placeholder="Enter notification message"></textarea>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div>
+                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📁 Category</label>
+                        <select id="notifCategory_${modalId}" class="form-control">
+                            <option value="General">General</option>
+                            <option value="Fees">Fees</option>
+                            <option value="Attendance">Attendance</option>
+                            <option value="Homework">Homework</option>
+                            <option value="Exam">Exam</option>
+                            <option value="Emergency">Emergency</option>
+                            <option value="System">System</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">⚡ Priority</label>
+                        <select id="notifPriority_${modalId}" class="form-control">
+                            <option value="Normal">Normal</option>
+                            <option value="Important">Important</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">👥 Send To</label>
+                    <select id="notifTarget_${modalId}" class="form-control" onchange="toggleSpecificUserSection('${modalId}')">
+                        ${targetOptions}
+                    </select>
+                </div>
+                <div id="specificUserSection_${modalId}" style="display:none; margin-bottom:16px;">
+                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">👤 Select User</label>
+                    <select id="specificUserSelect_${modalId}" class="form-control">
+                        <option value="">-- Select User --</option>
+                        ${window._userOptionsForModal}
+                    </select>
+                </div>
+                
+                <!-- Role Permission Info -->
+                <div style="background:#dbeafe; padding:10px; border-radius:12px; margin-top:10px;">
+                    <i class="fas fa-info-circle" style="color:#1e40af;"></i>
+                    <span style="font-size:11px; color:#1e40af;">
+                        ✅ You can send to: <strong>${allowedTargets.join(', ')}</strong>
+                    </span>
+                </div>
+            </div>
+            <div style="padding:16px 20px; background:var(--bg-body); border-top:1px solid var(--border-light); border-radius:0 0 28px 28px; display:flex; gap:12px; justify-content:flex-end;">
+                <button class="btn btn-danger" onclick="closeNotifModal('${modalId}')">Cancel</button>
+                <button class="btn btn-primary" onclick="sendNotificationFromModal('${modalId}')">
+                    <i class="fas fa-paper-plane"></i> Send Notification
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// ======================= ✅ ROLE-BASED: SEND NOTIFICATION FROM MODAL =======================
 function sendNotificationFromModal(modalId) {
     console.log('📤 sendNotificationFromModal called...');
     
@@ -1499,13 +1789,78 @@ function sendNotificationFromModal(modalId) {
     var target = document.getElementById('notifTarget_' + modalId)?.value || 'all';
     var priority = document.getElementById('notifPriority_' + modalId)?.value || 'Normal';
     var category = document.getElementById('notifCategory_' + modalId)?.value || 'General';
+    var specificUserId = document.getElementById('specificUserSelect_' + modalId)?.value || null;
     
     if (!title || !message) {
         showToast('⚠️ Title and message are required', 'error');
         return;
     }
     
-    // Save to notifications array
+    // ========== ROLE VALIDATION ==========
+    const role = currentUser.role;
+    let allowedTargets = [];
+    
+    if (role === 'admin') {
+        allowedTargets = ['all', 'admin', 'teacher', 'student', 'cashier', 'accountant', 'specific'];
+    } else if (role === 'teacher' || role === 'cashier') {
+        allowedTargets = ['all', 'student', 'admin', 'specific'];
+    } else if (role === 'accountant') {
+        allowedTargets = ['all', 'admin', 'teacher', 'cashier', 'specific'];
+    } else {
+        showToast('⛔ You do not have permission to send notifications', 'error');
+        return;
+    }
+    
+    // Check if target is allowed
+    if (!allowedTargets.includes(target)) {
+        showToast('⛔ You cannot send to this role', 'error');
+        return;
+    }
+    
+    // If target is 'specific', check if user is selected
+    if (target === 'specific' && !specificUserId) {
+        showToast('⚠️ Please select a specific user', 'error');
+        return;
+    }
+    
+    // ========== GET TARGET USER INFO FOR SPECIFIC USER ==========
+    let targetUserRole = null;
+    let targetUserName = null;
+    
+    if (target === 'specific' && specificUserId) {
+        // Find user in users array
+        if (window.users) {
+            for (let u of window.users) {
+                if (u.id === specificUserId) {
+                    targetUserName = u.name;
+                    targetUserRole = u.role;
+                    break;
+                }
+            }
+        }
+        // If not found, check students
+        if (!targetUserName && window.students) {
+            for (let s of window.students) {
+                if (s.id === specificUserId) {
+                    targetUserName = s.name;
+                    targetUserRole = 'student';
+                    break;
+                }
+            }
+        }
+        // If not found, check employees
+        if (!targetUserName && window.employees) {
+            for (let e of window.employees) {
+                if (e.id === specificUserId) {
+                    targetUserName = e.name;
+                    targetUserRole = e.role || 'employee';
+                    break;
+                }
+            }
+        }
+    }
+    
+    // ========== CREATE NOTIFICATION ==========
     if (!window.notifications) {
         window.notifications = [];
     }
@@ -1517,7 +1872,9 @@ function sendNotificationFromModal(modalId) {
         senderRole: currentUser.role,
         senderId: currentUser.id,
         senderName: currentUser.name,
-        targetRole: target,
+        targetRole: target === 'specific' ? targetUserRole : target,
+        targetUser: target === 'specific' ? specificUserId : null,
+        targetUserName: targetUserName || null,
         category: category,
         priority: priority,
         read: false,
@@ -1540,17 +1897,34 @@ function sendNotificationFromModal(modalId) {
     
     // ============================================================
     // ✅ DIRECT BROWSER NOTIFICATION (NO SERVICE WORKER)
+    // 🔥 FIX: Check if current user is the target
     // ============================================================
     console.log('📤 Showing notification directly...');
+    console.log('🎯 Target Role:', target);
+    console.log('👤 Current User Role:', currentUser?.role);
     
-    if ('Notification' in window) {
+    let shouldShowPopup = false;
+    
+    if (target === 'all') {
+        shouldShowPopup = true;
+    } else if (target === 'specific' && specificUserId) {
+        if (specificUserId === currentUser.id) {
+            shouldShowPopup = true;
+        }
+    } else {
+        if (target === currentUser?.role) {
+            shouldShowPopup = true;
+        }
+    }
+    
+    if (shouldShowPopup && 'Notification' in window) {
         if (Notification.permission === 'granted') {
             try {
                 var notif = new Notification(title, {
                     body: message,
                     icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
                 });
-                console.log('✅ Direct notification shown!');
+                console.log('✅ Direct notification shown to:', currentUser?.name);
             } catch(e) {
                 console.log('❌ Notification error:', e);
             }
@@ -1568,7 +1942,7 @@ function sendNotificationFromModal(modalId) {
             console.log('❌ Permission denied. Current:', Notification.permission);
         }
     } else {
-        console.log('❌ Notification API not supported');
+        console.log('ℹ️ Notification not shown to:', currentUser?.name, 'Target:', target);
     }
     
     // ============================================================
@@ -1584,6 +1958,8 @@ function sendNotificationFromModal(modalId) {
             sender_id: newNotif.senderId,
             sender_name: newNotif.senderName,
             target_role: newNotif.targetRole,
+            target_user_id: newNotif.targetUser,
+            target_user_name: newNotif.targetUserName,
             category: newNotif.category,
             priority: newNotif.priority,
             date: newNotif.date,
@@ -1915,7 +2291,7 @@ async function loadNotificationsModule() {
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button class="btn btn-warning btn-sm" onclick="markAllNotificationsRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
-                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()"><i class="fas fa-bell"></i> Send Notification</button>` : ''}
+                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier' || currentUser.role === 'accountant')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()"><i class="fas fa-bell"></i> Send Notification</button>` : ''}
                 <button class="btn btn-success btn-sm" onclick="refreshNotifications()"><i class="fas fa-sync-alt"></i> Refresh</button>
                 <button class="btn btn-info btn-sm" onclick="exportNotificationsCSV()"><i class="fas fa-file-csv"></i> CSV</button>
             </div>
@@ -1954,7 +2330,7 @@ function renderFullNotificationList(notifications) {
                 <i class="fas fa-bell-slash" style="font-size:48px; color:#94a3b8;"></i>
                 <h3 style="margin-top:16px;">No Notifications</h3>
                 <p style="color:var(--text-secondary);">${navigator.onLine ? 'No notifications in Supabase.' : 'Offline - Connect to internet to load data.'}</p>
-                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()" style="margin-top:12px;"><i class="fas fa-bell"></i> Send First Notification</button>` : ''}
+                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier' || currentUser.role === 'accountant')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()" style="margin-top:12px;"><i class="fas fa-bell"></i> Send First Notification</button>` : ''}
             </div>
         `;
         return;
@@ -1966,6 +2342,14 @@ function renderFullNotificationList(notifications) {
                             n.priority === 'Urgent' ? '#f97316' : 
                             n.priority === 'Important' ? '#f59e0b' : '#94a3b8';
         
+        let targetBadge = '';
+        if (n.targetRole && n.targetRole !== 'all') {
+            targetBadge = `<span style="background:#8b5cf6; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:6px;">🎯 ${n.targetRole}</span>`;
+        }
+        if (n.targetUserName) {
+            targetBadge += `<span style="background:#10b981; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:4px;">👤 ${n.targetUserName}</span>`;
+        }
+        
         html += `
             <div class="data-card" style="margin-bottom:12px; ${!n.read ? 'border-left:3px solid #2563eb;' : ''}">
                 <div style="display:flex; gap:12px; flex-wrap:wrap; padding:12px;">
@@ -1974,7 +2358,7 @@ function renderFullNotificationList(notifications) {
                     </div>
                     <div style="flex:1; min-width:0;">
                         <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                            <h3 style="font-size:15px; margin:0; ${!n.read ? 'color:#2563eb;' : ''}">${escapeHtml(n.title)}</h3>
+                            <h3 style="font-size:15px; margin:0; ${!n.read ? 'color:#2563eb;' : ''}">${escapeHtml(n.title)} ${targetBadge}</h3>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <span class="badge ${n.read ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 12px; border-radius:20px; background:${n.read ? '#10b981' : '#f59e0b'}; color:white;">${n.read ? 'Read' : 'Unread'}</span>
                                 <span style="font-size:10px; color:${priorityColor};">
@@ -2012,9 +2396,9 @@ function exportNotificationsCSV() {
         return;
     }
     
-    let csv = "ID,Date,Title,Message,Category,Priority,Status,Sender\n";
+    let csv = "ID,Date,Title,Message,Category,Priority,Status,Sender,Target Role,Target User\n";
     for (let n of userNotifications) {
-        csv += `"${n.id || ''}","${n.date || ''}","${n.title.replace(/,/g, ' ')}","${n.message.replace(/,/g, ' ')}","${n.category || 'General'}","${n.priority || 'Normal'}",${n.read ? 'Read' : 'Unread'},"${n.senderName || 'System'}"\n`;
+        csv += `"${n.id || ''}","${n.date || ''}","${n.title.replace(/,/g, ' ')}","${n.message.replace(/,/g, ' ')}","${n.category || 'General'}","${n.priority || 'Normal'}",${n.read ? 'Read' : 'Unread'},"${n.senderName || 'System'}","${n.targetRole || 'all'}","${n.targetUserName || ''}"\n`;
     }
     
     let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
@@ -2062,26 +2446,22 @@ function refreshNotifications() {
 // ======================= GENERATE USER OPTIONS FOR SPECIFIC USER =======================
 function generateUserOptions() {
     let options = '';
+    let userMap = {};
     
     if (window.users && window.users.length > 0) {
         for (let user of window.users) {
-            let roleDisplay = user.role_display || user.role || 'user';
-            options += `<option value="${user.id}">${user.name} (${roleDisplay})</option>`;
+            if (!userMap[user.id]) {
+                userMap[user.id] = true;
+                let roleDisplay = user.role_display || user.role || 'user';
+                options += `<option value="${user.id}">${user.name} (${roleDisplay})</option>`;
+            }
         }
     }
     
     if (window.students && window.students.length > 0) {
         for (let student of window.students) {
-            let exists = false;
-            if (window.users) {
-                for (let user of window.users) {
-                    if (user.name === student.name || user.id === student.id) {
-                        exists = true;
-                        break;
-                    }
-                }
-            }
-            if (!exists) {
+            if (!userMap[student.id]) {
+                userMap[student.id] = true;
                 options += `<option value="${student.id}">${student.name} (Student)</option>`;
             }
         }
@@ -2089,16 +2469,8 @@ function generateUserOptions() {
     
     if (window.employees && window.employees.length > 0) {
         for (let emp of window.employees) {
-            let exists = false;
-            if (window.users) {
-                for (let user of window.users) {
-                    if (user.name === emp.name || user.id === emp.id) {
-                        exists = true;
-                        break;
-                    }
-                }
-            }
-            if (!exists) {
+            if (!userMap[emp.id]) {
+                userMap[emp.id] = true;
                 let roleDisplay = emp.designation || emp.role || 'Employee';
                 options += `<option value="${emp.id}">${emp.name} (${roleDisplay})</option>`;
             }
@@ -2115,127 +2487,6 @@ function toggleSpecificUserSection(modalId) {
     if (section) {
         section.style.display = target === 'specific' ? 'block' : 'none';
     }
-}
-
-// ======================= SHOW SEND NOTIFICATION FORM =======================
-function showSendNotificationForm() {
-    if (!currentUser || typeof currentUser === 'undefined' || !currentUser.role) {
-        showToast('⚠️ Please login first', 'error');
-        return;
-    }
-    
-    const role = currentUser.role;
-    let allowedTargets = [];
-    
-    if (role === 'admin') {
-        allowedTargets = ['all', 'admin', 'teacher', 'student', 'cashier', 'accountant', 'specific'];
-    } else if (role === 'teacher') {
-        allowedTargets = ['all', 'student', 'admin', 'specific'];
-    } else if (role === 'cashier') {
-        allowedTargets = ['all', 'student', 'admin', 'specific'];
-    } else if (role === 'accountant') {
-        allowedTargets = ['all', 'admin', 'teacher', 'cashier', 'specific'];
-    } else {
-        showToast('⛔ You do not have permission to send notifications', 'error');
-        return;
-    }
-    
-    let targetOptions = '';
-    if (allowedTargets.includes('all')) {
-        targetOptions += `<option value="all">📢 All Users</option>`;
-    }
-    if (allowedTargets.includes('admin')) {
-        targetOptions += `<option value="admin">👑 Administrators</option>`;
-    }
-    if (allowedTargets.includes('teacher')) {
-        targetOptions += `<option value="teacher">👩‍🏫 Teachers</option>`;
-    }
-    if (allowedTargets.includes('student')) {
-        targetOptions += `<option value="student">🧑‍🎓 Students</option>`;
-    }
-    if (allowedTargets.includes('cashier')) {
-        targetOptions += `<option value="cashier">💰 Cashiers</option>`;
-    }
-    if (allowedTargets.includes('accountant')) {
-        targetOptions += `<option value="accountant">📊 Accountants</option>`;
-    }
-    if (allowedTargets.includes('specific')) {
-        targetOptions += `<option value="specific">👤 Specific User</option>`;
-    }
-    
-    let modalId = 'notifModal_' + Date.now();
-    let modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.id = modalId;
-    
-    modal.innerHTML = `
-        <div style="background:var(--bg-surface); border-radius:28px; max-width:550px; width:95%; max-height:90vh; overflow-y:auto; padding:0;">
-            <div style="background:linear-gradient(135deg,#2563eb,#1e40af); padding:16px 20px; border-radius:28px 28px 0 0; display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="color:white; margin:0; font-size:18px;"><i class="fas fa-bell"></i> Send Notification</h2>
-                <button onclick="closeNotifModal('${modalId}')" style="background:rgba(255,255,255,0.2); border:none; color:white; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:20px;">&times;</button>
-            </div>
-            <div style="padding:20px;">
-                <div style="margin-bottom:16px;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📌 Title *</label>
-                    <input id="notifTitle_${modalId}" class="form-control" placeholder="Enter notification title">
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📝 Message *</label>
-                    <textarea id="notifMessage_${modalId}" class="form-control" rows="3" placeholder="Enter notification message"></textarea>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-                    <div>
-                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📁 Category</label>
-                        <select id="notifCategory_${modalId}" class="form-control">
-                            <option value="General">General</option>
-                            <option value="Fees">Fees</option>
-                            <option value="Attendance">Attendance</option>
-                            <option value="Homework">Homework</option>
-                            <option value="Exam">Exam</option>
-                            <option value="Emergency">Emergency</option>
-                            <option value="System">System</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">⚡ Priority</label>
-                        <select id="notifPriority_${modalId}" class="form-control">
-                            <option value="Normal">Normal</option>
-                            <option value="Important">Important</option>
-                            <option value="Urgent">Urgent</option>
-                            <option value="Critical">Critical</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">👥 Send To</label>
-                    <select id="notifTarget_${modalId}" class="form-control" onchange="toggleSpecificUserSection('${modalId}')">
-                        ${targetOptions}
-                    </select>
-                </div>
-                <div id="specificUserSection_${modalId}" style="display:none; margin-bottom:16px;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">👤 Select User</label>
-                    <select id="specificUserSelect_${modalId}" class="form-control">
-                        <option value="">-- Select User --</option>
-                        ${generateUserOptions()}
-                    </select>
-                </div>
-                <div style="background:#f0fdf4; padding:10px; border-radius:12px; margin-top:10px;">
-                    <i class="fas fa-info-circle" style="color:#10b981;"></i>
-                    <span style="font-size:11px; color:#065f46;">
-                        ✅ You are sending as <strong>${currentUser.name}</strong> (${currentUser.role})
-                    </span>
-                </div>
-            </div>
-            <div style="padding:16px 20px; background:var(--bg-body); border-top:1px solid var(--border-light); border-radius:0 0 28px 28px; display:flex; gap:12px; justify-content:flex-end;">
-                <button class="btn btn-danger" onclick="closeNotifModal('${modalId}')">Cancel</button>
-                <button class="btn btn-primary" onclick="sendNotificationFromModal('${modalId}')">
-                    <i class="fas fa-paper-plane"></i> Send Notification
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
 }
 
 // ======================= CLOSE NOTIFICATION MODAL =======================
@@ -2269,7 +2520,12 @@ window.toggleSpecificUserSection = toggleSpecificUserSection;
 window.requestNotificationPermission = requestNotificationPermission;
 window.addNotification = addNotification;
 
-console.log('✅ 🔔 NOTIFICATION BELL COMPLETE - FULLY FIXED WITH POP-UP!');
+console.log('✅ 🔔 NOTIFICATION BELL COMPLETE - ROLE BASED + POP-UP FIXED!');
+console.log('📌 Role-Based Permissions:');
+console.log('   👑 Admin → All, Admin, Teacher, Student, Cashier, Accountant');
+console.log('   👩‍🏫 Teacher → All, Student, Admin');
+console.log('   💰 Cashier → All, Student, Admin');
+console.log('   📊 Accountant → All, Admin, Teacher, Cashier');
 console.log('📌 Features:');
 console.log('   ✅ Data from Supabase notifications table');
 console.log('   ✅ Bell Icon with Unread Count');
@@ -2280,8 +2536,10 @@ console.log('   ✅ Auto-Refresh Every 30 Seconds');
 console.log('   ✅ 🔥 FIXED: Bell click handler works properly');
 console.log('   ✅ 🔥 FIXED: Notification List displays properly');
 console.log('   ✅ 🔥 FIXED: Direct Browser Notification Pop-up (NO Service Worker)');
+console.log('   ✅ 🔥 NEW: Role-Based Target Options');
+console.log('   ✅ 🔥 NEW: Specific User Selection');
+console.log('   ✅ 🔥 NEW: Target User Shows in Notification');
 console.log('   ✅ 🔥 NEW: Instant Bell Count Update on Send');
-console.log('   ✅ 🔥 NEW: Permission Request on Login');
 
 // ======================= PART 1 ENDS HERE =======================
 // ======================= FIX: SUPABASE CLIENT & CURRENTUSER CHECKS =======================
