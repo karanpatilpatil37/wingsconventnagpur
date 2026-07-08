@@ -2079,68 +2079,54 @@ function showSendNotificationForm() {
 function sendNotificationFromModal(modalId) {
     console.log('📤 sendNotificationFromModal called...');
     
-    const title = document.getElementById(`notifTitle_${modalId}`)?.value?.trim();
-    const message = document.getElementById(`notifMessage_${modalId}`)?.value?.trim();
-    const category = document.getElementById(`notifCategory_${modalId}`)?.value || 'General';
-    const priority = document.getElementById(`notifPriority_${modalId}`)?.value || 'Normal';
-    const target = document.getElementById(`notifTarget_${modalId}`)?.value || 'all';
-    const specificUserId = document.getElementById(`specificUserSelect_${modalId}`)?.value || null;
+    var title = document.getElementById('notifTitle_' + modalId)?.value;
+    var message = document.getElementById('notifMessage_' + modalId)?.value;
+    var target = document.getElementById('notifTarget_' + modalId)?.value || 'all';
+    var priority = document.getElementById('notifPriority_' + modalId)?.value || 'Normal';
+    var category = document.getElementById('notifCategory_' + modalId)?.value || 'General';
     
     if (!title || !message) {
         showToast('⚠️ Title and message are required', 'error');
         return;
     }
     
-    if (target === 'specific' && !specificUserId) {
-        showToast('⚠️ Please select a user', 'error');
-        return;
-    }
-    
+    // Save to notifications array
     if (!window.notifications) {
         window.notifications = [];
-        console.log('✅ window.notifications initialized');
     }
     
-    const newNotif = {
-        id: 'NTF' + Date.now().toString().slice(-6),
+    var newNotif = {
+        id: 'NTF' + Date.now(),
         title: title,
         message: message,
         senderRole: currentUser.role,
         senderId: currentUser.id,
         senderName: currentUser.name,
-        targetType: target === 'specific' ? 'user' : 'role',
-        targetRole: target === 'specific' ? null : target,
-        targetUser: target === 'specific' ? specificUserId : null,
-        targetClass: null,
+        targetRole: target,
         category: category,
         priority: priority,
-        expiryDate: null,
-        autoHide: false,
         read: false,
-        readAt: null,
         date: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        attachmentUrl: null,
-        attachment: null
+        createdAt: new Date().toISOString()
     };
     
     window.notifications.unshift(newNotif);
     localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
     updateNotificationBell();
     
+    // Update UI
     if (isBellOpen) {
         loadBellNotifications();
     }
-    
-    const moduleContent = document.getElementById('moduleContent');
+    var moduleContent = document.getElementById('moduleContent');
     if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
         loadNotificationsModule();
     }
     
     // ============================================================
-    // ✅ DIRECT BROWSER NOTIFICATION (MOST RELIABLE)
+    // ✅ SHOW NOTIFICATION - DIRECT BROWSER NOTIFICATION
     // ============================================================
-    console.log('📤 Sending direct browser notification...');
+    console.log('📤 Showing notification...');
     
     if (Notification.permission === 'granted') {
         try {
@@ -2148,69 +2134,37 @@ function sendNotificationFromModal(modalId) {
                 body: message,
                 icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
             });
-            console.log('✅ Direct browser notification sent');
-            
-            // Auto close after 5 seconds
-            setTimeout(function() {
-                if (notif) notif.close();
-            }, 5000);
+            console.log('✅ Notification shown!');
         } catch(e) {
-            console.log('❌ Notification error:', e);
+            console.log('❌ Error:', e);
         }
-    } else if (Notification.permission === 'default') {
+    } else {
+        console.log('❌ Permission not granted. Current:', Notification.permission);
+        // Request permission
         Notification.requestPermission().then(function(perm) {
             if (perm === 'granted') {
                 var notif = new Notification(title, {
                     body: message,
                     icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
                 });
-                console.log('✅ Direct browser notification sent after permission');
-            } else {
-                console.log('❌ Permission denied');
+                console.log('✅ Notification shown after permission!');
             }
         });
-    } else {
-        console.log('❌ Permission denied - ' + Notification.permission);
-    }
-    
-    // ============================================================
-    // ✅ SEND VIA SERVICE WORKER (BACKUP)
-    // ============================================================
-    if (typeof sendViaServiceWorker === 'function') {
-        sendViaServiceWorker(title, message);
-    } else {
-        console.log('⚠️ sendViaServiceWorker function not found');
-        // Fallback: Direct Service Worker
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.ready.then(function(registration) {
-                registration.showNotification(title, {
-                    body: message,
-                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico',
-                    badge: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico',
-                    vibrate: [200, 100, 200],
-                    requireInteraction: true,
-                    tag: 'wings-notification-' + Date.now()
-                });
-                console.log('✅ Fallback Service Worker notification sent');
-            });
-        }
     }
     
     // ============================================================
     // ✅ SAVE TO SUPABASE
     // ============================================================
-    const supabase = getSupabaseClient();
+    var supabase = getSupabaseClient();
     if (supabase && navigator.onLine) {
-        const dbData = {
+        var dbData = {
             id: newNotif.id,
             title: newNotif.title,
             message: newNotif.message,
             sender_role: newNotif.senderRole,
             sender_id: newNotif.senderId,
             sender_name: newNotif.senderName,
-            target_type: newNotif.targetType,
             target_role: newNotif.targetRole,
-            target_user_id: newNotif.targetUser,
             category: newNotif.category,
             priority: newNotif.priority,
             date: newNotif.date,
@@ -2219,31 +2173,18 @@ function sendNotificationFromModal(modalId) {
         };
         
         supabase.from('notifications').upsert(dbData, { onConflict: 'id' })
-            .then(({ error }) => {
-                if (error) console.error('Save error:', error);
-                else console.log('✅ Notification saved to Supabase');
+            .then(function(result) {
+                if (result.error) {
+                    console.error('Save error:', result.error);
+                } else {
+                    console.log('✅ Saved to Supabase');
+                }
             });
     }
     
     closeNotifModal(modalId);
-    showToast(`✅ Notification "${title}" sent successfully!`, 'success');
-    
-    if (priority === 'Important' || priority === 'Urgent' || priority === 'Critical') {
-        Swal.fire({
-            icon: priority === 'Critical' ? 'error' : 'warning',
-            title: '📢 ' + title,
-            text: message,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#2563eb'
-        });
-    }
+    showToast('✅ Notification "' + title + '" sent!', 'success');
 }
-
-function closeNotifModal(modalId) {
-    let modal = document.getElementById(modalId);
-    if (modal) modal.remove();
-}
-
 // ======================= EXPOSE FUNCTIONS GLOBALLY =======================
 window.getUserNotifications = getUserNotifications;
 window.updateNotificationBell = updateNotificationBell;
