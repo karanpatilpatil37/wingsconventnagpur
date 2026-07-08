@@ -2234,7 +2234,6 @@ function sendNotificationFromModal(modalId) {
         return;
     }
     
-    // ✅ Ensure window.notifications exists
     if (!window.notifications) {
         window.notifications = [];
         console.log('✅ window.notifications initialized');
@@ -2267,19 +2266,17 @@ function sendNotificationFromModal(modalId) {
     localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
     updateNotificationBell();
     
-    // ✅ UPDATE DROPDOWN IF OPEN
     if (isBellOpen) {
         loadBellNotifications();
     }
     
-    // ✅ UPDATE MODULE IF OPEN
     const moduleContent = document.getElementById('moduleContent');
     if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
         loadNotificationsModule();
     }
     
     // ============================================================
-    // ✅ SEND VIA SERVICE WORKER (PRIORITY) + ONESIGNAL (FALLBACK)
+    // SERVICE WORKER NOTIFICATION (PRIORITY)
     // ============================================================
     console.log('📤 Sending notification via Service Worker...');
     
@@ -2315,7 +2312,7 @@ function sendNotificationFromModal(modalId) {
     }
     
     // ============================================================
-    // ✅ SEND VIA ONESIGNAL (FALLBACK)
+    // ONESIGNAL FALLBACK
     // ============================================================
     function sendViaOneSignalFallback() {
         if (serviceWorkerSuccess) {
@@ -2357,7 +2354,6 @@ function sendNotificationFromModal(modalId) {
                         })
                         .catch(function(err) {
                             console.log('❌ OneSignal error:', err);
-                            // Last fallback: Direct Service Worker
                             if (navigator.serviceWorker) {
                                 navigator.serviceWorker.ready.then(function(registration) {
                                     registration.showNotification(title, {
@@ -2374,7 +2370,6 @@ function sendNotificationFromModal(modalId) {
                         });
                 } else {
                     console.log('⚠️ OneSignal.Notifications.send not available');
-                    // Last fallback: Direct Service Worker
                     if (navigator.serviceWorker) {
                         navigator.serviceWorker.ready.then(function(registration) {
                             registration.showNotification(title, {
@@ -2391,7 +2386,6 @@ function sendNotificationFromModal(modalId) {
                 }
             } catch(e) {
                 console.log('⚠️ OneSignal error:', e);
-                // Last fallback: Direct Service Worker
                 if (navigator.serviceWorker) {
                     navigator.serviceWorker.ready.then(function(registration) {
                         registration.showNotification(title, {
@@ -2408,7 +2402,6 @@ function sendNotificationFromModal(modalId) {
             }
         } else {
             console.log('❌ OneSignal not loaded');
-            // Last fallback: Direct Service Worker
             if (navigator.serviceWorker) {
                 navigator.serviceWorker.ready.then(function(registration) {
                     registration.showNotification(title, {
@@ -2426,7 +2419,7 @@ function sendNotificationFromModal(modalId) {
     }
     
     // ============================================================
-    // ✅ SAVE TO SUPABASE (BACKGROUND)
+    // SAVE TO SUPABASE
     // ============================================================
     const supabase = getSupabaseClient();
     if (supabase && navigator.onLine) {
