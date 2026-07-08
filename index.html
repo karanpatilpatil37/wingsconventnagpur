@@ -7755,7 +7755,6 @@ async function login() {
                 }
             } catch(supabaseError) {
                 console.warn('⚠️ Supabase fetch error:', supabaseError);
-                // Fallback to cache
             }
         }
         
@@ -7783,7 +7782,6 @@ async function login() {
                 if (typeof openModule === 'function') {
                     openModule(22);
                 } else {
-                    console.warn('⚠️ openModule not available, showing dashboard directly');
                     document.getElementById('dashboardView').style.display = 'block';
                 }
             }, 1500);
@@ -7809,27 +7807,21 @@ async function login() {
             return;
         }
         
-        // ========== 6. 🔥 FIX: GET PHOTO URL PROPERLY ==========
+        // ========== 6. GET PHOTO URL ==========
         let userPhotoUrl = foundUser.photo_url || null;
         
-        // If photo_url is not available, check photo_data
         if (!userPhotoUrl && foundUser.photo_data && foundUser.photo_data.startsWith('data:image')) {
             userPhotoUrl = foundUser.photo_data;
-            console.log('📸 Using photo_data from users table');
         }
         
-        // If still no photo, check in employees table (for teachers/staff)
         if (!userPhotoUrl && window.employees && window.employees.length > 0) {
             for (let emp of window.employees) {
                 if (emp.name === foundUser.name && emp.photo_url) {
                     userPhotoUrl = emp.photo_url;
-                    console.log('📸 Found photo from employees table');
                     break;
                 }
             }
         }
-        
-        console.log('📸 User Photo URL:', userPhotoUrl ? '✅ Yes' : '❌ No');
         
         // ========== 7. SET CURRENT USER ==========
         window.currentUser = {
@@ -7867,65 +7859,48 @@ async function login() {
             await rebuildCacheAfterLogin();
         }
         
-        // ========== 10. 🔥 FIX: UPDATE LOGO AND HEADER ==========
+        // ========== 10. UPDATE LOGO AND HEADER ==========
         document.getElementById('loginScreen').classList.remove('active');
         document.getElementById('mainScreen').classList.add('active');
         
-        // 🔥 CRITICAL: Update logo after login
         if (typeof updateSchoolLogoInHeader === 'function') {
-            console.log('🔄 Updating logo after login...');
             updateSchoolLogoInHeader();
-        } else {
-            console.warn('⚠️ updateSchoolLogoInHeader not available');
         }
         
-        // Update header user name
         const headerUserName = document.getElementById('headerUserName');
         if (headerUserName) {
             headerUserName.innerHTML = window.currentUser.name || 'User';
         }
         
-        // Render dashboard
         if (typeof renderDashboard === 'function') {
             renderDashboard();
         }
         
-        // Start date time
         if (typeof startDateTime === 'function') {
             startDateTime();
         }
         
-        // ========== 🔥🔥🔥 CRITICAL FIX: LOAD NOTIFICATIONS AFTER LOGIN ==========
+        // ========== LOAD NOTIFICATIONS AFTER LOGIN ==========
         console.log('🔔 Loading notifications after login...');
         if (typeof loadNotificationsFromSupabase === 'function') {
             await loadNotificationsFromSupabase();
-            console.log('✅ Notifications loaded, updating bell...');
             if (typeof updateNotificationBell === 'function') {
                 updateNotificationBell();
-                console.log('✅ Bell updated with count:', notificationUnreadCount);
-            }
-        } else {
-            console.warn('⚠️ loadNotificationsFromSupabase function not available!');
-            // Fallback: Try to load from cache
-            const cached = localStorage.getItem('cache_notifications');
-            if (cached) {
-                try {
-                    window.notifications = JSON.parse(cached);
-                    if (typeof updateNotificationBell === 'function') {
-                        updateNotificationBell();
-                    }
-                } catch(e) {
-                    console.error('Cache parse error:', e);
-                }
             }
         }
         
         hideLoader();
         showNotification(`✅ Welcome ${window.currentUser.name}!`, 'success');
         
-        // ========== 🔥🔥🔥 NEW: REQUEST NOTIFICATION PERMISSION AFTER LOGIN ==========
+        // ========== 🔥🔥🔥 START NOTIFICATION LISTENER FOR ALL USERS ==========
         setTimeout(function() {
+            // Request permission first
             requestNotificationPermissionAfterLogin();
+            
+            // Then start listener
+            setTimeout(function() {
+                startNotificationListener();
+            }, 1000);
         }, 1500);
         
         // ========== 11. PROCESS PENDING QUEUE ==========
@@ -7933,7 +7908,6 @@ async function login() {
             if (navigator.onLine && supabaseClient && typeof processPendingQueue === 'function') {
                 processPendingQueue();
             }
-            // ========== 🔥 Auto-refresh bell after 2 seconds ==========
             setTimeout(() => {
                 if (typeof loadNotificationsFromSupabase === 'function') {
                     loadNotificationsFromSupabase().then(function() {
@@ -7951,73 +7925,6 @@ async function login() {
         showNotification('❌ Login failed! Please try again.', 'error');
     }
 }
-
-// ========== 🔥🔥🔥 NEW: REQUEST NOTIFICATION PERMISSION FUNCTION ==========
-function requestNotificationPermissionAfterLogin() {
-    console.log('🔔 requestNotificationPermissionAfterLogin called...');
-    console.log('👤 Current User:', currentUser?.name, 'Role:', currentUser?.role);
-    
-    if (!('Notification' in window)) {
-        console.log('❌ Notification API not supported in this browser');
-        return;
-    }
-    
-    if (Notification.permission === 'granted') {
-        console.log('✅ Notification permission already granted for:', currentUser?.name);
-        // Show a welcome notification
-        try {
-            new Notification('🔔 Welcome ' + currentUser?.name + '!', {
-                body: 'Notifications are enabled. You will receive pop-ups.',
-                icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
-            });
-            console.log('✅ Welcome notification shown!');
-        } catch(e) {
-            console.log('❌ Welcome notification error:', e);
-        }
-        return;
-    }
-    
-    if (Notification.permission === 'denied') {
-        console.log('❌ Notification permission denied for:', currentUser?.name);
-        showNotification('⚠️ Please allow notifications from browser settings to receive pop-ups.', 'warning');
-        
-        // Show browser notification settings link for Firefox
-        if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
-            showNotification('🔔 Firefox users: Click 🔒 lock icon → Permissions → Notifications → Allow', 'info');
-        }
-        return;
-    }
-    
-    // Permission is 'default' - request it
-    console.log('📌 Requesting notification permission for:', currentUser?.name);
-    
-    Notification.requestPermission().then(function(permission) {
-        if (permission === 'granted') {
-            console.log('✅ Notification permission granted for:', currentUser?.name);
-            showNotification('🔔 Notifications enabled! You will now receive pop-ups.', 'success');
-            
-            // Show a welcome notification
-            try {
-                new Notification('🔔 Welcome ' + currentUser?.name + '!', {
-                    body: 'Notifications are now enabled.',
-                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
-                });
-                console.log('✅ Welcome notification shown after permission!');
-            } catch(e) {
-                console.log('❌ Welcome notification error:', e);
-            }
-        } else {
-            console.log('❌ Notification permission denied for:', currentUser?.name);
-            showNotification('⚠️ Please allow notifications from browser settings to receive pop-ups.', 'warning');
-            
-            // Show browser notification settings link for Firefox
-            if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
-                showNotification('🔔 Firefox users: Click 🔒 lock icon → Permissions → Notifications → Allow', 'info');
-            }
-        }
-    });
-}
-
 // ======================= LOGOUT FUNCTION =======================
 function logout() {
     window.currentUser = null;
@@ -8029,7 +7936,171 @@ function logout() {
     document.getElementById('password').value = '';
     showNotification('Logged out successfully', 'info');
 }
+// ======================= PART 3J ENDS HERE =======================
+// ======================= 🔥🔥🔥 NOTIFICATION PERMISSION & LISTENER (ALL USERS) =======================
 
+// ===== 1. REQUEST PERMISSION =====
+function requestNotificationPermissionAfterLogin() {
+    console.log('🔔 requestNotificationPermissionAfterLogin called...');
+    console.log('👤 Current User:', currentUser?.name, 'Role:', currentUser?.role);
+    
+    if (!('Notification' in window)) {
+        console.log('❌ Notification API not supported');
+        return;
+    }
+    
+    if (Notification.permission === 'granted') {
+        console.log('✅ Notification permission already granted for:', currentUser?.name);
+        try {
+            new Notification('🔔 Welcome ' + currentUser?.name + '!', {
+                body: 'Notifications are enabled. You will receive pop-ups.',
+                icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+            });
+            console.log('✅ Welcome notification shown for:', currentUser?.name);
+        } catch(e) {
+            console.log('❌ Welcome notification error:', e);
+        }
+        return;
+    }
+    
+    if (Notification.permission === 'denied') {
+        console.log('❌ Notification permission denied for:', currentUser?.name);
+        showNotification('⚠️ Please allow notifications from browser settings to receive pop-ups.', 'warning');
+        if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+            showNotification('🔔 Firefox: Click 🔒 lock icon → Permissions → Notifications → Allow', 'info');
+        } else if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+            showNotification('🔔 Chrome: Click 🔒 lock icon → Notifications → Allow', 'info');
+        }
+        return;
+    }
+    
+    console.log('📌 Requesting notification permission for:', currentUser?.name);
+    Notification.requestPermission().then(function(permission) {
+        if (permission === 'granted') {
+            console.log('✅ Notification permission granted for:', currentUser?.name);
+            showNotification('🔔 Notifications enabled! You will now receive pop-ups.', 'success');
+            try {
+                new Notification('🔔 Welcome ' + currentUser?.name + '!', {
+                    body: 'Notifications are now enabled.',
+                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                });
+                console.log('✅ Welcome notification shown after permission for:', currentUser?.name);
+            } catch(e) {
+                console.log('❌ Welcome notification error:', e);
+            }
+        } else {
+            console.log('❌ Notification permission denied for:', currentUser?.name);
+            showNotification('⚠️ Please allow notifications from browser settings to receive pop-ups.', 'warning');
+            if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+                showNotification('🔔 Firefox: Click 🔒 lock icon → Permissions → Notifications → Allow', 'info');
+            } else if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+                showNotification('🔔 Chrome: Click 🔒 lock icon → Notifications → Allow', 'info');
+            }
+        }
+    });
+}
+
+// ===== 2. START LISTENER =====
+function startNotificationListener() {
+    console.log('🔔 Starting notification listener for:', currentUser?.name, 'Role:', currentUser?.role);
+    
+    const listenerInterval = setInterval(function() {
+        if (!currentUser) {
+            console.log('🛑 No user logged in, stopping listener');
+            clearInterval(listenerInterval);
+            return;
+        }
+        
+        loadNotificationsFromSupabase().then(function() {
+            const userNotifications = getUserNotifications();
+            const unreadNotifications = userNotifications.filter(n => !n.read);
+            
+            if (unreadNotifications.length > 0) {
+                console.log('📊 Found', unreadNotifications.length, 'unread notifications for:', currentUser?.name);
+                
+                for (let n of unreadNotifications) {
+                    const notifKey = 'notif_shown_' + n.id + '_' + currentUser?.id;
+                    if (localStorage.getItem(notifKey) === 'true') {
+                        continue;
+                    }
+                    
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        try {
+                            const notif = new Notification('🔔 ' + n.title, {
+                                body: n.message,
+                                icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                            });
+                            console.log('✅ Pop-up shown to:', currentUser?.name, 'for:', n.title);
+                            localStorage.setItem(notifKey, 'true');
+                            setTimeout(function() {
+                                localStorage.removeItem(notifKey);
+                            }, 3600000);
+                            notif.onclick = function() {
+                                window.focus();
+                                if (typeof openModule === 'function') {
+                                    openModule(19);
+                                }
+                            };
+                        } catch(e) {
+                            console.log('❌ Pop-up error for:', currentUser?.name, e);
+                        }
+                    }
+                }
+                updateNotificationBell();
+            }
+        });
+    }, 10000);
+    
+    console.log('✅ Notification listener started for:', currentUser?.name);
+}
+
+// ===== 3. VISIBILITY CHANGE LISTENER =====
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && currentUser) {
+        console.log('👁️ Page focused - Checking notifications for:', currentUser?.name);
+        
+        loadNotificationsFromSupabase().then(function() {
+            const userNotifications = getUserNotifications();
+            const unreadNotifications = userNotifications.filter(n => !n.read);
+            
+            if (unreadNotifications.length > 0) {
+                console.log('📊 Found', unreadNotifications.length, 'unread notifications on focus for:', currentUser?.name);
+                
+                for (let n of unreadNotifications) {
+                    const notifKey = 'notif_shown_' + n.id + '_' + currentUser?.id;
+                    if (localStorage.getItem(notifKey) === 'true') continue;
+                    
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        try {
+                            const notif = new Notification('🔔 ' + n.title, {
+                                body: n.message,
+                                icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                            });
+                            console.log('✅ Pop-up shown on focus for:', currentUser?.name, 'for:', n.title);
+                            localStorage.setItem(notifKey, 'true');
+                            setTimeout(function() {
+                                localStorage.removeItem(notifKey);
+                            }, 3600000);
+                            notif.onclick = function() {
+                                window.focus();
+                                if (typeof openModule === 'function') {
+                                    openModule(19);
+                                }
+                            };
+                        } catch(e) {
+                            console.log('❌ Pop-up error on focus:', e);
+                        }
+                    }
+                }
+                updateNotificationBell();
+            }
+        });
+    }
+});
+
+// ===== 4. EXPOSE FUNCTIONS =====
+window.requestNotificationPermissionAfterLogin = requestNotificationPermissionAfterLogin;
+window.startNotificationListener = startNotificationListener;
 // ======================= PART 3J ENDS HERE =======================
 // ======================= PART 3K: MODULES, DASHBOARD, MODULE LOADERS =======================
 // ======================= MODULES ARRAY =======================
