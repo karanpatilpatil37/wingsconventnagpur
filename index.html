@@ -7726,7 +7726,6 @@ async function checkIfUsersExist() {
 }
 
 // ======================= PART 3J LOGIN FUNCTION (FIXED - WITH NOTIFICATION BELL) =======================
-
 async function login() {
     let loginInput = document.getElementById('loginEmailMobile').value.trim();
     let password = document.getElementById('password').value.trim();
@@ -7924,6 +7923,11 @@ async function login() {
         hideLoader();
         showNotification(`✅ Welcome ${window.currentUser.name}!`, 'success');
         
+        // ========== 🔥🔥🔥 NEW: REQUEST NOTIFICATION PERMISSION AFTER LOGIN ==========
+        setTimeout(function() {
+            requestNotificationPermissionAfterLogin();
+        }, 1500);
+        
         // ========== 11. PROCESS PENDING QUEUE ==========
         setTimeout(() => {
             if (navigator.onLine && supabaseClient && typeof processPendingQueue === 'function') {
@@ -7946,6 +7950,72 @@ async function login() {
         hideLoader();
         showNotification('❌ Login failed! Please try again.', 'error');
     }
+}
+
+// ========== 🔥🔥🔥 NEW: REQUEST NOTIFICATION PERMISSION FUNCTION ==========
+function requestNotificationPermissionAfterLogin() {
+    console.log('🔔 requestNotificationPermissionAfterLogin called...');
+    console.log('👤 Current User:', currentUser?.name, 'Role:', currentUser?.role);
+    
+    if (!('Notification' in window)) {
+        console.log('❌ Notification API not supported in this browser');
+        return;
+    }
+    
+    if (Notification.permission === 'granted') {
+        console.log('✅ Notification permission already granted for:', currentUser?.name);
+        // Show a welcome notification
+        try {
+            new Notification('🔔 Welcome ' + currentUser?.name + '!', {
+                body: 'Notifications are enabled. You will receive pop-ups.',
+                icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+            });
+            console.log('✅ Welcome notification shown!');
+        } catch(e) {
+            console.log('❌ Welcome notification error:', e);
+        }
+        return;
+    }
+    
+    if (Notification.permission === 'denied') {
+        console.log('❌ Notification permission denied for:', currentUser?.name);
+        showNotification('⚠️ Please allow notifications from browser settings to receive pop-ups.', 'warning');
+        
+        // Show browser notification settings link for Firefox
+        if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+            showNotification('🔔 Firefox users: Click 🔒 lock icon → Permissions → Notifications → Allow', 'info');
+        }
+        return;
+    }
+    
+    // Permission is 'default' - request it
+    console.log('📌 Requesting notification permission for:', currentUser?.name);
+    
+    Notification.requestPermission().then(function(permission) {
+        if (permission === 'granted') {
+            console.log('✅ Notification permission granted for:', currentUser?.name);
+            showNotification('🔔 Notifications enabled! You will now receive pop-ups.', 'success');
+            
+            // Show a welcome notification
+            try {
+                new Notification('🔔 Welcome ' + currentUser?.name + '!', {
+                    body: 'Notifications are now enabled.',
+                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                });
+                console.log('✅ Welcome notification shown after permission!');
+            } catch(e) {
+                console.log('❌ Welcome notification error:', e);
+            }
+        } else {
+            console.log('❌ Notification permission denied for:', currentUser?.name);
+            showNotification('⚠️ Please allow notifications from browser settings to receive pop-ups.', 'warning');
+            
+            // Show browser notification settings link for Firefox
+            if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+                showNotification('🔔 Firefox users: Click 🔒 lock icon → Permissions → Notifications → Allow', 'info');
+            }
+        }
+    });
 }
 
 // ======================= LOGOUT FUNCTION =======================
