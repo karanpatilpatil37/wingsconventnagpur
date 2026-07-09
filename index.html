@@ -1003,7 +1003,7 @@ console.log('   ✅ Cropper.js');
 console.log('   ✅ html2pdf.js');
 console.log('   ✅ Supabase JS');
 
-// ======================= 🔔 NOTIFICATION BELL - COMPLETE UNIVERSAL =======================
+// ======================= 🔔 NOTIFICATION BELL - PURE SUPABASE =======================
 // ======================= GLOBAL VARIABLES =======================
 let notificationUnreadCount = 0;
 let isBellOpen = false;
@@ -1089,6 +1089,7 @@ async function loadNotificationsFromSupabase() {
                     targetRole: notif.target_role || 'all',
                     targetClass: notif.target_class_id || null,
                     targetUser: notif.target_user_id || null,
+                    targetUserName: notif.target_user_name || null,
                     category: notif.category || 'General',
                     priority: notif.priority || 'Normal',
                     expiryDate: notif.expiry_date || null,
@@ -1168,17 +1169,32 @@ function getUserNotifications() {
                 category: n.category || 'General',
                 priority: n.priority || 'Normal',
                 senderName: n.senderName || 'System',
-                targetRole: n.targetRole || 'all'
+                targetRole: n.targetRole || 'all',
+                targetUserName: n.targetUserName || null
             });
         } else {
             let show = false;
             const targetRole = n.targetRole || 'all';
+            const targetUser = n.targetUser || null;
+            
             if (targetRole === 'all') show = true;
             else if (targetRole === currentUser.role) show = true;
-            else if (currentUser.role === 'student' && targetRole === 'student') show = true;
+            else if (currentUser.role === 'student' && targetRole === 'student') {
+                if (!targetUser || targetUser === currentUser.id || targetUser === currentUser.name) {
+                    show = true;
+                }
+            }
             else if (currentUser.role === 'teacher' && targetRole === 'teacher') show = true;
             else if (currentUser.role === 'cashier' && targetRole === 'cashier') show = true;
             else if (currentUser.role === 'accountant' && targetRole === 'accountant') show = true;
+            
+            // Specific user check
+            if (show && targetUser && targetUser !== currentUser.id && targetUser !== currentUser.name) {
+                show = false;
+            }
+            if (targetUser === currentUser.id || targetUser === currentUser.name) {
+                show = true;
+            }
             
             if (show) {
                 userNotifs.push({
@@ -1191,7 +1207,8 @@ function getUserNotifications() {
                     category: n.category || 'General',
                     priority: n.priority || 'Normal',
                     senderName: n.senderName || 'System',
-                    targetRole: n.targetRole || 'all'
+                    targetRole: n.targetRole || 'all',
+                    targetUserName: n.targetUserName || null
                 });
             }
         }
@@ -1307,7 +1324,7 @@ function loadBellNotifications() {
     if (userNotifications.length > 10) {
         html += `
             <div style="padding:8px 16px; text-align:center;">
-                <button onclick="closeNotificationDropdown(); if(typeof openModule === 'function') openModule(19);" style="background:none; border:none; color:#2563eb; font-size:12px; cursor:pointer; font-weight:500;">
+                <button onclick="closeNotificationDropdown(); openNotificationsModuleDirect();" style="background:none; border:none; color:#2563eb; font-size:12px; cursor:pointer; font-weight:500;">
                     View all ${userNotifications.length} notifications
                 </button>
             </div>
@@ -1383,18 +1400,15 @@ function markAllNotificationsRead() {
     showToast(`✅ ${unread.length} marked as read`, 'success');
 }
 
-// ======================= ✅ UNIVERSAL NOTIFICATION FUNCTION (ANDROID + BROWSER) =======================
-function sendNotification(title, message) {
-    console.log('📤 Sending notification:', title);
-    console.log('📱 Platform:', isAndroidApp() ? 'Android App' : 'Web Browser');
+// ======================= ✅ SEND NOTIFICATION DIRECT (UNIVERSAL) =======================
+function sendNotificationDirect(title, message) {
+    console.log('📤 sendNotificationDirect called:', title);
     
     // ✅ 1. ANDROID APP (APK) KE LIYE
     if (window.Android) {
         try {
             window.Android.showNotification(title, message);
             console.log('✅ Android Native Notification sent!');
-            
-            // ✅ Android me extra vibration
             if (window.Android.vibrate) {
                 window.Android.vibrate(200);
             }
@@ -1404,7 +1418,7 @@ function sendNotification(title, message) {
         }
     }
     
-    // ✅ 2. WEB BROWSER KE LIYE (Chrome, Firefox, Edge, Safari)
+    // ✅ 2. WEB BROWSER KE LIYE
     if ('Notification' in window) {
         if (Notification.permission === 'granted') {
             try {
@@ -1416,94 +1430,78 @@ function sendNotification(title, message) {
                     requireInteraction: true,
                     tag: 'wings-notification-' + Date.now()
                 });
-                
-                // ✅ Click event for web notifications
                 notif.onclick = function() {
                     window.focus();
                     this.close();
-                    if (typeof openModule === 'function') {
-                        openModule(19); // Open notifications module
+                    if (typeof loadNotificationsModule === 'function') {
+                        loadNotificationsModule();
+                    } else {
+                        openNotificationsModuleDirect();
                     }
                 };
-                
                 console.log('✅ Browser Notification sent!');
                 return true;
             } catch(e) {
                 console.log('❌ Browser notification error:', e);
             }
         } else if (Notification.permission === 'default') {
-            // ✅ Permission nahi hai toh request karein
             Notification.requestPermission().then(function(perm) {
                 if (perm === 'granted') {
-                    sendNotification(title, message);
+                    sendNotificationDirect(title, message);
                 }
             });
         } else {
             console.log('❌ Notification permission denied');
-            // ✅ Show "Enable Notification" button
-            showEnableNotificationButton();
         }
     }
-    
     return false;
 }
 
 // ======================= ✅ DETECT ANDROID APP =======================
 function isAndroidApp() {
-    // Method 1: Check for Android interface
     if (window.Android) return true;
-    
-    // Method 2: Check user agent
     const ua = navigator.userAgent.toLowerCase();
     if (ua.includes('android') && !ua.includes('chrome')) return true;
-    
-    // Method 3: Check if running in WebView
     if (window.navigator.standalone) return false;
     if (window.matchMedia('(display-mode: standalone)').matches) return false;
-    
     return false;
 }
 
-// ======================= ✅ REQUEST PERMISSION (UNIVERSAL) =======================
+// ======================= ✅ REQUEST PERMISSION =======================
 function requestNotificationPermission() {
     console.log('🔔 Requesting notification permission...');
     
-    // ✅ ANDROID APP: Permission already requested at app level
     if (window.Android) {
         try {
-            window.Android.showToast('📱 Notifications enabled in app!');
-            // Test notification
-            sendNotification('🔔 Notifications Enabled', 'You will receive notifications in this app!');
+            if (window.Android.showToast) {
+                window.Android.showToast('📱 Notifications enabled in app!');
+            }
+            sendNotificationDirect('🔔 Notifications Enabled', 'You will receive notifications in this app!');
             return;
         } catch(e) {
             console.log('Android toast error:', e);
         }
     }
     
-    // ✅ WEB BROWSER: Request permission
     if ('Notification' in window) {
         if (Notification.permission === 'granted') {
             showToast('✅ Notifications already enabled!', 'success');
-            sendNotification('🔔 Notifications Enabled', 'You will receive notifications!');
+            sendNotificationDirect('🔔 Notifications Enabled', 'You will receive notifications!');
             return;
         }
-        
         if (Notification.permission === 'denied') {
             showToast('⚠️ Please enable notifications from browser settings', 'warning');
-            // Browser settings link
             if (navigator.userAgent.toLowerCase().includes('chrome')) {
                 showToast('🔧 Go to: chrome://settings/content/notifications', 'info');
             }
             return;
         }
-        
         Notification.requestPermission().then(function(permission) {
             if (permission === 'granted') {
                 showToast('🔔 Notifications enabled!', 'success');
-                sendNotification('🔔 Welcome!', 'You will now receive real-time notifications.');
+                sendNotificationDirect('🔔 Welcome!', 'You will now receive real-time notifications.');
             } else {
                 showToast('⚠️ Please allow notifications', 'warning');
-                showEnableNotificationButton();
             }
         });
     } else {
@@ -1513,7 +1511,6 @@ function requestNotificationPermission() {
 
 // ======================= ✅ SHOW ENABLE NOTIFICATION BUTTON =======================
 function showEnableNotificationButton() {
-    // Check if already exists
     if (document.getElementById('enableNotifBtn')) return;
     
     const headerRight = document.querySelector('.header-right');
@@ -1542,11 +1539,10 @@ function showEnableNotificationButton() {
     headerRight.prepend(btn);
 }
 
-// ======================= ✅ ADD NOTIFICATION (CALLS sendNotification) =======================
+// ======================= ✅ ADD NOTIFICATION =======================
 function addNotification(title, message, category = 'General', priority = 'Normal') {
     console.log('📝 addNotification called:', title);
     
-    // Ensure window.notifications exists
     if (!window.notifications) {
         window.notifications = [];
         console.log('✅ window.notifications initialized');
@@ -1582,8 +1578,8 @@ function addNotification(title, message, category = 'General', priority = 'Norma
     updateNotificationBell();
     showToast('🔔 ' + title, 'success');
     
-    // ✅ SEND NOTIFICATION (ANDROID + BROWSER)
-    sendNotification(title, message);
+    // ✅ SEND NOTIFICATION
+    sendNotificationDirect(title, message);
     
     // ✅ SAVE TO SUPABASE
     const supabase = getSupabaseClient();
@@ -1624,89 +1620,6 @@ function addNotification(title, message, category = 'General', priority = 'Norma
     }
 }
 
-// ======================= ✅ SEND NOTIFICATION FROM MODAL =======================
-function sendNotificationFromModal(modalId) {
-    console.log('📤 sendNotificationFromModal called...');
-    
-    var title = document.getElementById('notifTitle_' + modalId)?.value;
-    var message = document.getElementById('notifMessage_' + modalId)?.value;
-    var target = document.getElementById('notifTarget_' + modalId)?.value || 'all';
-    var priority = document.getElementById('notifPriority_' + modalId)?.value || 'Normal';
-    var category = document.getElementById('notifCategory_' + modalId)?.value || 'General';
-    
-    if (!title || !message) {
-        showToast('⚠️ Title and message are required', 'error');
-        return;
-    }
-    
-    // Save to notifications array
-    if (!window.notifications) {
-        window.notifications = [];
-    }
-    
-    var newNotif = {
-        id: 'NTF' + Date.now(),
-        title: title,
-        message: message,
-        senderRole: currentUser.role,
-        senderId: currentUser.id,
-        senderName: currentUser.name,
-        targetRole: target,
-        category: category,
-        priority: priority,
-        read: false,
-        date: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString()
-    };
-    
-    window.notifications.unshift(newNotif);
-    localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
-    updateNotificationBell();
-    
-    // Update UI
-    if (isBellOpen) {
-        loadBellNotifications();
-    }
-    var moduleContent = document.getElementById('moduleContent');
-    if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
-        loadNotificationsModule();
-    }
-    
-    // ✅ SEND NOTIFICATION (ANDROID + BROWSER)
-    sendNotification(title, message);
-    
-    // ✅ SAVE TO SUPABASE
-    var supabase = getSupabaseClient();
-    if (supabase && navigator.onLine) {
-        var dbData = {
-            id: newNotif.id,
-            title: newNotif.title,
-            message: newNotif.message,
-            sender_role: newNotif.senderRole,
-            sender_id: newNotif.senderId,
-            sender_name: newNotif.senderName,
-            target_role: newNotif.targetRole,
-            category: newNotif.category,
-            priority: newNotif.priority,
-            date: newNotif.date,
-            created_at: newNotif.createdAt,
-            updated_at: new Date().toISOString()
-        };
-        
-        supabase.from('notifications').upsert(dbData, { onConflict: 'id' })
-            .then(function(result) {
-                if (result.error) {
-                    console.error('Save error:', result.error);
-                } else {
-                    console.log('✅ Saved to Supabase');
-                }
-            });
-    }
-    
-    closeNotifModal(modalId);
-    showToast('✅ Notification "' + title + '" sent!', 'success');
-}
-
 // ======================= HELPER FUNCTIONS =======================
 function escapeHtml(str) {
     if (!str) return '';
@@ -1734,10 +1647,129 @@ function showToast(msg, type) {
     if (typeof Swal !== 'undefined') {
         Swal.fire({ toast: true, position: 'top-end', icon: type || 'success', title: msg, showConfirmButton: false, timer: 3000 });
     } else {
+        console.log(`[${type}] ${msg}`);
         alert(msg);
     }
 }
 
+// ======================= 🔥 OPEN NOTIFICATIONS MODULE DIRECT =======================
+function openNotificationsModuleDirect() {
+    console.log('📋 openNotificationsModuleDirect called...');
+    
+    // Switch to module view
+    document.getElementById('dashboardView').style.display = 'none';
+    document.getElementById('moduleView').style.display = 'block';
+    document.getElementById('moduleTitle').textContent = 'Notifications';
+    
+    // Show loading
+    document.getElementById('moduleContent').innerHTML = `
+        <div style="text-align:center; padding:60px;">
+            <i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--primary);"></i>
+            <h3 style="margin-top:20px;">Loading Notifications...</h3>
+            <p style="color:var(--text-secondary);">Please wait...</p>
+        </div>
+    `;
+    
+    // Try to load with retry
+    function tryLoad(attempt) {
+        attempt = attempt || 0;
+        if (typeof loadNotificationsModule === 'function') {
+            loadNotificationsModule();
+        } else if (typeof window.loadNotificationsModule === 'function') {
+            window.loadNotificationsModule();
+        } else if (attempt < 10) {
+            setTimeout(function() { tryLoad(attempt + 1); }, 500);
+        } else {
+            document.getElementById('moduleContent').innerHTML = `
+                <div class="profile-card" style="text-align:center; padding:40px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:48px; color:#f59e0b;"></i>
+                    <h3>⚠️ Module Not Loaded</h3>
+                    <p>Please refresh the page.</p>
+                    <button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Refresh</button>
+                </div>
+            `;
+        }
+    }
+    tryLoad(0);
+}
+
+// ======================= CREATE NOTIFICATION BELL =======================
+function createNotificationBell() {
+    console.log('🔔 Creating notification bell...');
+    
+    if (document.getElementById('notificationBellContainer')) {
+        updateNotificationBell();
+        return;
+    }
+    
+    const bellContainer = document.createElement('div');
+    bellContainer.id = 'notificationBellContainer';
+    
+    bellContainer.innerHTML = `
+        <div id="notificationBellBtn">
+            <i class="fas fa-bell" id="notificationBellIcon"></i>
+            <span id="notificationBadge">0</span>
+        </div>
+        <div id="notificationDropdown">
+            <div style="padding:8px 16px 12px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center;">
+                <h4 style="margin:0; font-size:14px; font-weight:600;"><i class="fas fa-bell"></i> Notifications</h4>
+                <div style="display:flex; gap:8px;">
+                    <button id="markAllReadBtn" style="background:none; border:none; color:#2563eb; font-size:11px; cursor:pointer; font-weight:500;">Mark all read</button>
+                    <button id="viewAllNotifBtn" style="background:none; border:none; color:#64748b; font-size:11px; cursor:pointer; font-weight:500;">View all</button>
+                </div>
+            </div>
+            <div id="notificationList" style="padding:4px 0;">
+                <div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">
+                    <i class="fas fa-bell-slash" style="font-size:24px;"></i>
+                    <p style="margin:8px 0 0;">No notifications</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const headerRight = document.querySelector('.header-right');
+    if (headerRight) {
+        const userProfile = document.getElementById('userProfile');
+        if (userProfile) {
+            headerRight.insertBefore(bellContainer, userProfile);
+        } else {
+            headerRight.prepend(bellContainer);
+        }
+    }
+    
+    // ========== BELL CLICK ==========
+    document.getElementById('notificationBellBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleNotificationDropdown();
+    });
+    
+    // ========== CLOSE DROPDOWN ON OUTSIDE CLICK ==========
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('notificationDropdown');
+        const bellBtn = document.getElementById('notificationBellBtn');
+        if (dropdown && dropdown.classList.contains('show') && 
+            !dropdown.contains(e.target) && !bellBtn.contains(e.target)) {
+            closeNotificationDropdown();
+        }
+    });
+    
+    // ========== MARK ALL READ ==========
+    document.getElementById('markAllReadBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        markAllNotificationsRead();
+    });
+    
+    // ========== 🔥 VIEW ALL BUTTON - FIXED ==========
+    document.getElementById('viewAllNotifBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        console.log('📋 View All clicked - opening module...');
+        closeNotificationDropdown();
+        openNotificationsModuleDirect();
+    });
+    
+    updateNotificationBell();
+    console.log('✅ Notification bell created');
+}
 // ======================= ATTACH BELL EVENTS =======================
 function attachBellEvents() {
     console.log('🔔 attachBellEvents called...');
@@ -1823,15 +1855,51 @@ function attachBellEvents() {
     
     const viewAllBtn = document.getElementById('viewAllNotifBtn');
     if (viewAllBtn) {
-        viewAllBtn.addEventListener('click', function(e) {
+        // Remove old listeners by cloning
+        const newViewBtn = viewAllBtn.cloneNode(true);
+        viewAllBtn.parentNode.replaceChild(newViewBtn, viewAllBtn);
+        
+        newViewBtn.addEventListener('click', function(e) {
             e.stopPropagation();
+            e.preventDefault();
+            console.log('📋 View All Notifications clicked - FINAL');
+            
             const dropdown = document.getElementById('notificationDropdown');
             if (dropdown) {
                 dropdown.style.display = 'none';
                 dropdown.classList.remove('show');
             }
-            if (typeof openModule === 'function') {
-                openModule(19);
+            
+            // ============================================================
+            // 🔥 DIRECT METHOD
+            // ============================================================
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('moduleView').style.display = 'block';
+            document.getElementById('moduleTitle').textContent = 'Notifications';
+            
+            // 🔥 DIRECT CALL
+            if (typeof loadNotificationsModule === 'function') {
+                console.log('✅ loadNotificationsModule found, calling...');
+                loadNotificationsModule();
+            } else if (typeof window.loadNotificationsModule === 'function') {
+                console.log('✅ window.loadNotificationsModule found, calling...');
+                window.loadNotificationsModule();
+            } else {
+                console.log('⚠️ Function not found, loading fallback...');
+                document.getElementById('moduleContent').innerHTML = `
+                    <div style="text-align:center; padding:40px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size:32px; color:var(--primary);"></i>
+                        <h3>Loading Notifications...</h3>
+                        <button class="btn btn-primary btn-sm" onclick="location.reload()">Refresh</button>
+                    </div>
+                `;
+                setTimeout(function() {
+                    if (typeof loadNotificationsModule === 'function') {
+                        loadNotificationsModule();
+                    } else if (typeof window.loadNotificationsModule === 'function') {
+                        window.loadNotificationsModule();
+                    }
+                }, 500);
             }
         });
     }
@@ -1934,15 +2002,46 @@ async function initNotificationBell() {
     
     const viewAllBtn = document.getElementById('viewAllNotifBtn');
     if (viewAllBtn) {
-        viewAllBtn.addEventListener('click', function(e) {
+        // Remove old listeners by cloning
+        const newViewBtn = viewAllBtn.cloneNode(true);
+        viewAllBtn.parentNode.replaceChild(newViewBtn, viewAllBtn);
+        
+        newViewBtn.addEventListener('click', function(e) {
             e.stopPropagation();
+            e.preventDefault();
+            console.log('📋 View All Notifications clicked - FINAL');
+            
             const dropdown = document.getElementById('notificationDropdown');
             if (dropdown) {
                 dropdown.style.display = 'none';
                 dropdown.classList.remove('show');
             }
-            if (typeof openModule === 'function') {
-                openModule(19);
+            
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('moduleView').style.display = 'block';
+            document.getElementById('moduleTitle').textContent = 'Notifications';
+            
+            if (typeof loadNotificationsModule === 'function') {
+                console.log('✅ loadNotificationsModule found, calling...');
+                loadNotificationsModule();
+            } else if (typeof window.loadNotificationsModule === 'function') {
+                console.log('✅ window.loadNotificationsModule found, calling...');
+                window.loadNotificationsModule();
+            } else {
+                document.getElementById('moduleContent').innerHTML = `
+                    <div style="text-align:center; padding:40px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size:32px; color:var(--primary);"></i>
+                        <h3>Loading Notifications...</h3>
+                        <button class="btn btn-primary btn-sm" onclick="location.reload()">Refresh</button>
+                    </div>
+                `;
+                setTimeout(function() {
+                    if (typeof loadNotificationsModule === 'function') {
+                        loadNotificationsModule();
+                    } else if (typeof window.loadNotificationsModule === 'function') {
+                        window.loadNotificationsModule();
+                    }
+                }, 500);
             }
         });
     }
@@ -1961,784 +2060,7 @@ async function initNotificationBell() {
     console.log('👉 Click the bell icon now to test.');
 }
 
-// ======================= OPEN NOTIFICATION MODULE =======================
-function openNotificationModule() {
-    document.getElementById('dashboardView').style.display = 'none';
-    document.getElementById('moduleView').style.display = 'block';
-    document.getElementById('moduleTitle').textContent = 'Notifications';
-    loadNotificationsModule();
-}
-
-// ======================= LOAD NOTIFICATIONS MODULE =======================
-async function loadNotificationsModule() {
-    console.log('📋 loadNotificationsModule called...');
-    
-    await loadNotificationsFromSupabase();
-    
-    const userNotifications = getUserNotifications();
-    const total = userNotifications.length;
-    const unread = userNotifications.filter(n => !n.read).length;
-    const read = total - unread;
-    
-    let content = `
-        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
-            <div>
-                <span style="background:#10b981; color:white; padding:4px 12px; border-radius:20px; font-size:10px;">
-                    <i class="fas fa-wifi"></i> ${navigator.onLine ? 'Online' : 'Offline'}
-                </span>
-                <span style="margin-left:8px; font-size:12px; color:var(--text-secondary);">
-                    <strong>${window.notifications.length}</strong> Total
-                </span>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-warning btn-sm" onclick="markAllNotificationsRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
-                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()"><i class="fas fa-bell"></i> Send Notification</button>` : ''}
-                <button class="btn btn-success btn-sm" onclick="refreshNotifications()"><i class="fas fa-sync-alt"></i> Refresh</button>
-                <button class="btn btn-info btn-sm" onclick="exportNotificationsCSV()"><i class="fas fa-file-csv"></i> CSV</button>
-            </div>
-        </div>
-        
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;">
-            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
-                <div style="font-size:24px; font-weight:700;">${total}</div>
-                <div style="font-size:12px; color:var(--text-secondary);">Total</div>
-            </div>
-            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
-                <div style="font-size:24px; font-weight:700; color:#f59e0b;">${unread}</div>
-                <div style="font-size:12px; color:var(--text-secondary);">Unread</div>
-            </div>
-            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
-                <div style="font-size:24px; font-weight:700; color:#10b981;">${read}</div>
-                <div style="font-size:12px; color:var(--text-secondary);">Read</div>
-            </div>
-        </div>
-        
-        <div id="notificationListFull"></div>
-    `;
-    
-    document.getElementById('moduleContent').innerHTML = content;
-    renderFullNotificationList(userNotifications);
-    updateNotificationBell();
-}
-
-function renderFullNotificationList(notifications) {
-    const container = document.getElementById('notificationListFull');
-    if (!container) return;
-    
-    if (notifications.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center; padding:60px; background:var(--bg-surface); border-radius:20px;">
-                <i class="fas fa-bell-slash" style="font-size:48px; color:#94a3b8;"></i>
-                <h3 style="margin-top:16px;">No Notifications</h3>
-                <p style="color:var(--text-secondary);">${navigator.onLine ? 'No notifications in Supabase.' : 'Offline - Connect to internet to load data.'}</p>
-                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()" style="margin-top:12px;"><i class="fas fa-bell"></i> Send First Notification</button>` : ''}
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '';
-    for (let n of notifications) {
-        const priorityColor = n.priority === 'Critical' ? '#ef4444' : 
-                            n.priority === 'Urgent' ? '#f97316' : 
-                            n.priority === 'Important' ? '#f59e0b' : '#94a3b8';
-        
-        html += `
-            <div class="data-card" style="margin-bottom:12px; ${!n.read ? 'border-left:3px solid #2563eb;' : ''}">
-                <div style="display:flex; gap:12px; flex-wrap:wrap; padding:12px;">
-                    <div style="width:44px; height:44px; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                        <i class="fas fa-bell" style="color:white; font-size:20px;"></i>
-                    </div>
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                            <h3 style="font-size:15px; margin:0; ${!n.read ? 'color:#2563eb;' : ''}">${escapeHtml(n.title)}</h3>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <span class="badge ${n.read ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 12px; border-radius:20px; background:${n.read ? '#10b981' : '#f59e0b'}; color:white;">${n.read ? 'Read' : 'Unread'}</span>
-                                <span style="font-size:10px; color:${priorityColor};">
-                                    <span class="priority-dot priority-${n.priority ? n.priority.toLowerCase() : 'normal'}"></span>${n.priority || 'Normal'}
-                                </span>
-                            </div>
-                        </div>
-                        <p style="font-size:12px; margin:4px 0 0; color:var(--text-secondary);">${escapeHtml(n.message)}</p>
-                        <div style="display:flex; gap:12px; margin-top:6px; font-size:10px; color:#94a3b8; flex-wrap:wrap;">
-                            <span><i class="far fa-clock"></i> ${formatTimeAgo(n.date)}</span>
-                            ${n.category ? `<span>📁 ${escapeHtml(n.category)}</span>` : ''}
-                            ${n.senderName ? `<span>From: ${escapeHtml(n.senderName)}</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; padding:0 12px 12px 12px;">
-                    <button class="action-chip" onclick="markNotificationRead('${n.id}')">
-                        <i class="fas ${n.read ? 'fa-envelope-open' : 'fa-envelope'}"></i> ${n.read ? 'Mark Unread' : 'Mark Read'}
-                    </button>
-                    ${(currentUser && currentUser.role === 'admin') ? `<button class="action-chip" onclick="deleteNotification('${n.id}')" style="border-color:#dc2626; color:#dc2626;"><i class="fas fa-trash"></i> Delete</button>` : ''}
-                    <button class="action-chip" onclick="shareNotification('${n.id}')" style="border-color:#25D366; color:#25D366;"><i class="fab fa-whatsapp"></i> Share</button>
-                </div>
-            </div>
-        `;
-    }
-    
-    container.innerHTML = html;
-}
-
-// ======================= EXPORT FUNCTIONS =======================
-function exportNotificationsCSV() {
-    let userNotifications = getUserNotifications();
-    if (userNotifications.length === 0) {
-        showToast('No notifications to export!', 'warning');
-        return;
-    }
-    
-    let csv = "ID,Date,Title,Message,Category,Priority,Status,Sender\n";
-    for (let n of userNotifications) {
-        csv += `"${n.id || ''}","${n.date || ''}","${n.title.replace(/,/g, ' ')}","${n.message.replace(/,/g, ' ')}","${n.category || 'General'}","${n.priority || 'Normal'}",${n.read ? 'Read' : 'Unread'},"${n.senderName || 'System'}"\n`;
-    }
-    
-    let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `notifications_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    showToast('✅ CSV exported!', 'success');
-}
-
-function shareNotification(id) {
-    let n = window.notifications.find(notif => notif.id == id);
-    if (n) {
-        let message = `🔔 *${n.title}*\n\n${n.message}\n\n📅 ${new Date(n.date).toLocaleDateString()}\n🏫 Wings Convent School`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-    }
-}
-
-function deleteNotification(id) {
-    Swal.fire({
-        title: 'Delete Notification?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Delete',
-        confirmButtonColor: '#ef4444'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.notifications = window.notifications.filter(n => n.id != id);
-            localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
-            loadNotificationsModule();
-            updateNotificationBell();
-            showToast('✅ Deleted successfully!', 'success');
-        }
-    });
-}
-
-function refreshNotifications() {
-    loadNotificationsFromSupabase().then(function() {
-        loadNotificationsModule();
-        updateNotificationBell();
-        showToast('✅ Refreshed!', 'success');
-    });
-}
-
-// ======================= GENERATE USER OPTIONS FOR SPECIFIC USER =======================
-function generateUserOptions() {
-    let options = '';
-    
-    if (window.users && window.users.length > 0) {
-        for (let user of window.users) {
-            let roleDisplay = user.role_display || user.role || 'user';
-            options += `<option value="${user.id}">${user.name} (${roleDisplay})</option>`;
-        }
-    }
-    
-    if (window.students && window.students.length > 0) {
-        for (let student of window.students) {
-            let exists = false;
-            if (window.users) {
-                for (let user of window.users) {
-                    if (user.name === student.name || user.id === student.id) {
-                        exists = true;
-                        break;
-                    }
-                }
-            }
-            if (!exists) {
-                options += `<option value="${student.id}">${student.name} (Student)</option>`;
-            }
-        }
-    }
-    
-    if (window.employees && window.employees.length > 0) {
-        for (let emp of window.employees) {
-            let exists = false;
-            if (window.users) {
-                for (let user of window.users) {
-                    if (user.name === emp.name || user.id === emp.id) {
-                        exists = true;
-                        break;
-                    }
-                }
-            }
-            if (!exists) {
-                let roleDisplay = emp.designation || emp.role || 'Employee';
-                options += `<option value="${emp.id}">${emp.name} (${roleDisplay})</option>`;
-            }
-        }
-    }
-    
-    return options;
-}
-
-// ======================= TOGGLE SPECIFIC USER SECTION =======================
-function toggleSpecificUserSection(modalId) {
-    const target = document.getElementById(`notifTarget_${modalId}`)?.value;
-    const section = document.getElementById(`specificUserSection_${modalId}`);
-    if (section) {
-        section.style.display = target === 'specific' ? 'block' : 'none';
-    }
-}
-
-// ======================= SHOW SEND NOTIFICATION FORM =======================
-function showSendNotificationForm() {
-    if (!currentUser || typeof currentUser === 'undefined' || !currentUser.role) {
-        showToast('⚠️ Please login first', 'error');
-        return;
-    }
-    
-    const role = currentUser.role;
-    let allowedTargets = [];
-    
-    if (role === 'admin') {
-        allowedTargets = ['all', 'admin', 'teacher', 'student', 'cashier', 'accountant', 'specific'];
-    } else if (role === 'teacher') {
-        allowedTargets = ['all', 'student', 'admin', 'specific'];
-    } else if (role === 'cashier') {
-        allowedTargets = ['all', 'student', 'admin', 'specific'];
-    } else if (role === 'accountant') {
-        allowedTargets = ['all', 'admin', 'teacher', 'cashier', 'specific'];
-    } else {
-        showToast('⛔ You do not have permission to send notifications', 'error');
-        return;
-    }
-    
-    let targetOptions = '';
-    if (allowedTargets.includes('all')) {
-        targetOptions += `<option value="all">📢 All Users</option>`;
-    }
-    if (allowedTargets.includes('admin')) {
-        targetOptions += `<option value="admin">👑 Administrators</option>`;
-    }
-    if (allowedTargets.includes('teacher')) {
-        targetOptions += `<option value="teacher">👩‍🏫 Teachers</option>`;
-    }
-    if (allowedTargets.includes('student')) {
-        targetOptions += `<option value="student">🧑‍🎓 Students</option>`;
-    }
-    if (allowedTargets.includes('cashier')) {
-        targetOptions += `<option value="cashier">💰 Cashiers</option>`;
-    }
-    if (allowedTargets.includes('accountant')) {
-        targetOptions += `<option value="accountant">📊 Accountants</option>`;
-    }
-    if (allowedTargets.includes('specific')) {
-        targetOptions += `<option value="specific">👤 Specific User</option>`;
-    }
-    
-    let modalId = 'notifModal_' + Date.now();
-    let modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.id = modalId;
-    
-    modal.innerHTML = `
-        <div style="background:var(--bg-surface); border-radius:28px; max-width:550px; width:95%; max-height:90vh; overflow-y:auto; padding:0;">
-            <div style="background:linear-gradient(135deg,#2563eb,#1e40af); padding:16px 20px; border-radius:28px 28px 0 0; display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="color:white; margin:0; font-size:18px;"><i class="fas fa-bell"></i> Send Notification</h2>
-                <button onclick="closeNotifModal('${modalId}')" style="background:rgba(255,255,255,0.2); border:none; color:white; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:20px;">&times;</button>
-            </div>
-            <div style="padding:20px;">
-                <div style="margin-bottom:16px;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📌 Title *</label>
-                    <input id="notifTitle_${modalId}" class="form-control" placeholder="Enter notification title">
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📝 Message *</label>
-                    <textarea id="notifMessage_${modalId}" class="form-control" rows="3" placeholder="Enter notification message"></textarea>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-                    <div>
-                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">📁 Category</label>
-                        <select id="notifCategory_${modalId}" class="form-control">
-                            <option value="General">General</option>
-                            <option value="Fees">Fees</option>
-                            <option value="Attendance">Attendance</option>
-                            <option value="Homework">Homework</option>
-                            <option value="Exam">Exam</option>
-                            <option value="Emergency">Emergency</option>
-                            <option value="System">System</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">⚡ Priority</label>
-                        <select id="notifPriority_${modalId}" class="form-control">
-                            <option value="Normal">Normal</option>
-                            <option value="Important">Important</option>
-                            <option value="Urgent">Urgent</option>
-                            <option value="Critical">Critical</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">👥 Send To</label>
-                    <select id="notifTarget_${modalId}" class="form-control" onchange="toggleSpecificUserSection('${modalId}')">
-                        ${targetOptions}
-                    </select>
-                </div>
-                <div id="specificUserSection_${modalId}" style="display:none; margin-bottom:16px;">
-                    <label style="font-weight:600; font-size:13px; display:block; margin-bottom:5px;">👤 Select User</label>
-                    <select id="specificUserSelect_${modalId}" class="form-control">
-                        <option value="">-- Select User --</option>
-                        ${generateUserOptions()}
-                    </select>
-                </div>
-                <div style="background:#f0fdf4; padding:10px; border-radius:12px; margin-top:10px;">
-                    <i class="fas fa-info-circle" style="color:#10b981;"></i>
-                    <span style="font-size:11px; color:#065f46;">
-                        ✅ You are sending as <strong>${currentUser.name}</strong> (${currentUser.role})
-                    </span>
-                </div>
-            </div>
-            <div style="padding:16px 20px; background:var(--bg-body); border-top:1px solid var(--border-light); border-radius:0 0 28px 28px; display:flex; gap:12px; justify-content:flex-end;">
-                <button class="btn btn-danger" onclick="closeNotifModal('${modalId}')">Cancel</button>
-                <button class="btn btn-primary" onclick="sendNotificationFromModal('${modalId}')">
-                    <i class="fas fa-paper-plane"></i> Send Notification
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-// ======================= CLOSE NOTIFICATION MODAL =======================
-function closeNotifModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.remove();
-}
-
-// ======================= ======================= =======================
-// ======================= 📸 CAMERA ACCESS (UNIVERSAL - ANDROID + BROWSER) =======================
-// ======================= ======================= =======================
-
-// ======================= ✅ OPEN CAMERA (ANDROID + BROWSER) =======================
-function openCameraUniversal(callback, aspectRatio = 1, allowGallery = true) {
-    console.log('📸 openCameraUniversal called...');
-    
-    // ✅ 1. ANDROID APP KE LIYE
-    if (window.Android && window.Android.openCamera) {
-        try {
-            window.Android.openCamera(function(imageData) {
-                callback(imageData);
-            });
-            return;
-        } catch(e) {
-            console.log('❌ Android camera error:', e);
-        }
-    }
-    
-    // ✅ 2. BROWSER KE LIYE (Web Camera)
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        openBrowserCamera(callback, aspectRatio);
-        return;
-    }
-    
-    // ✅ 3. FALLBACK: File Input
-    openFilePicker(callback, aspectRatio);
-}
-
-// ======================= ✅ BROWSER CAMERA (WebRTC) =======================
-function openBrowserCamera(callback, aspectRatio = 1) {
-    console.log('📸 Opening browser camera...');
-    
-    const video = document.createElement('video');
-    video.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        object-fit: cover; z-index: 100000; background: #000;
-    `;
-    video.setAttribute('playsinline', '');
-    document.body.appendChild(video);
-    
-    const canvas = document.createElement('canvas');
-    canvas.style.display = 'none';
-    document.body.appendChild(canvas);
-    
-    const controls = document.createElement('div');
-    controls.style.cssText = `
-        position: fixed; bottom: 40px; left: 0; right: 0;
-        display: flex; justify-content: center; gap: 20px;
-        z-index: 100001; padding: 20px;
-        background: linear-gradient(transparent, rgba(0,0,0,0.7));
-    `;
-    
-    // Capture Button
-    const captureBtn = document.createElement('button');
-    captureBtn.innerHTML = '📸 Capture';
-    captureBtn.style.cssText = `
-        background: #2563eb; color: white; border: none;
-        padding: 16px 40px; border-radius: 50px;
-        font-size: 18px; font-weight: bold; cursor: pointer;
-        box-shadow: 0 4px 20px rgba(37,99,235,0.4);
-    `;
-    
-    // Close Button
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '✕ Close';
-    closeBtn.style.cssText = `
-        background: #ef4444; color: white; border: none;
-        padding: 16px 30px; border-radius: 50px;
-        font-size: 16px; font-weight: bold; cursor: pointer;
-    `;
-    
-    controls.appendChild(captureBtn);
-    controls.appendChild(closeBtn);
-    document.body.appendChild(controls);
-    
-    let stream = null;
-    let facingMode = 'environment'; // Back camera by default
-    
-    // Switch Camera Button
-    const switchBtn = document.createElement('button');
-    switchBtn.innerHTML = '🔄 Switch Camera';
-    switchBtn.style.cssText = `
-        background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);
-        padding: 16px 30px; border-radius: 50px;
-        font-size: 16px; font-weight: bold; cursor: pointer;
-    `;
-    controls.insertBefore(switchBtn, closeBtn);
-    
-    function startCamera(facing = 'environment') {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        
-        navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: facing,
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            },
-            audio: false
-        })
-        .then(function(s) {
-            stream = s;
-            video.srcObject = s;
-            video.play();
-        })
-        .catch(function(err) {
-            console.error('Camera error:', err);
-            showToast('❌ Camera access denied! Please allow camera permission.', 'error');
-            closeCameraUI();
-        });
-    }
-    
-    function closeCameraUI() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-        video.remove();
-        canvas.remove();
-        controls.remove();
-        document.body.style.overflow = '';
-    }
-    
-    switchBtn.onclick = function() {
-        facingMode = facingMode === 'environment' ? 'user' : 'environment';
-        startCamera(facingMode);
-        showToast('🔄 Switched camera', 'info');
-    };
-    
-    captureBtn.onclick = function() {
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const imageData = canvas.toDataURL('image/jpeg', 0.9);
-        closeCameraUI();
-        callback(imageData);
-    };
-    
-    closeBtn.onclick = function() {
-        closeCameraUI();
-        showToast('📸 Camera closed', 'info');
-    };
-    
-    // Start camera
-    startCamera('environment');
-    
-    // Keyboard shortcut
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeCameraUI();
-        }
-        if (e.key === 'Enter') {
-            captureBtn.click();
-        }
-    });
-}
-
-// ======================= ✅ FILE PICKER (FALLBACK) =======================
-function openFilePicker(callback, aspectRatio = 1) {
-    console.log('📸 Opening file picker...');
-    
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/jpg,image/png';
-    input.capture = 'environment';
-    
-    input.onchange = function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                const img = new Image();
-                img.onload = function() {
-                    // Crop if aspect ratio is specified
-                    if (aspectRatio) {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        if (width / height > aspectRatio) {
-                            width = height * aspectRatio;
-                        } else {
-                            height = width / aspectRatio;
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        callback(canvas.toDataURL('image/jpeg', 0.9));
-                    } else {
-                        callback(ev.target.result);
-                    }
-                };
-                img.src = ev.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-    
-    input.click();
-}
-
-// ======================= ✅ OPEN CAMERA WITH CROP (UNIVERSAL) =======================
-function openCameraWithCrop(callback, aspectRatio = 1, allowGallery = true) {
-    console.log('📸 openCameraWithCrop called...');
-    
-    openCameraUniversal(function(imageData) {
-        // Show crop modal
-        showCropModal(imageData, callback, aspectRatio);
-    }, aspectRatio, allowGallery);
-}
-
-// ======================= ✅ CROP MODAL =======================
-function showCropModal(imageData, callback, aspectRatio = 1) {
-    console.log('✂️ Showing crop modal...');
-    
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        z-index: 200000; padding: 20px;
-    `;
-    
-    const img = document.createElement('img');
-    img.src = imageData;
-    img.style.cssText = `
-        max-width: 100%; max-height: 60vh; border-radius: 12px;
-        object-fit: contain;
-    `;
-    modal.appendChild(img);
-    
-    const controls = document.createElement('div');
-    controls.style.cssText = `
-        display: flex; gap: 16px; margin-top: 20px; flex-wrap: wrap;
-        justify-content: center;
-    `;
-    
-    const cropBtn = document.createElement('button');
-    cropBtn.innerHTML = '✂️ Crop & Save';
-    cropBtn.style.cssText = `
-        background: #10b981; color: white; border: none;
-        padding: 14px 32px; border-radius: 50px;
-        font-size: 16px; font-weight: bold; cursor: pointer;
-    `;
-    
-    const cancelBtn = document.createElement('button');
-    cancelBtn.innerHTML = '❌ Cancel';
-    cancelBtn.style.cssText = `
-        background: #ef4444; color: white; border: none;
-        padding: 14px 32px; border-radius: 50px;
-        font-size: 16px; font-weight: bold; cursor: pointer;
-    `;
-    
-    controls.appendChild(cropBtn);
-    controls.appendChild(cancelBtn);
-    modal.appendChild(controls);
-    
-    document.body.appendChild(modal);
-    
-    let cropX = 0, cropY = 0, cropW = 200, cropH = 200;
-    let isDragging = false;
-    let startX, startY;
-    
-    // Simple crop selection
-    img.onload = function() {
-        cropW = img.naturalWidth * 0.8;
-        cropH = cropW / aspectRatio;
-        cropX = (img.naturalWidth - cropW) / 2;
-        cropY = (img.naturalHeight - cropH) / 2;
-    };
-    
-    cropBtn.onclick = function() {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const naturalWidth = img.naturalWidth || img.width;
-        const naturalHeight = img.naturalHeight || img.height;
-        
-        const displayWidth = img.clientWidth || 300;
-        const displayHeight = img.clientHeight || 300;
-        const scaleX = naturalWidth / displayWidth;
-        const scaleY = naturalHeight / displayHeight;
-        
-        const finalX = cropX * scaleX;
-        const finalY = cropY * scaleY;
-        const finalW = cropW * scaleX;
-        const finalH = cropH * scaleY;
-        
-        canvas.width = cropW;
-        canvas.height = cropH;
-        ctx.drawImage(img, finalX, finalY, finalW, finalH, 0, 0, cropW, cropH);
-        
-        const croppedData = canvas.toDataURL('image/jpeg', 0.9);
-        modal.remove();
-        callback(croppedData);
-    };
-    
-    cancelBtn.onclick = function() {
-        modal.remove();
-        showToast('❌ Cancelled', 'info');
-    };
-    
-    // Touch/Mouse events for crop selection
-    let cropDiv = document.createElement('div');
-    cropDiv.style.cssText = `
-        position: absolute; border: 2px solid #10b981;
-        cursor: move; background: rgba(16, 185, 129, 0.1);
-        pointer-events: auto;
-    `;
-    modal.appendChild(cropDiv);
-    cropDiv.style.display = 'none';
-    
-    // Auto-crop after image loads
-    setTimeout(function() {
-        const rect = img.getBoundingClientRect();
-        cropDiv.style.left = (rect.left + rect.width * 0.1) + 'px';
-        cropDiv.style.top = (rect.top + rect.height * 0.1) + 'px';
-        cropDiv.style.width = (rect.width * 0.8) + 'px';
-        cropDiv.style.height = (rect.width * 0.8 / aspectRatio) + 'px';
-        cropDiv.style.display = 'block';
-    }, 100);
-}
-
-// ======================= ✅ ANDROID CAMERA PERMISSION CHECK =======================
-function checkAndroidCameraPermission() {
-    if (window.Android && window.Android.checkCameraPermission) {
-        try {
-            return window.Android.checkCameraPermission();
-        } catch(e) {
-            return false;
-        }
-    }
-    return true; // Browser me permission later check
-}
-
-// ======================= ✅ OPEN CAMERA FOR STUDENT PHOTO (UPDATED) =======================
-function openStudentPhotoCapture(callback) {
-    console.log('📸 openStudentPhotoCapture called...');
-    
-    // Show source selection (Camera / Gallery)
-    const sourceModal = document.createElement('div');
-    sourceModal.className = 'modal-overlay';
-    sourceModal.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-        display: flex; align-items: center; justify-content: center;
-        z-index: 100001; padding: 16px;
-    `;
-    
-    sourceModal.innerHTML = `
-        <div style="background: var(--bg-surface); border-radius: 28px;
-            width: 90%; max-width: 350px; padding: 24px; text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            <i class="fas fa-camera" style="font-size: 48px; color: var(--primary);
-                margin-bottom: 15px; display: block;"></i>
-            <h3 style="margin-bottom: 15px; color: #1e293b;">Choose Source</h3>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button id="cameraOptBtn" class="btn btn-primary" style="
-                    width: 100%; padding: 14px; border-radius: 30px;
-                    font-size: 14px; display: flex; align-items: center;
-                    justify-content: center; gap: 8px;
-                ">
-                    <i class="fas fa-camera"></i> 📸 Camera
-                </button>
-                <button id="galleryOptBtn" class="btn btn-secondary" style="
-                    width: 100%; padding: 14px; border-radius: 30px;
-                    font-size: 14px; display: flex; align-items: center;
-                    justify-content: center; gap: 8px;
-                ">
-                    <i class="fas fa-images"></i> 🖼️ Gallery
-                </button>
-            </div>
-            <button id="closeSourceModal" style="
-                margin-top: 15px; background: none; border: none;
-                color: var(--text-secondary); cursor: pointer;
-                padding: 10px; font-size: 14px;
-            ">
-                <i class="fas fa-times"></i> Cancel
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(sourceModal);
-    
-    const closeSourceModal = function() { sourceModal.remove(); };
-    
-    // Camera button
-    document.getElementById('cameraOptBtn').onclick = function() {
-        closeSourceModal();
-        openCameraWithCrop(callback, 1, false);
-    };
-    
-    // Gallery button
-    document.getElementById('galleryOptBtn').onclick = function() {
-        closeSourceModal();
-        openFilePicker(callback, 1);
-    };
-    
-    // Cancel button
-    document.getElementById('closeSourceModal').onclick = closeSourceModal;
-}
-
-// ======================= EXPOSE CAMERA FUNCTIONS GLOBALLY =======================
-window.openCameraUniversal = openCameraUniversal;
-window.openCameraWithCrop = openCameraWithCrop;
-window.openStudentPhotoCapture = openStudentPhotoCapture;
-window.checkAndroidCameraPermission = checkAndroidCameraPermission;
-window.openBrowserCamera = openBrowserCamera;
-window.openFilePicker = openFilePicker;
-
-// ======================= EXPOSE NOTIFICATION FUNCTIONS GLOBALLY =======================
+// ======================= EXPOSE FUNCTIONS =======================
 window.getUserNotifications = getUserNotifications;
 window.updateNotificationBell = updateNotificationBell;
 window.loadBellNotifications = loadBellNotifications;
@@ -2748,34 +2070,20 @@ window.markNotificationReadFromBell = markNotificationReadFromBell;
 window.markNotificationRead = markNotificationRead;
 window.markAllNotificationsRead = markAllNotificationsRead;
 window.initNotificationBell = initNotificationBell;
-window.loadNotificationsModule = loadNotificationsModule;
-window.showSendNotificationForm = showSendNotificationForm;
-window.sendNotificationFromModal = sendNotificationFromModal;
-window.closeNotifModal = closeNotifModal;
-window.exportNotificationsCSV = exportNotificationsCSV;
-window.shareNotification = shareNotification;
-window.deleteNotification = deleteNotification;
-window.refreshNotifications = refreshNotifications;
-window.openNotificationModule = openNotificationModule;
 window.loadNotificationsFromSupabase = loadNotificationsFromSupabase;
-window.generateUserOptions = generateUserOptions;
-window.toggleSpecificUserSection = toggleSpecificUserSection;
 window.addNotification = addNotification;
-window.sendNotification = sendNotification;
+window.createNotificationBell = createNotificationBell;
+window.attachBellEvents = attachBellEvents;
+window.getSupabaseClient = getSupabaseClient;
+window.sendNotificationDirect = sendNotificationDirect;
 window.isAndroidApp = isAndroidApp;
-window.showEnableNotificationButton = showEnableNotificationButton;
 window.requestNotificationPermission = requestNotificationPermission;
+window.openNotificationsModuleDirect = openNotificationsModuleDirect;
+window.showEnableNotificationButton = showEnableNotificationButton;
 
-console.log('✅ 🔔 NOTIFICATION + 📸 CAMERA COMPLETE - UNIVERSAL!');
-console.log('📌 Features:');
-console.log('   ✅ Notification Pop-up (Web + Android APK)');
-console.log('   ✅ Camera Access (Web + Android APK)');
-console.log('   ✅ Crop Function (Web + Android APK)');
-console.log('   ✅ Gallery Upload (Web + Android APK)');
-console.log('   ✅ Bell Icon with Unread Count');
-console.log('   ✅ Auto-Refresh Every 30 Seconds');
+console.log('✅ 🔔 NOTIFICATION BELL COMPLETE - PART 1 FIXED!');
 
-// ======================= 🔔 AUTO REQUEST PERMISSION ON PAGE LOAD =======================
+// ======================= AUTO REQUEST PERMISSION =======================
 (function autoRequestNotificationPermission() {
     console.log('🔔 Auto requesting notification permission...');
     
@@ -2790,31 +2098,7 @@ console.log('   ✅ Auto-Refresh Every 30 Seconds');
             console.log('✅ Notification permission already granted');
         } else {
             console.log('❌ Notification permission blocked');
-            if (typeof showEnableNotificationButton === 'function') {
-                showEnableNotificationButton();
-            }
         }
-    }
-})();
-
-// ======================= 📸 AUTO REQUEST CAMERA PERMISSION ON LOAD =======================
-(function autoRequestCameraPermission() {
-    console.log('📸 Auto checking camera permission...');
-    
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        // Just check, don't request automatically
-        navigator.mediaDevices.enumerateDevices().then(function(devices) {
-            const hasCamera = devices.some(function(d) { return d.kind === 'videoinput'; });
-            if (hasCamera) {
-                console.log('📸 Camera detected!');
-            } else {
-                console.log('📸 No camera found');
-            }
-        }).catch(function() {
-            console.log('📸 Camera permission not checked');
-        });
-    } else {
-        console.log('📸 Camera API not supported');
     }
 })();
 
@@ -36062,8 +35346,7 @@ console.log('📌 Analytics Dashboard with Charts');
 console.log('📌 Export CSV/PDF with School Logo');
 console.log('✅ "Give Feedback" button is working!');
 // ======================= PART 21 ENDS HERE =======================
-// ======================= PART 22: NOTIFICATIONS MODULE (FIXED - SHOW ALL NOTIFICATIONS) =======================
-
+// ======================= PART 22: NOTIFICATIONS MODULE (COMPLETE FIXED) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.notificationsModuleLoaded === 'undefined') {
     window.notificationsModuleLoaded = true;
@@ -36078,6 +35361,9 @@ let notifFilterText = '';
 let notifStatusFilter = 'all';
 let notifCategoryFilter = '';
 let isNotificationsLoading = false;
+let notificationUnreadCount = 0;
+let isBellOpen = false;
+let realtimeSubscription = null;
 
 // ======================= HELPER FUNCTIONS =======================
 function escapeHtml(str) {
@@ -36112,9 +35398,9 @@ function hideLoader() {
     if(loader) loader.style.display = 'none'; 
 }
 
-function showNotification(msg, type) {
+function showToast(msg, type) {
     if (typeof Swal !== 'undefined') {
-        Swal.fire({ toast: true, position: 'top-end', icon: type, title: msg, showConfirmButton: false, timer: 3000 });
+        Swal.fire({ toast: true, position: 'top-end', icon: type || 'success', title: msg, showConfirmButton: false, timer: 3000 });
     } else {
         console.log(`[${type}] ${msg}`);
         alert(msg);
@@ -36143,91 +35429,13 @@ function getSupabaseClientNotifications() {
     return null;
 }
 
-// ======================= 🔥 FIXED: GET USER NOTIFICATIONS (SHOW ALL) =======================
-function getUserNotifications() {
-    let userNotifs = [];
-    if (!currentUser) return [];
-    
-    for (let n of window.notifications) {
-        let show = false;
-        const targetRole = n.targetRole || 'all';
-        const targetUser = n.targetUser || null;
-        
-        // ========== ADMIN: Show ALL notifications ==========
-        if (currentUser.role === 'admin') {
-            show = true;  // ✅ Admin ko sab dikhega
-        }
-        // ========== TEACHER: Show All, Teacher, and their Class ==========
-        else if (currentUser.role === 'teacher') {
-            if (targetRole === 'all' || targetRole === 'teacher') {
-                show = true;
-            } else if (targetRole === 'student' && n.targetClass) {
-                // Teacher ki class ke students ke liye
-                const teacher = window.employees ? window.employees.find(e => e.name === currentUser.name) : null;
-                const myClass = teacher?.classTeacher || '';
-                if (n.targetClass === myClass) {
-                    show = true;
-                }
-            }
-        }
-        // ========== STUDENT: Show All, Student, and their class ==========
-        else if (currentUser.role === 'student') {
-            if (targetRole === 'all' || targetRole === 'student') {
-                if (!targetUser || targetUser === currentUser.name) {
-                    show = true;
-                }
-            } else if (targetRole === 'class' && n.targetClass) {
-                const student = window.students ? window.students.find(s => s.name === currentUser.name) : null;
-                const myClass = student ? `${student.cls} ${student.sec}` : '';
-                if (n.targetClass === myClass) {
-                    show = true;
-                }
-            }
-        }
-        // ========== CASHIER: Show All, Cashier, and Student ==========
-        else if (currentUser.role === 'cashier') {
-            if (targetRole === 'all' || targetRole === 'cashier') {
-                show = true;
-            } else if (targetRole === 'student') {
-                show = true;
-            }
-        }
-        // ========== ACCOUNTANT: Show All, Accountant, Admin, Teacher ==========
-        else if (currentUser.role === 'accountant') {
-            if (targetRole === 'all' || targetRole === 'accountant' || 
-                targetRole === 'admin' || targetRole === 'teacher') {
-                show = true;
-            }
-        }
-        
-        if (show) {
-            userNotifs.push({
-                id: n.id,
-                title: n.title,
-                message: n.message,
-                date: n.date || n.createdAt || new Date().toISOString(),
-                read: n.read || false,
-                icon: 'fa-bell',
-                category: n.category || 'General',
-                priority: n.priority || 'Normal',
-                senderName: n.senderName,
-                attachmentUrl: n.attachmentUrl,
-                targetRole: n.targetRole,
-                targetClass: n.targetClass
-            });
-        }
-    }
-    
-    userNotifs.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return userNotifs;
-}
-
-// ======================= LOAD NOTIFICATIONS FROM SUPABASE =======================
+// ======================= 🔥 LOAD NOTIFICATIONS FROM SUPABASE =======================
 async function loadNotificationsFromSupabase() {
     console.log('📋 loadNotificationsFromSupabase called...');
     
     const supabase = getSupabaseClientNotifications();
     
+    // ✅ OFFLINE: Cache se load
     if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Loading from cache');
         const cached = localStorage.getItem('cache_notifications');
@@ -36245,8 +35453,9 @@ async function loadNotificationsFromSupabase() {
         return false;
     }
     
+    // ✅ ONLINE: Supabase se load
     try {
-        console.log('🔄 Loading from Supabase...');
+        console.log('🔄 Loading from Supabase notifications table...');
         const { data, error } = await supabase
             .from('notifications')
             .select('*')
@@ -36271,6 +35480,7 @@ async function loadNotificationsFromSupabase() {
                     targetRole: notif.target_role || 'all',
                     targetClass: notif.target_class_id || null,
                     targetUser: notif.target_user_id || null,
+                    targetUserName: notif.target_user_name || null,
                     category: notif.category || 'General',
                     priority: notif.priority || 'Normal',
                     expiryDate: notif.expiry_date || null,
@@ -36283,76 +35493,109 @@ async function loadNotificationsFromSupabase() {
                     attachment: notif.attachment_data || null
                 });
             }
+            
             localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
             console.log(`✅ Loaded ${window.notifications.length} notifications from Supabase`);
             return true;
         } else {
+            console.log('📭 No notifications found in Supabase');
+            const cached = localStorage.getItem('cache_notifications');
+            if (cached) {
+                try {
+                    window.notifications = JSON.parse(cached);
+                    console.log(`📦 Loaded ${window.notifications.length} notifications from cache (Supabase empty)`);
+                    return true;
+                } catch(e) {
+                    window.notifications = [];
+                }
+            }
             window.notifications = [];
-            localStorage.removeItem('cache_notifications');
             return false;
         }
     } catch(e) {
-        console.error('❌ Error loading:', e);
+        console.error('❌ Error loading from Supabase:', e);
+        const cached = localStorage.getItem('cache_notifications');
+        if (cached) {
+            try {
+                window.notifications = JSON.parse(cached);
+                console.log(`📦 Loaded ${window.notifications.length} notifications from cache (error fallback)`);
+                return true;
+            } catch(err) {
+                window.notifications = [];
+            }
+        }
         window.notifications = [];
         return false;
     }
 }
 
-// ======================= SAVE NOTIFICATION TO SUPABASE =======================
-async function saveNotificationToSupabase(notificationData) {
-    console.log('📤 saveNotificationToSupabase called for:', notificationData.title);
+// ======================= 🔥 GET USER NOTIFICATIONS =======================
+function getUserNotifications() {
+    let userNotifs = [];
+    if (!currentUser) return [];
     
-    const supabase = getSupabaseClientNotifications();
-    
-    if (!supabase || !navigator.onLine) {
-        console.log('📴 Offline - Saving locally');
-        showNotification('📴 Offline: Saved locally', 'warning');
-        return false;
+    for (let n of window.notifications) {
+        let show = false;
+        const targetRole = n.targetRole || 'all';
+        const targetUser = n.targetUser || null;
+        
+        if (currentUser.role === 'admin') {
+            show = true;
+        }
+        else if (currentUser.role === 'teacher') {
+            if (targetRole === 'all' || targetRole === 'teacher') {
+                show = true;
+            }
+        }
+        else if (currentUser.role === 'student') {
+            if (targetRole === 'all' || targetRole === 'student') {
+                if (!targetUser || targetUser === currentUser.id || targetUser === currentUser.name) {
+                    show = true;
+                }
+            }
+        }
+        else if (currentUser.role === 'cashier') {
+            if (targetRole === 'all' || targetRole === 'cashier') {
+                show = true;
+            }
+        }
+        else if (currentUser.role === 'accountant') {
+            if (targetRole === 'all' || targetRole === 'accountant' || 
+                targetRole === 'admin' || targetRole === 'teacher') {
+                show = true;
+            }
+        }
+        
+        if (show && targetUser && targetUser !== currentUser.id && targetUser !== currentUser.name) {
+            show = false;
+        }
+        if (targetUser === currentUser.id || targetUser === currentUser.name) {
+            show = true;
+        }
+        
+        if (show) {
+            userNotifs.push({
+                id: n.id,
+                title: n.title,
+                message: n.message,
+                date: n.date || n.createdAt || new Date().toISOString(),
+                read: n.read || false,
+                icon: 'fa-bell',
+                category: n.category || 'General',
+                priority: n.priority || 'Normal',
+                senderName: n.senderName,
+                attachmentUrl: n.attachmentUrl,
+                targetRole: n.targetRole,
+                targetUserName: n.targetUserName || null
+            });
+        }
     }
     
-    try {
-        const dbData = {
-            id: notificationData.id || 'N' + Date.now(),
-            title: notificationData.title || 'Notification',
-            message: notificationData.message || '',
-            sender_role: notificationData.senderRole || 'admin',
-            sender_id: notificationData.senderId || currentUser?.id || 'system',
-            sender_name: notificationData.senderName || currentUser?.name || 'System',
-            target_type: notificationData.targetType || 'all',
-            target_role: notificationData.targetRole || 'all',
-            target_class_id: notificationData.targetClass || null,
-            target_user_id: notificationData.targetUser || null,
-            category: notificationData.category || 'General',
-            priority: notificationData.priority || 'Normal',
-            expiry_date: notificationData.expiryDate || null,
-            auto_hide: notificationData.autoHide || false,
-            read: notificationData.read || false,
-            read_at: notificationData.readAt || null,
-            date: notificationData.date || new Date().toISOString().split('T')[0],
-            attachment_url: notificationData.attachmentUrl || null,
-            attachment_data: notificationData.attachment || null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-        
-        const { error } = await supabase
-            .from('notifications')
-            .upsert(dbData, { onConflict: 'id' });
-        
-        if (error) throw error;
-        
-        console.log(`✅ Notification "${notificationData.title}" saved to Supabase`);
-        showNotification('✅ Saved to cloud!', 'success');
-        return true;
-        
-    } catch(e) {
-        console.error('❌ Save error:', e);
-        showNotification('⚠️ Failed to save to cloud', 'warning');
-        return false;
-    }
+    userNotifs.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return userNotifs;
 }
 
-// ======================= UPDATE NOTIFICATION BELL =======================
+// ======================= 🔥 UPDATE BELL BADGE =======================
 function updateNotificationBell() {
     const userNotifications = getUserNotifications();
     const unreadCount = userNotifications.filter(n => !n.read).length;
@@ -36380,117 +35623,553 @@ function updateNotificationBell() {
     }
 }
 
-function loadBellNotifications() {
-    const listContainer = document.getElementById('notificationList');
-    if (!listContainer) return;
+// ======================= 🔥 GET ALL USERS =======================
+function getAllUsersForNotification() {
+    let allUsers = [];
+    let userMap = {};
     
-    const userNotifications = getUserNotifications();
-    const recentNotifs = userNotifications.slice(0, 10);
+    if (window.users && window.users.length > 0) {
+        for (let user of window.users) {
+            if (!userMap[user.id]) {
+                userMap[user.id] = true;
+                let role = user.role || 'user';
+                let roleDisplay = user.role_display || user.role || 'User';
+                allUsers.push({
+                    id: user.id,
+                    name: user.name,
+                    role: role,
+                    roleDisplay: roleDisplay,
+                    group: role === 'admin' ? '👑 Administrators' : 
+                           role === 'teacher' ? '👩‍🏫 Teachers' :
+                           role === 'cashier' ? '💰 Cashiers' :
+                           role === 'accountant' ? '📊 Accountants' : '👤 Users'
+                });
+            }
+        }
+    }
     
-    if (recentNotifs.length === 0) {
-        listContainer.innerHTML = `
-            <div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">
-                <i class="fas fa-bell-slash" style="font-size:24px;"></i>
-                <p style="margin:8px 0 0;">No notifications</p>
-            </div>
-        `;
+    if (window.students && window.students.length > 0) {
+        for (let student of window.students) {
+            if (!userMap[student.id] && !userMap[student.name]) {
+                let exists = allUsers.some(u => u.name === student.name);
+                if (!exists) {
+                    userMap[student.id] = true;
+                    allUsers.push({
+                        id: student.id,
+                        name: student.name,
+                        role: 'student',
+                        roleDisplay: 'Student',
+                        group: '🧑‍🎓 Students'
+                    });
+                }
+            }
+        }
+    }
+    
+    if (window.employees && window.employees.length > 0) {
+        for (let emp of window.employees) {
+            if (!userMap[emp.id] && !userMap[emp.name]) {
+                let exists = allUsers.some(u => u.name === emp.name);
+                if (!exists) {
+                    userMap[emp.id] = true;
+                    let roleDisplay = emp.designation || emp.role || 'Employee';
+                    allUsers.push({
+                        id: emp.id,
+                        name: emp.name,
+                        role: emp.role || 'employee',
+                        roleDisplay: roleDisplay,
+                        group: '👥 Staff'
+                    });
+                }
+            }
+        }
+    }
+    
+    return allUsers;
+}
+
+// ======================= 🔥 GENERATE USER OPTIONS =======================
+function generateUserOptions() {
+    let options = '';
+    let allUsers = getAllUsersForNotification();
+    
+    if (allUsers.length === 0) {
+        return '<option value="">-- No users available --</option>';
+    }
+    
+    let currentGroup = '';
+    for (let u of allUsers) {
+        if (u.group !== currentGroup) {
+            currentGroup = u.group;
+            options += `<option value="" disabled style="font-weight:bold; background:#e2e8f0; color:#1e293b; padding:4px 12px;">── ${currentGroup} ──</option>`;
+        }
+        options += `<option value="${u.id}" style="padding:4px 12px;">${u.name} (${u.roleDisplay})</option>`;
+    }
+    
+    return options;
+}
+
+// ======================= 🔥 GET USER BY ID =======================
+function getUserById(userId) {
+    let allUsers = getAllUsersForNotification();
+    return allUsers.find(u => u.id === userId) || null;
+}
+
+// ======================= 🔥 TOGGLE SPECIFIC USER =======================
+function toggleSpecificUserSection(modalId) {
+    const target = document.getElementById(`notifTarget_${modalId}`)?.value;
+    const section = document.getElementById(`specificUserSection_${modalId}`);
+    if (section) {
+        section.style.display = target === 'specific' ? 'block' : 'none';
+    }
+}
+
+// ======================= 🔥 FILTER SPECIFIC USERS =======================
+function filterSpecificUsers(modalId) {
+    const searchInput = document.getElementById('specificUserSearch_' + modalId);
+    const select = document.getElementById('specificUserSelect_' + modalId);
+    
+    if (!searchInput || !select) return;
+    
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const options = select.querySelectorAll('option');
+    
+    let visibleCount = 0;
+    for (let opt of options) {
+        if (opt.value === '' || opt.disabled) {
+            opt.style.display = 'block';
+            continue;
+        }
+        const text = opt.textContent.toLowerCase();
+        if (searchTerm === '' || text.includes(searchTerm)) {
+            opt.style.display = 'block';
+            visibleCount++;
+        } else {
+            opt.style.display = 'none';
+        }
+    }
+    
+    const countSpan = document.getElementById('userCount_' + modalId);
+    if (countSpan) {
+        countSpan.textContent = visibleCount;
+    }
+}
+
+// ======================= 🔥 SHOW DIRECT NOTIFICATION POP-UP =======================
+function showDirectNotification(title, message) {
+    console.log('🔔 showDirectNotification called:', title);
+    
+    if (window.Android) {
+        try {
+            window.Android.showNotification(title, message);
+            console.log('✅ Android Native Notification sent!');
+            return;
+        } catch(e) {
+            console.log('❌ Android error:', e);
+        }
+    }
+    
+    if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+            try {
+                const notif = new Notification('🔔 ' + title, {
+                    body: message,
+                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                });
+                console.log('✅ Direct notification shown!');
+                notif.onclick = function() {
+                    window.focus();
+                    if (typeof openModule === 'function') {
+                        openModule(19);
+                    }
+                };
+            } catch(e) {
+                console.log('❌ Notification error:', e);
+            }
+        } else if (Notification.permission === 'default') {
+            Notification.requestPermission().then(function(perm) {
+                if (perm === 'granted') {
+                    try {
+                        const notif = new Notification('🔔 ' + title, {
+                            body: message,
+                            icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                        });
+                        console.log('✅ Notification shown after permission!');
+                        notif.onclick = function() {
+                            window.focus();
+                            if (typeof openModule === 'function') {
+                                openModule(19);
+                            }
+                        };
+                    } catch(e) {
+                        console.log('❌ Notification error:', e);
+                    }
+                }
+            });
+        }
+    }
+}
+
+// ======================= 🔥 SAVE NOTIFICATION TO SUPABASE =======================
+async function saveNotificationToSupabase(notificationData) {
+    console.log('📤 saveNotificationToSupabase called for:', notificationData.title);
+    
+    const supabase = getSupabaseClientNotifications();
+    
+    if (!supabase || !navigator.onLine) {
+        console.log('📴 Offline - Saving locally');
+        return false;
+    }
+    
+    try {
+        const dbData = {
+            id: notificationData.id || 'N' + Date.now(),
+            title: notificationData.title || 'Notification',
+            message: notificationData.message || '',
+            sender_role: notificationData.senderRole || 'admin',
+            sender_id: notificationData.senderId || currentUser?.id || 'system',
+            sender_name: notificationData.senderName || currentUser?.name || 'System',
+            target_type: notificationData.targetType || 'all',
+            target_role: notificationData.targetRole || 'all',
+            target_class_id: notificationData.targetClass || null,
+            target_user_id: notificationData.targetUser || null,
+            target_user_name: notificationData.targetUserName || null,
+            category: notificationData.category || 'General',
+            priority: notificationData.priority || 'Normal',
+            expiry_date: notificationData.expiryDate || null,
+            auto_hide: notificationData.autoHide || false,
+            read: notificationData.read || false,
+            read_at: notificationData.readAt || null,
+            date: notificationData.date || new Date().toISOString().split('T')[0],
+            attachment_url: notificationData.attachmentUrl || null,
+            attachment_data: notificationData.attachment || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        
+        const { error } = await supabase
+            .from('notifications')
+            .upsert(dbData, { onConflict: 'id' });
+        
+        if (error) throw error;
+        
+        console.log(`✅ Notification "${notificationData.title}" saved to Supabase`);
+        return true;
+        
+    } catch(e) {
+        console.error('❌ Save error:', e);
+        return false;
+    }
+}
+
+// ======================= 🔥 SEND NOTIFICATION FROM MODAL =======================
+function sendNotificationFromModal(modalId) {
+    let title = document.getElementById(`notifTitle_${modalId}`)?.value.trim();
+    let message = document.getElementById(`notifMessage_${modalId}`)?.value.trim();
+    let target = document.getElementById(`notifTarget_${modalId}`)?.value || 'all';
+    let category = document.getElementById(`notifCategory_${modalId}`)?.value || 'General';
+    let priority = document.getElementById(`notifPriority_${modalId}`)?.value || 'Normal';
+    let expiryDate = document.getElementById(`notifExpiry_${modalId}`)?.value || null;
+    
+    if (!title || !message) {
+        showToast('⚠️ Title and message are required', 'error');
         return;
     }
     
-    let html = '';
-    for (let n of recentNotifs) {
-        const isRead = n.read;
-        html += `
-            <div class="notification-item ${!isRead ? 'unread' : ''}" onclick="markNotificationReadFromBell('${n.id}')">
-                <div style="display:flex; align-items:flex-start; gap:10px;">
-                    <div style="width:32px; height:32px; border-radius:50%; background:${n.read ? 'var(--bg-body)' : '#2563eb'}; display:flex; align-items:center; justify-content:center;">
-                        <i class="fas ${n.icon || 'fa-bell'}" style="color:${n.read ? 'var(--text-secondary)' : 'white'}; font-size:14px;"></i>
-                    </div>
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:13px; font-weight:600; ${!isRead ? 'color:#2563eb;' : ''}">${escapeHtml(n.title)}</span>
-                            ${!isRead ? '<span style="background:#2563eb; width:8px; height:8px; border-radius:50%;"></span>' : ''}
-                        </div>
-                        <div style="font-size:12px; color:var(--text-secondary);">${escapeHtml((n.message || '').substring(0, 60))}${(n.message || '').length > 60 ? '...' : ''}</div>
-                        <div style="font-size:10px; color:#94a3b8; margin-top:4px;">${formatTimeAgo(n.date)}</div>
-                    </div>
+    let specificUserId = null;
+    let specificUserName = null;
+    let specificUserRole = null;
+    
+    if (target === 'specific') {
+        specificUserId = document.getElementById(`specificUserSelect_${modalId}`)?.value || null;
+        if (specificUserId) {
+            const user = getUserById(specificUserId);
+            if (user) {
+                specificUserName = user.name;
+                specificUserRole = user.role;
+                console.log('📌 Specific User:', specificUserName, 'Role:', specificUserRole);
+            }
+        }
+    }
+    
+    const role = currentUser.role;
+    let allowedTargets = [];
+    
+    if (role === 'admin') {
+        allowedTargets = ['all', 'admin', 'teacher', 'student', 'cashier', 'accountant', 'specific'];
+    } else if (role === 'teacher' || role === 'cashier') {
+        allowedTargets = ['all', 'student', 'admin', 'specific'];
+    } else if (role === 'accountant') {
+        allowedTargets = ['all', 'admin', 'teacher', 'cashier', 'specific'];
+    } else {
+        showToast('⛔ You do not have permission to send notifications', 'error');
+        return;
+    }
+    
+    if (!allowedTargets.includes(target)) {
+        showToast('⛔ You cannot send to this role', 'error');
+        return;
+    }
+    
+    if (target === 'specific' && !specificUserId) {
+        showToast('⚠️ Please select a specific user', 'error');
+        return;
+    }
+    
+    let targetRole = target === 'all' ? 'all' : target;
+    if (target === 'specific' && specificUserRole) {
+        targetRole = specificUserRole;
+    }
+    
+    let notifObj = {
+        id: 'N_' + Date.now(),
+        title: title,
+        message: message,
+        senderRole: currentUser.role,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        targetType: 'role',
+        targetRole: targetRole,
+        targetClass: null,
+        targetUser: target === 'specific' ? specificUserId : null,
+        targetUserName: target === 'specific' ? specificUserName : null,
+        category: category,
+        priority: priority,
+        expiryDate: expiryDate,
+        autoHide: false,
+        read: false,
+        readAt: null,
+        date: new Date().toISOString().split('T')[0],
+        createdAt: new Date().toISOString(),
+        attachmentUrl: null,
+        attachment: null
+    };
+    
+    console.log('📤 Sending notification:', notifObj);
+    
+    // ✅ LocalStorage save
+    if (!window.notifications) {
+        window.notifications = [];
+    }
+    window.notifications.unshift(notifObj);
+    localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
+    
+    // ✅ Pop-up show
+    showDirectNotification(title, message);
+    
+    // ✅ Supabase save
+    if (navigator.onLine) {
+        saveNotificationToSupabase(notifObj);
+        showToast('✅ Notification sent to cloud!', 'success');
+    } else {
+        showToast('📴 Offline: Saved locally. Will sync when online.', 'warning');
+    }
+    
+    // ✅ Bell update
+    updateNotificationBell();
+    
+    closeNotifModal(modalId);
+    loadNotificationsModule();
+}
+
+// ======================= 🔥 CLOSE NOTIFICATION MODAL =======================
+function closeNotifModal(modalId) {
+    let modal = document.getElementById(modalId);
+    if (modal) modal.remove();
+}
+
+// ======================= 🔥 SHOW SEND NOTIFICATION FORM =======================
+function showSendNotificationForm() {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'teacher' && 
+        currentUser.role !== 'cashier' && currentUser.role !== 'accountant') {
+        showToast('⛔ You do not have permission to send notifications', 'error');
+        return;
+    }
+    
+    const role = currentUser.role;
+    let allowedTargets = [];
+    
+    if (role === 'admin') {
+        allowedTargets = ['all', 'admin', 'teacher', 'student', 'cashier', 'accountant', 'specific'];
+    } else if (role === 'teacher' || role === 'cashier') {
+        allowedTargets = ['all', 'student', 'admin', 'specific'];
+    } else if (role === 'accountant') {
+        allowedTargets = ['all', 'admin', 'teacher', 'cashier', 'specific'];
+    } else {
+        showToast('⛔ You do not have permission to send notifications', 'error');
+        return;
+    }
+    
+    let targetOptions = '';
+    if (allowedTargets.includes('all')) {
+        targetOptions += `<option value="all">📢 All Users</option>`;
+    }
+    if (allowedTargets.includes('admin')) {
+        targetOptions += `<option value="admin">👑 Administrators</option>`;
+    }
+    if (allowedTargets.includes('teacher')) {
+        targetOptions += `<option value="teacher">👩‍🏫 Teachers</option>`;
+    }
+    if (allowedTargets.includes('student')) {
+        targetOptions += `<option value="student">🧑‍🎓 Students</option>`;
+    }
+    if (allowedTargets.includes('cashier')) {
+        targetOptions += `<option value="cashier">💰 Cashiers</option>`;
+    }
+    if (allowedTargets.includes('accountant')) {
+        targetOptions += `<option value="accountant">📊 Accountants</option>`;
+    }
+    if (allowedTargets.includes('specific')) {
+        targetOptions += `<option value="specific">👤 Specific User</option>`;
+    }
+    
+    const userOptions = generateUserOptions();
+    const userCount = userOptions.split('option').length - 1;
+    
+    let modalId = 'notifModal_' + Date.now();
+    let modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = modalId;
+    modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100000; padding:16px;';
+    
+    modal.innerHTML = `
+    <div style="max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 28px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <!-- HEADER -->
+        <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 14px 20px; border-radius: 28px 28px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink:0;">
+            <h2 style="color: white; margin: 0; font-size: 17px;"><i class="fas fa-bell"></i> Send Notification</h2>
+            <button onclick="closeNotifModal('${modalId}')" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 18px; display:flex; align-items:center; justify-content:center;">&times;</button>
+        </div>
+        
+        <div style="padding: 16px 20px; overflow-y:auto; flex:1;">
+            <!-- Sender Info -->
+            <div style="background:#f0fdf4; padding:8px 14px; border-radius:10px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+                <div>
+                    <i class="fas fa-user-shield" style="color:#10b981; font-size:13px;"></i>
+                    <span style="font-size:12px; color:#065f46;">
+                        Sending as <strong>${currentUser.name}</strong>
+                    </span>
+                </div>
+                <span style="font-size:10px; background:#dbeafe; padding:2px 10px; border-radius:16px; color:#1e40af;">
+                    🔑 ${role.toUpperCase()}
+                </span>
+            </div>
+            
+            <!-- Title -->
+            <div style="margin-bottom:12px;">
+                <label style="font-weight:600; font-size:12px; display:block; margin-bottom:4px;">📌 Title *</label>
+                <input id="notifTitle_${modalId}" class="form-control" placeholder="Enter notification title" style="width:100%; padding:10px 14px; border-radius:10px; font-size:14px; border:1px solid #e2e8f0; background:var(--bg-surface); color:var(--text-primary);">
+            </div>
+            
+            <!-- Message -->
+            <div style="margin-bottom:12px;">
+                <label style="font-weight:600; font-size:12px; display:block; margin-bottom:4px;">📝 Message *</label>
+                <textarea id="notifMessage_${modalId}" class="form-control" rows="2" placeholder="Enter notification message" style="width:100%; padding:10px 14px; border-radius:10px; font-size:14px; border:1px solid #e2e8f0; background:var(--bg-surface); color:var(--text-primary); resize:vertical;"></textarea>
+            </div>
+            
+            <!-- Category & Priority -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                <div>
+                    <label style="font-weight:600; font-size:12px; display:block; margin-bottom:4px;">📁 Category</label>
+                    <select id="notifCategory_${modalId}" class="form-control" style="width:100%; padding:10px 14px; border-radius:10px; font-size:13px; border:1px solid #e2e8f0; background:var(--bg-surface); color:var(--text-primary);">
+                        <option value="General">General</option>
+                        <option value="Fees">Fees</option>
+                        <option value="Attendance">Attendance</option>
+                        <option value="Homework">Homework</option>
+                        <option value="Exam">Exam</option>
+                        <option value="Emergency">Emergency</option>
+                        <option value="System">System</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-weight:600; font-size:12px; display:block; margin-bottom:4px;">⚡ Priority</label>
+                    <select id="notifPriority_${modalId}" class="form-control" style="width:100%; padding:10px 14px; border-radius:10px; font-size:13px; border:1px solid #e2e8f0; background:var(--bg-surface); color:var(--text-primary);">
+                        <option value="Normal">Normal</option>
+                        <option value="Important">Important</option>
+                        <option value="Urgent">Urgent</option>
+                        <option value="Critical">Critical</option>
+                    </select>
                 </div>
             </div>
-        `;
-    }
-    
-    if (userNotifications.length > 10) {
-        html += `
-            <div style="padding:8px 16px; text-align:center;">
-                <button onclick="closeNotificationDropdown(); if(typeof openModule === 'function') openModule(19);" style="background:none; border:none; color:#2563eb; font-size:12px; cursor:pointer; font-weight:500;">
-                    View all ${userNotifications.length} notifications
-                </button>
+            
+            <!-- Send To -->
+            <div style="margin-bottom:12px;">
+                <label style="font-weight:600; font-size:12px; display:block; margin-bottom:4px;">👥 Send To</label>
+                <select id="notifTarget_${modalId}" class="form-control" style="width:100%; padding:10px 14px; border-radius:10px; font-size:13px; border:1px solid #e2e8f0; background:var(--bg-surface); color:var(--text-primary);" onchange="toggleSpecificUserSection('${modalId}')">
+                    ${targetOptions}
+                </select>
             </div>
-        `;
-    }
+            
+            <!-- SPECIFIC USER SECTION -->
+            <div id="specificUserSection_${modalId}" style="display:none; margin-bottom:12px;">
+                <label style="font-weight:600; font-size:12px; display:block; margin-bottom:4px;">👤 Select User</label>
+                <div style="position:relative;">
+                    <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:13px;"></i>
+                    <input type="text" id="specificUserSearch_${modalId}" class="form-control" placeholder="Search user by name..." style="width:100%; padding:8px 12px 8px 34px; border-radius:8px; font-size:13px; border:1px solid #e2e8f0; background:var(--bg-surface); color:var(--text-primary);" oninput="filterSpecificUsers('${modalId}')">
+                </div>
+                <div style="max-height:120px; overflow-y:auto; margin-top:5px; border:1px solid #e2e8f0; border-radius:8px; background:var(--bg-surface);">
+                    <select id="specificUserSelect_${modalId}" class="form-control" style="width:100%; padding:2px 0; border:none; border-radius:8px; font-size:13px; min-height:80px; max-height:120px; background:transparent; overflow-y:auto; color:var(--text-primary);">
+                        <option value="" style="padding:5px 12px;">-- Select User --</option>
+                        ${userOptions}
+                    </select>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:3px;">
+                    <span style="font-size:10px; color:#94a3b8;">
+                        <i class="fas fa-users"></i> <span id="userCount_${modalId}">${userCount}</span> users
+                    </span>
+                    <span style="font-size:10px; color:#94a3b8;">
+                        <i class="fas fa-search"></i> Type to filter
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Expiry Date -->
+            <div style="margin-bottom:12px;">
+                <label style="font-weight:600; font-size:12px; display:block; margin-bottom:4px;">⏰ Expiry Date (Optional)</label>
+                <input type="date" id="notifExpiry_${modalId}" class="form-control" style="width:100%; padding:10px 14px; border-radius:10px; font-size:13px; border:1px solid #e2e8f0; background:var(--bg-surface); color:var(--text-primary);">
+            </div>
+            
+            <!-- Status -->
+            <div style="background:#f0fdf4; padding:8px 14px; border-radius:10px; margin-top:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+                <div>
+                    <i class="fas fa-info-circle" style="color:#10b981; font-size:12px;"></i>
+                    <span style="font-size:11px; color:#065f46;">
+                        ${navigator.onLine ? '✅ Online - Will sync to cloud' : '📴 Offline - Will save locally'}
+                    </span>
+                </div>
+                <span style="font-size:9px; background:#dbeafe; padding:2px 10px; border-radius:16px; color:#1e40af;">
+                    <i class="fas fa-shield-alt"></i> ${role}
+                </span>
+            </div>
+            
+            <!-- Role Permission Info -->
+            <div style="background:#dbeafe; padding:8px 14px; border-radius:10px; margin-top:8px;">
+                <i class="fas fa-check-circle" style="color:#1e40af; font-size:12px;"></i>
+                <span style="font-size:11px; color:#1e40af;">
+                    ✅ You can send to: <strong>${allowedTargets.join(', ')}</strong>
+                </span>
+            </div>
+        </div>
+        
+        <!-- FOOTER -->
+        <div style="padding: 12px 20px; background: var(--bg-body); border-top: 1px solid var(--border-light); border-radius: 0 0 28px 28px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap:wrap; flex-shrink:0;">
+            <button class="btn btn-danger" onclick="closeNotifModal('${modalId}')" style="padding: 8px 20px; border-radius: 25px; font-size:13px; font-weight:600; border:none; cursor:pointer; background:#ef4444; color:white;">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button class="btn btn-primary" onclick="sendNotificationFromModal('${modalId}')" style="padding: 8px 20px; border-radius: 25px; font-size:13px; font-weight:600; border:none; cursor:pointer; background:linear-gradient(135deg, #2563eb, #1e40af); color:white;">
+                <i class="fas fa-paper-plane"></i> Send Notification
+            </button>
+        </div>
+    </div>`;
     
-    listContainer.innerHTML = html;
-    updateNotificationBell();
+    document.body.appendChild(modal);
 }
 
-function toggleNotificationDropdown() {
-    const dropdown = document.getElementById('notificationDropdown');
-    if (!dropdown) return;
-    isBellOpen = !isBellOpen;
-    dropdown.classList.toggle('show', isBellOpen);
-    if (isBellOpen) {
-        loadBellNotifications();
-    }
-}
-
-function closeNotificationDropdown() {
-    const dropdown = document.getElementById('notificationDropdown');
-    if (dropdown) {
-        dropdown.classList.remove('show');
-        isBellOpen = false;
-    }
-}
-
-function markNotificationReadFromBell(notificationId) {
-    markNotificationRead(notificationId);
-    loadBellNotifications();
-}
-
-function markNotificationRead(notificationId) {
-    let notif = window.notifications.find(n => n.id == notificationId);
-    if (notif) {
-        notif.read = true;
-        notif.readAt = new Date().toISOString();
-        localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
-        updateNotificationBell();
-    }
-}
-
-function markAllNotificationsRead() {
-    const userNotifications = getUserNotifications();
-    const unread = userNotifications.filter(n => !n.read);
-    
-    if (unread.length === 0) {
-        showNotification('No unread notifications', 'info');
-        return;
-    }
-    
-    for (let n of unread) {
-        const notif = window.notifications.find(wn => wn.id == n.id);
-        if (notif) notif.read = true;
-    }
-    
-    localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
-    updateNotificationBell();
-    showNotification(`✅ ${unread.length} marked as read`, 'success');
-}
-
-// ======================= MAIN LOAD FUNCTION =======================
+// ======================= 🔥 LOAD NOTIFICATIONS MODULE =======================
 async function loadNotificationsModule() {
-    console.log('📋 loadNotificationsModule called');
+    console.log('📋 loadNotificationsModule called...');
     
     if (isNotificationsLoading) {
-        console.log('⚠️ Already loading');
+        console.log('⚠️ Already loading, skipping...');
         return;
     }
     
@@ -36509,21 +36188,26 @@ async function loadNotificationsModule() {
     showLoader();
     
     document.getElementById('moduleContent').innerHTML = `
-        <div style="text-align:center; padding:60px;">
-            <i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--primary);"></i>
-            <h3 style="margin-top:20px;">Loading Notifications...</h3>
-            <p style="color:var(--text-secondary);">Fetching data from cloud</p>
+        <div style="text-align:center; padding:40px;">
+            <i class="fas fa-spinner fa-spin" style="font-size:32px; color:var(--primary);"></i>
+            <h3 style="margin-top:16px;">Loading Notifications...</h3>
+            <p style="color:var(--text-secondary);">Please wait...</p>
         </div>
     `;
     
     try {
+        // ✅ Load from Supabase
         if (navigator.onLine) {
             await loadNotificationsFromSupabase();
         } else {
             const cached = localStorage.getItem('cache_notifications');
             if (cached) {
-                window.notifications = JSON.parse(cached);
-                console.log(`📦 Loaded ${window.notifications.length} from cache (offline)`);
+                try {
+                    window.notifications = JSON.parse(cached);
+                    console.log(`📦 Loaded ${window.notifications.length} from cache (offline)`);
+                } catch(e) {
+                    window.notifications = [];
+                }
             }
         }
         
@@ -36532,15 +36216,15 @@ async function loadNotificationsModule() {
         
         hideLoader();
         isNotificationsLoading = false;
-        console.log('✅ Module rendered successfully');
+        console.log('✅ Notifications module rendered successfully');
         
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('❌ Error loading module:', error);
         document.getElementById('moduleContent').innerHTML = `
             <div class="profile-card" style="text-align:center; padding:40px;">
                 <i class="fas fa-exclamation-triangle" style="font-size:48px; color:#ef4444;"></i>
-                <h3>Error Loading</h3>
-                <p>${error.message}</p>
+                <h3>Error Loading Notifications</h3>
+                <p>${error.message || 'Unknown error occurred'}</p>
                 <button class="btn btn-primary btn-sm" onclick="loadNotificationsModule()">Retry</button>
             </div>
         `;
@@ -36549,7 +36233,7 @@ async function loadNotificationsModule() {
     }
 }
 
-// ======================= RENDER NOTIFICATIONS UI =======================
+// ======================= 🔥 RENDER NOTIFICATIONS UI =======================
 function renderNotificationsUI() {
     console.log('🎨 renderNotificationsUI called - notifications:', window.notifications.length);
     
@@ -36558,9 +36242,9 @@ function renderNotificationsUI() {
     const unread = userNotifications.filter(n => !n.read).length;
     const read = total - unread;
     
-    let canSendNotification = (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier');
+    let canSendNotification = (currentUser.role === 'admin' || currentUser.role === 'teacher' || 
+                               currentUser.role === 'cashier' || currentUser.role === 'accountant');
     
-    // Category filter options
     let categoryCounts = {};
     for (let n of userNotifications) {
         const cat = n.category || 'General';
@@ -36645,10 +36329,12 @@ function renderFullNotificationList(notificationsToRender) {
         const priorityColor = n.priority === 'Critical' ? '#ef4444' : n.priority === 'Urgent' ? '#f97316' : n.priority === 'Important' ? '#f59e0b' : '#94a3b8';
         const priorityDot = `<span class="priority-dot priority-${n.priority ? n.priority.toLowerCase() : 'normal'}"></span>`;
         
-        // Target role badge
         let targetBadge = '';
         if (n.targetRole && n.targetRole !== 'all') {
             targetBadge = `<span style="background:#8b5cf6; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:6px;">🎯 ${n.targetRole}</span>`;
+        }
+        if (n.targetUserName) {
+            targetBadge += `<span style="background:#10b981; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:4px;">👤 ${n.targetUserName}</span>`;
         }
         
         html += `
@@ -36687,14 +36373,14 @@ function renderFullNotificationList(notificationsToRender) {
         <div class="profile-card" style="text-align: center; padding: 40px;">
             <i class="fas fa-bell-slash" style="font-size: 48px; color: #94a3b8;"></i>
             <p style="margin-top: 10px;">No notifications found.</p>
-            ${(currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier') ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()">+ Send Notification</button>` : ''}
+            ${(currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier' || currentUser.role === 'accountant') ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()">+ Send Notification</button>` : ''}
         </div>`;
     }
     
     document.getElementById('notificationListFull').innerHTML = html;
 }
 
-// ======================= SHARE NOTIFICATION =======================
+// ======================= 🔥 SHARE NOTIFICATION =======================
 function shareNotification(id) {
     let n = window.notifications.find(notif => notif.id == id);
     if (n) {
@@ -36703,10 +36389,10 @@ function shareNotification(id) {
     }
 }
 
-// ======================= DELETE NOTIFICATION =======================
+// ======================= 🔥 DELETE NOTIFICATION =======================
 async function deleteNotification(id) {
     if (currentUser.role !== 'admin') {
-        showNotification('⛔ Only administrators can delete notifications', 'error');
+        showToast('⛔ Only administrators can delete notifications', 'error');
         return;
     }
     
@@ -36734,12 +36420,12 @@ async function deleteNotification(id) {
             hideLoader();
             loadNotificationsModule();
             updateNotificationBell();
-            showNotification('Deleted successfully!', 'success');
+            showToast('Deleted successfully!', 'success');
         }
     });
 }
 
-// ======================= FILTER FUNCTIONS =======================
+// ======================= 🔥 FILTER FUNCTIONS =======================
 function filterNotifications() {
     notifFilterText = document.getElementById('notifSearch')?.value || '';
     loadNotificationsModule();
@@ -36761,233 +36447,41 @@ function clearNotifFilter() {
     loadNotificationsModule();
 }
 
-// ======================= EXPORT CSV =======================
+// ======================= 🔥 EXPORT CSV =======================
 function exportNotificationsCSV() {
     let userNotifications = getUserNotifications();
     if (userNotifications.length === 0) {
-        showNotification('No notifications to export!', 'warning');
+        showToast('No notifications to export!', 'warning');
         return;
     }
     
-    let csv = "Date,Title,Message,Category,Priority,Status,Target Role,Has Attachment\n";
+    let csv = "Date,Title,Message,Category,Priority,Status,Target Role,Target User,Has Attachment\n";
     for (let n of userNotifications) {
-        csv += `"${n.date || ''}","${n.title.replace(/,/g, ' ')}","${n.message.replace(/,/g, ' ')}","${n.category || 'General'}","${n.priority || 'Normal'}",${n.read ? 'Read' : 'Unread'},"${n.targetRole || 'all'}",${n.attachmentUrl ? 'Yes' : 'No'}\n`;
+        csv += `"${n.date || ''}","${n.title.replace(/,/g, ' ')}","${n.message.replace(/,/g, ' ')}","${n.category || 'General'}","${n.priority || 'Normal'}",${n.read ? 'Read' : 'Unread'},"${n.targetRole || 'all'}","${n.targetUserName || ''}",${n.attachmentUrl ? 'Yes' : 'No'}\n`;
     }
     let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
     let link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `notifications_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
-    showNotification('CSV exported!', 'success');
+    showToast('CSV exported!', 'success');
 }
 
-// ======================= REFRESH =======================
+// ======================= 🔥 REFRESH =======================
 async function refreshNotificationsData() {
     showLoader();
-    showNotification('🔄 Syncing from cloud...', 'info');
+    showToast('🔄 Syncing from cloud...', 'info');
     await loadNotificationsFromSupabase();
     loadNotificationsModule();
     updateNotificationBell();
     hideLoader();
-    showNotification(`✅ ${window.notifications.length} notifications loaded!`, 'success');
+    showToast(`✅ ${window.notifications.length} notifications loaded!`, 'success');
 }
 
-// ======================= SHOW SEND NOTIFICATION FORM =======================
-function showSendNotificationForm() {
-    if (currentUser.role !== 'admin' && currentUser.role !== 'teacher' && currentUser.role !== 'cashier') {
-        showNotification('⛔ Only Admins, Teachers, and Cashiers can send notifications', 'error');
-        return;
-    }
-    
-    let modalId = 'notifModal_' + Date.now();
-    let modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.id = modalId;
-    
-    modal.innerHTML = `
-    <div style="max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 28px; background: var(--bg-surface); padding: 0;">
-        <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 16px 20px; border-radius: 28px 28px 0 0; display: flex; justify-content: space-between; align-items: center;">
-            <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-bell"></i> Send Notification</h2>
-            <button onclick="closeNotifModal('${modalId}')" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
-        </div>
-        <div style="padding: 20px;">
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">📌 Title *</label>
-                <input id="notifTitle_${modalId}" class="form-control" placeholder="Enter notification title">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">📝 Message *</label>
-                <textarea id="notifMessage_${modalId}" class="form-control" rows="3" placeholder="Enter notification message">
-            </div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-                <div class="form-group">
-                    <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">📁 Category</label>
-                    <select id="notifCategory_${modalId}" class="form-control">
-                        <option value="General">General</option>
-                        <option value="Fees">Fees</option>
-                        <option value="Attendance">Attendance</option>
-                        <option value="Homework">Homework</option>
-                        <option value="Exam">Exam</option>
-                        <option value="Emergency">Emergency</option>
-                        <option value="System">System</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">⚡ Priority</label>
-                    <select id="notifPriority_${modalId}" class="form-control">
-                        <option value="Normal">Normal</option>
-                        <option value="Important">Important</option>
-                        <option value="Urgent">Urgent</option>
-                        <option value="Critical">Critical</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">👥 Send To</label>
-                <select id="notifTarget_${modalId}" class="form-control" onchange="toggleSpecificUserSection('${modalId}')">
-                    <option value="all">📢 All Users</option>
-                    <option value="admin">👑 Administrators</option>
-                    <option value="teacher">👩‍🏫 Teachers</option>
-                    <option value="student">🧑‍🎓 Students</option>
-                    <option value="cashier">💰 Cashiers</option>
-                    <option value="accountant">📊 Accountants</option>
-                </select>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">⏰ Expiry Date (Optional)</label>
-                <input type="date" id="notifExpiry_${modalId}" class="form-control">
-            </div>
-            
-            <div style="background: #f0fdf4; padding: 10px; border-radius: 12px; margin-top: 10px;">
-                <i class="fas fa-info-circle" style="color: #10b981;"></i>
-                <span style="font-size: 11px; color: #065f46;">
-                    ${navigator.onLine ? '✅ Online: Will sync to cloud' : '📴 Offline: Will save locally'}
-                </span>
-            </div>
-        </div>
-        <div style="padding: 16px 20px; background: var(--bg-body); border-top: 1px solid var(--border-light); border-radius: 0 0 28px 28px; display: flex; gap: 12px; justify-content: flex-end;">
-            <button class="btn btn-danger" onclick="closeNotifModal('${modalId}')">Cancel</button>
-            <button class="btn btn-primary" onclick="sendNotificationFromModal('${modalId}')" style="padding: 12px 20px; border-radius: 30px; background: linear-gradient(135deg, #2563eb, #1e40af);">
-                <i class="fas fa-paper-plane"></i> Send
-            </button>
-        </div>
-    </div>`;
-    
-    document.body.appendChild(modal);
-}
-
-function closeNotifModal(modalId) {
-    let modal = document.getElementById(modalId);
-    if (modal) modal.remove();
-}
-
-// ======================= CREATE NOTIFICATION BELL =======================
-function createNotificationBell() {
-    console.log('🔔 Creating notification bell...');
-    
-    if (document.getElementById('notificationBellContainer')) {
-        updateNotificationBell();
-        return;
-    }
-    
-    const bellContainer = document.createElement('div');
-    bellContainer.id = 'notificationBellContainer';
-    
-    bellContainer.innerHTML = `
-        <div id="notificationBellBtn">
-            <i class="fas fa-bell" id="notificationBellIcon"></i>
-            <span id="notificationBadge">0</span>
-        </div>
-        <div id="notificationDropdown">
-            <div style="padding:8px 16px 12px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; font-size:14px; font-weight:600;"><i class="fas fa-bell"></i> Notifications</h4>
-                <div style="display:flex; gap:8px;">
-                    <button id="markAllReadBtn" style="background:none; border:none; color:#2563eb; font-size:11px; cursor:pointer; font-weight:500;">Mark all read</button>
-                    <button id="viewAllNotifBtn" style="background:none; border:none; color:#64748b; font-size:11px; cursor:pointer; font-weight:500;">View all</button>
-                </div>
-            </div>
-            <div id="notificationList" style="padding:4px 0;">
-                <div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">
-                    <i class="fas fa-bell-slash" style="font-size:24px;"></i>
-                    <p style="margin:8px 0 0;">No notifications</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    const headerRight = document.querySelector('.header-right');
-    if (headerRight) {
-        const userProfile = document.getElementById('userProfile');
-        if (userProfile) {
-            headerRight.insertBefore(bellContainer, userProfile);
-        } else {
-            headerRight.prepend(bellContainer);
-        }
-    }
-    
-    document.getElementById('notificationBellBtn').addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleNotificationDropdown();
-    });
-    
-    document.addEventListener('click', function(e) {
-        const dropdown = document.getElementById('notificationDropdown');
-        const bellBtn = document.getElementById('notificationBellBtn');
-        if (dropdown && dropdown.classList.contains('show') && 
-            !dropdown.contains(e.target) && !bellBtn.contains(e.target)) {
-            closeNotificationDropdown();
-        }
-    });
-    
-    document.getElementById('markAllReadBtn').addEventListener('click', function(e) {
-        e.stopPropagation();
-        markAllNotificationsRead();
-    });
-    
-    document.getElementById('viewAllNotifBtn').addEventListener('click', function(e) {
-        e.stopPropagation();
-        closeNotificationDropdown();
-        if (typeof openModule === 'function') {
-            openModule(19);
-        }
-    });
-    
-    updateNotificationBell();
-    console.log('✅ Notification bell created');
-}
-
-function initNotificationBell() {
-    console.log('🔔 Initializing notification bell...');
-    let attempts = 0;
-    const maxAttempts = 10;
-    
-    const tryCreateBell = function() {
-        attempts++;
-        const headerRight = document.querySelector('.header-right');
-        if (headerRight) {
-            createNotificationBell();
-            return;
-        }
-        if (attempts < maxAttempts) {
-            setTimeout(tryCreateBell, 500);
-        }
-    };
-    
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tryCreateBell);
-    } else {
-        tryCreateBell();
-    }
-}
-
-// ======================= ONLINE/OFFLINE =======================
+// ======================= 🔥 ONLINE/OFFLINE =======================
 window.addEventListener('online', async () => {
     console.log('🟢 Online - Syncing...');
-    showNotification('🟢 Back online! Syncing notifications...', 'success');
+    showToast('🟢 Back online! Syncing notifications...', 'success');
     await loadNotificationsFromSupabase();
     loadNotificationsModule();
     updateNotificationBell();
@@ -36995,16 +36489,17 @@ window.addEventListener('online', async () => {
 
 window.addEventListener('offline', () => {
     console.log('🔴 Offline mode');
-    showNotification('🔴 Offline mode - Notifications saved locally', 'warning');
+    showToast('🔴 Offline mode - Notifications saved locally', 'warning');
 });
 
-// ======================= AUTO-LOAD =======================
-const origOpenModuleNotifications = window.openModule;
-if (origOpenModuleNotifications) {
+// ======================= 🔥 AUTO-LOAD =======================
+// Override openModule to load notifications when module 19 is opened
+if (typeof window.openModule === 'function') {
+    const origOpenModule = window.openModule;
     window.openModule = function(id) {
-        origOpenModuleNotifications(id);
+        origOpenModule(id);
         if (id === 19) {
-            setTimeout(() => {
+            setTimeout(function() {
                 if (typeof loadNotificationsModule === 'function') {
                     loadNotificationsModule();
                 }
@@ -37013,16 +36508,11 @@ if (origOpenModuleNotifications) {
     };
 }
 
-setTimeout(() => {
-    const moduleTitle = document.getElementById('moduleTitle');
-    if (moduleTitle && moduleTitle.innerText && moduleTitle.innerText.toUpperCase().includes('NOTIFICATIONS')) {
-        loadNotificationsModule();
-    }
-}, 500);
-
-// ======================= EXPOSE =======================
+// ======================= 🔥 EXPOSE FUNCTIONS =======================
 window.loadNotificationsModule = loadNotificationsModule;
 window.showSendNotificationForm = showSendNotificationForm;
+window.sendNotificationFromModal = sendNotificationFromModal;
+window.closeNotifModal = closeNotifModal;
 window.markNotificationRead = markNotificationRead;
 window.markAllNotificationsRead = markAllNotificationsRead;
 window.deleteNotification = deleteNotification;
@@ -37032,15 +36522,18 @@ window.filterNotificationsByStatus = filterNotificationsByStatus;
 window.clearNotifFilter = clearNotifFilter;
 window.refreshNotificationsData = refreshNotificationsData;
 window.exportNotificationsCSV = exportNotificationsCSV;
-window.createNotificationBell = createNotificationBell;
 window.updateNotificationBell = updateNotificationBell;
 window.getUserNotifications = getUserNotifications;
-window.initNotificationBell = initNotificationBell;
 window.saveNotificationToSupabase = saveNotificationToSupabase;
+window.getAllUsersForNotification = getAllUsersForNotification;
+window.generateUserOptions = generateUserOptions;
+window.getUserById = getUserById;
+window.toggleSpecificUserSection = toggleSpecificUserSection;
+window.filterSpecificUsers = filterSpecificUsers;
+window.showDirectNotification = showDirectNotification;
 
-initNotificationBell();
-
-console.log('✅ NOTIFICATIONS MODULE COMPLETE - FIXED!');
+console.log('✅ PART 22 COMPLETE - Notifications Module with Supabase Connection');
+console.log('📌 Features: View, Send, Search, Filter, Export, Delete, Supabase Sync');
 
 } // End of duplicate check
 // ======================= PART 22 ENDS HERE =======================
