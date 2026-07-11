@@ -15761,7 +15761,7 @@ async function exportFeesPDF() {
 }
 
 // ======================= ✅ FIXED: VIEW RECEIPT (ANDROID MOBILE VIEW) =======================
-// ======================= ✅ COMPLETE FIX: VIEW RECEIPT (100% RESPONSIVE) =======================
+// ======================= ✅ COMPLETE FIX: VIEW RECEIPT (DESKTOP + TABLET + MOBILE) =======================
 function viewReceipt(id) {
     let f = window.fees.find(f => f && f.id === id);
     if (!f) {
@@ -15790,15 +15790,15 @@ function viewReceipt(id) {
         let rowStyle = isCurrent ? 'background-color: #e8f5e9;' : '';
         paymentHistoryRows += `
             <tr style="${rowStyle}">
-                <td style="padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${formatDateDMY(p.date)}</td>
-                <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600;">${formatFullCurrency(p.amount || 0)}</td>
-                <td style="padding: 8px 10px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${p.mode || 'N/A'}</td>
-                <td style="padding: 8px 10px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${p.receipt_no || 'N/A'}</td>
+                <td style="padding: 6px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 10px;">${formatDateDMY(p.date)}</td>
+                <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #e2e8f0; font-size: 10px; font-weight: 600;">${formatFullCurrency(p.amount || 0)}</td>
+                <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 10px;">${p.mode || 'N/A'}</td>
+                <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 10px;">${p.receipt_no || 'N/A'}</td>
             </tr>
         `;
     }
     
-    let logoHTML = getSchoolLogoHTML('width: 40px; height: 40px; border-radius: 50%; margin-bottom: 4px; object-fit: cover;');
+    let logoHTML = getSchoolLogoHTML('width: 35px; height: 35px; border-radius: 50%; margin-bottom: 3px; object-fit: cover;');
     
     // ✅ RESPONSIVE BREAKPOINTS
     const width = window.innerWidth;
@@ -15806,39 +15806,41 @@ function viewReceipt(id) {
     const isTablet = width >= 768 && width < 1024;
     const isMobile = width < 768;
     
-    // ✅ ALL DEVICES: 100% WIDTH
+    // ✅ RESPONSIVE SETTINGS
     let receiptWidth = '100%';
     let modalMaxWidth = isDesktop ? '700px' : (isTablet ? '95%' : '98%');
-    let containerPadding = isDesktop ? '14px 28px' : (isTablet ? '12px 20px' : '10px 14px');
-    let bodyPadding = isDesktop ? '20px 28px' : (isTablet ? '16px 20px' : '12px 14px');
-    let fontSize = isDesktop ? '13px' : (isTablet ? '14px' : '14px');
-    let headingSize = isDesktop ? '18px' : (isTablet ? '19px' : '18px');
-    let thPadding = isDesktop ? '12px 20px' : (isTablet ? '12px 18px' : '12px 14px');
-    let tdPadding = isDesktop ? '12px 20px' : (isTablet ? '12px 18px' : '12px 14px');
-    let buttonPadding = isDesktop ? '10px 22px' : (isTablet ? '10px 18px' : '12px 16px');
-    let buttonFontSize = isDesktop ? '13px' : (isTablet ? '13px' : '14px');
-    let buttonMinHeight = isDesktop ? '40px' : (isTablet ? '44px' : '48px');
-    let receiptBorder = '1px solid #e2e8f0; border-radius: 8px; padding: 16px;';
+    let containerPadding = isDesktop ? '14px 28px' : (isTablet ? '12px 20px' : '6px 10px');
+    let bodyPadding = isDesktop ? '20px 28px' : (isTablet ? '16px 20px' : '6px 10px');
+    let fontSize = isDesktop ? '13px' : (isTablet ? '14px' : '11px');
+    let headingSize = isDesktop ? '18px' : (isTablet ? '19px' : '15px');
+    let thPadding = isDesktop ? '12px 20px' : (isTablet ? '12px 18px' : '6px 10px');
+    let tdPadding = isDesktop ? '12px 20px' : (isTablet ? '12px 18px' : '6px 10px');
+    let buttonPadding = isDesktop ? '10px 22px' : (isTablet ? '10px 18px' : '4px 10px');
+    let buttonFontSize = isDesktop ? '13px' : (isTablet ? '13px' : '10px');
+    let buttonMinHeight = isDesktop ? '40px' : (isTablet ? '44px' : '25px');
+    let receiptBorder = isDesktop ? '1px solid #e2e8f0; border-radius: 8px; padding: 16px;' : (isTablet ? '1px solid #e2e8f0; border-radius: 8px; padding: 14px;' : 'none');
     let gridColumns = (isDesktop || isTablet) ? '1fr 1fr' : '1fr';
-    let gridGap = (isDesktop || isTablet) ? '6px 24px' : '4px 0px';
-    let detailFontSize = isDesktop ? '13px' : (isTablet ? '14px' : '14px');
-    let tableFontSize = isDesktop ? '14px' : (isTablet ? '15px' : '15px');
-    let historyFontSize = isDesktop ? '12px' : (isTablet ? '12px' : '12px');
-    let historyMinWidth = isDesktop ? '400px' : (isTablet ? '400px' : '320px');
-    let signatureWidth = isDesktop ? '160px' : (isTablet ? '160px' : '160px');
-    let footerFontSize = isDesktop ? '9px' : (isTablet ? '9px' : '9px');
-    let modalBorderRadius = isDesktop ? '20px' : (isTablet ? '18px' : '16px');
+    let gridGap = (isDesktop || isTablet) ? '6px 24px' : '2px 0px';
+    let detailFontSize = isDesktop ? '13px' : (isTablet ? '14px' : '11px');
+    let tableFontSize = isDesktop ? '14px' : (isTablet ? '15px' : '12px');
+    let historyFontSize = isDesktop ? '12px' : (isTablet ? '12px' : '10px');
+    let historyMinWidth = isDesktop ? '400px' : (isTablet ? '400px' : '280px');
+    let signatureWidth = isDesktop ? '160px' : (isTablet ? '160px' : '120px');
+    let footerFontSize = isDesktop ? '9px' : (isTablet ? '9px' : '7px');
+    let modalBorderRadius = isDesktop ? '20px' : (isTablet ? '18px' : '12px');
+    let detailPadding = isDesktop ? '8px 0' : (isTablet ? '8px 0' : '4px 0');
+    let detailBorder = isDesktop ? '1px dotted #d1d5db;' : (isTablet ? '1px dotted #d1d5db;' : '1px dotted #d1d5db;');
     
     const modalHTML = `
         <div style="border-radius: ${modalBorderRadius}; overflow: hidden; display: flex; flex-direction: column; height: 100%; background: #ffffff; max-width: 100%;">
             
             <!-- HEADER -->
             <div style="background: linear-gradient(135deg, #1a56db, #1e40af); padding: ${containerPadding}; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-                <h2 style="color: white; margin: 0; font-size: ${headingSize}; display: flex; align-items: center; gap: 8px;">
+                <h2 style="color: white; margin: 0; font-size: ${headingSize}; display: flex; align-items: center; gap: 6px;">
                     <i class="fas fa-receipt" style="font-size: ${headingSize};"></i> 
                     <span>Receipt - ${f.receipt_no || 'N/A'}</span>
                 </h2>
-                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: ${isMobile ? '40px' : '36px'}; height: ${isMobile ? '40px' : '36px'}; border-radius: 50%; cursor: pointer; font-size: ${isMobile ? '24px' : '22px'}; display: flex; align-items: center; justify-content: center;">&times;</button>
+                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: ${isMobile ? '28px' : '36px'}; height: ${isMobile ? '28px' : '36px'}; border-radius: 50%; cursor: pointer; font-size: ${isMobile ? '16px' : '22px'}; display: flex; align-items: center; justify-content: center;">&times;</button>
             </div>
             
             <!-- BODY -->
@@ -15850,70 +15852,80 @@ function viewReceipt(id) {
                     font-family: 'Segoe UI', Arial, sans-serif;
                     overflow: hidden;
                     width: ${receiptWidth};
-                    ${receiptBorder}
+                    ${!isMobile ? receiptBorder : ''}
                 ">
                     
                     <!-- ===== SCHOOL HEADER ===== -->
-                    <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: ${isMobile ? '14px' : '12px'}; margin-bottom: ${isMobile ? '16px' : '14px'};">
-                        <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: ${isMobile ? '8px' : '12px'}; margin-bottom: ${isMobile ? '8px' : '14px'};">
+                        <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 2px;">
                             ${logoHTML}
                         </div>
-                        <h2 style="margin: 0; font-size: ${isDesktop ? '18px' : (isTablet ? '20px' : '20px')}; font-weight: 800; color: #1e293b; letter-spacing: 0.5px; text-transform: uppercase;">${escapeHtml(localStorage.getItem('schoolName') || 'Wings Convent')}</h2>
-                        <p style="margin: ${isMobile ? '8px 0 0' : '6px 0 0'}; font-size: ${isMobile ? '12px' : (isTablet ? '12px' : '11px')}; color: #64748b;">${escapeHtml(localStorage.getItem('schoolAddress') || 'Plot No. 366, Om Nagar, Koradi Road, Nagpur - 440030')}</p>
-                        <p style="margin: ${isMobile ? '4px 0 0' : '3px 0 0'}; font-size: ${isMobile ? '11px' : (isTablet ? '11px' : '10px')}; color: #64748b;">📞 ${escapeHtml(localStorage.getItem('schoolPhone') || '91-9876543210')} | 📧 ${escapeHtml(localStorage.getItem('schoolEmail') || 'info@wingsconvent.edu')}</p>
-                        <h3 style="margin: ${isMobile ? '12px 0 0' : '10px 0 0'}; font-size: ${isDesktop ? '17px' : (isTablet ? '19px' : '19px')}; color: #2563eb; font-weight: 700; letter-spacing: 1px;">FEE RECEIPT</h3>
+                        <h2 style="margin: 0; font-size: ${isDesktop ? '18px' : (isTablet ? '20px' : '14px')}; font-weight: 800; color: #1e293b; letter-spacing: 0.5px; text-transform: uppercase;">${escapeHtml(localStorage.getItem('schoolName') || 'Wings Convent')}</h2>
+                        <p style="margin: ${isMobile ? '4px 0 0' : '6px 0 0'}; font-size: ${isMobile ? '9px' : (isTablet ? '12px' : '11px')}; color: #64748b;">${escapeHtml(localStorage.getItem('schoolAddress') || 'Plot No. 366, Om Nagar, Koradi Road, Nagpur - 440030')}</p>
+                        <p style="margin: ${isMobile ? '2px 0 0' : '3px 0 0'}; font-size: ${isMobile ? '8px' : (isTablet ? '11px' : '10px')}; color: #64748b;">📞 ${escapeHtml(localStorage.getItem('schoolPhone') || '91-9876543210')} | 📧 ${escapeHtml(localStorage.getItem('schoolEmail') || 'info@wingsconvent.edu')}</p>
+                        <h3 style="margin: ${isMobile ? '6px 0 0' : '10px 0 0'}; font-size: ${isDesktop ? '17px' : (isTablet ? '19px' : '14px')}; color: #2563eb; font-weight: 700; letter-spacing: 1px;">FEE RECEIPT</h3>
                     </div>
                     
-                    <!-- ===== RECEIPT DETAILS (ALL FIELDS PROPER) ===== -->
-                    <div style="background: #f8fafc; border-radius: 8px; padding: ${isMobile ? '14px 16px' : (isTablet ? '16px 20px' : '16px 20px')}; margin-bottom: ${isMobile ? '16px' : '14px'}; border: 1px solid #e2e8f0;">
+                    <!-- ===== RECEIPT DETAILS ===== -->
+                    <div style="background: #f8fafc; border-radius: 8px; padding: ${isMobile ? '8px 10px' : (isTablet ? '16px 20px' : '16px 20px')}; margin-bottom: ${isMobile ? '8px' : '14px'}; border: 1px solid #e2e8f0;">
                         <div style="display: grid; grid-template-columns: ${gridColumns}; gap: ${gridGap}; font-size: ${detailFontSize};">
                             
-                            <!-- Row 1: Receipt No + Class -->
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db;">
+                            <!-- Receipt No -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Receipt No:</span>
                                 <span style="font-weight: 600; color: #1e293b; font-size: ${detailFontSize};">${f.receipt_no || 'N/A'}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db;">
+                            
+                            <!-- Class -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Class:</span>
                                 <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${escapeHtml(studentClass)}</span>
                             </div>
                             
-                            <!-- Row 2: Paid + Date -->
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db;">
+                            <!-- Paid -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Paid:</span>
                                 <span style="font-weight: 600; color: #10b981; font-size: ${detailFontSize};">${formatFullCurrency(f.amount)}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db;">
+                            
+                            <!-- Date -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Date:</span>
                                 <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${formatDateDMY(f.date)}</span>
                             </div>
                             
-                            <!-- Row 3: Roll No + Due -->
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db;">
+                            <!-- Roll No -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Roll No:</span>
                                 <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${rollNo}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db;">
+                            
+                            <!-- Due -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Due:</span>
                                 <span style="font-weight: 600; color: ${balanceFee > 0 ? '#dc2626' : '#10b981'}; font-size: ${detailFontSize};">${formatFullCurrency(balanceFee)}</span>
                             </div>
                             
-                            <!-- Row 4: Student + Total Fee -->
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db;">
+                            <!-- Student -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Student:</span>
                                 <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${escapeHtml(f.student_name || 'N/A')}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db;">
+                            
+                            <!-- Total Fee -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Total Fee:</span>
                                 <span style="font-weight: 600; color: #2563eb; font-size: ${detailFontSize};">${formatFullCurrency(totalFee)}</span>
                             </div>
                             
-                            <!-- Row 5: Mode + Collected By (Full Width) -->
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #d1d5db; grid-column: 1 / -1;">
+                            <!-- Mode -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; ${(isDesktop || isTablet) ? 'border-bottom: 1px dotted #d1d5db;' : 'border-bottom: 1px dotted #d1d5db;'}">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Mode:</span>
                                 <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${f.mode || 'N/A'}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0; grid-column: 1 / -1;">
+                            
+                            <!-- Collected By -->
+                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; grid-column: 1 / -1;">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Collected By:</span>
                                 <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${f.collected_by || 'Admin'}</span>
                             </div>
@@ -15922,28 +15934,28 @@ function viewReceipt(id) {
                     </div>
                     
                     <!-- ===== PAYMENT SUMMARY TABLE ===== -->
-                    <div style="margin-bottom: ${isMobile ? '16px' : '14px'}; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; width: 100%;">
+                    <div style="margin-bottom: ${isMobile ? '8px' : '14px'}; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; width: 100%;">
                         <table style="width: 100%; border-collapse: collapse; font-size: ${tableFontSize}; table-layout: fixed;">
                             <thead>
                                 <tr style="background: linear-gradient(135deg, #2563eb, #1e40af); color: white;">
                                     <th style="padding: ${thPadding}; text-align: left; font-weight: 700; font-size: ${tableFontSize}; width: 60%;">
-                                        <i class="fas fa-list-ul" style="margin-right: 8px;"></i> Particulars
+                                        <i class="fas fa-list-ul" style="margin-right: 6px;"></i> Particulars
                                     </th>
                                     <th style="padding: ${thPadding}; text-align: right; font-weight: 700; font-size: ${tableFontSize}; width: 40%;">
-                                        <i class="fas fa-rupee-sign" style="margin-right: 6px;"></i> Amount (₹)
+                                        <i class="fas fa-rupee-sign" style="margin-right: 4px;"></i> Amount (₹)
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr style="border-bottom: 1px solid #e2e8f0; background: #f0fdf4;">
                                     <td style="padding: ${tdPadding}; font-weight: 600; color: #065f46; font-size: ${tableFontSize};">
-                                        <i class="fas fa-check-circle" style="color: #10b981; margin-right: 8px;"></i> Amount Paid
+                                        <i class="fas fa-check-circle" style="color: #10b981; margin-right: 6px;"></i> Amount Paid
                                     </td>
                                     <td style="padding: ${tdPadding}; text-align: right; font-weight: 700; color: #10b981; font-size: ${tableFontSize};">${formatFullCurrency(f.amount || 0)}</td>
                                 </tr>
                                 <tr style="background: #ffffff;">
                                     <td style="padding: ${tdPadding}; font-weight: 600; color: #1e293b; font-size: ${tableFontSize};">
-                                        <i class="fas fa-clock" style="color: ${balanceFee > 0 ? '#dc2626' : '#10b981'}; margin-right: 8px;"></i> Balance Fee
+                                        <i class="fas fa-clock" style="color: ${balanceFee > 0 ? '#dc2626' : '#10b981'}; margin-right: 6px;"></i> Balance Fee
                                     </td>
                                     <td style="padding: ${tdPadding}; text-align: right; font-weight: 700; color: ${balanceFee > 0 ? '#dc2626' : '#10b981'}; font-size: ${tableFontSize};">${formatFullCurrency(balanceFee)}</td>
                                 </tr>
@@ -15953,41 +15965,41 @@ function viewReceipt(id) {
                     
                     <!-- ===== PAYMENT HISTORY ===== -->
                     ${allPayments.length > 1 ? `
-                    <div style="margin-top: ${isMobile ? '14px' : '12px'};">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: ${isMobile ? '12px' : '10px'}; flex-wrap: wrap;">
-                            <i class="fas fa-history" style="color: #2563eb; font-size: ${isMobile ? '20px' : (isTablet ? '18px' : '16px')};"></i>
-                            <h4 style="font-size: ${isMobile ? '18px' : (isTablet ? '16px' : '14px')}; margin: 0; color: #2563eb; font-weight: 700;">Payment History</h4>
-                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 14px; border-radius: 20px; font-size: ${isMobile ? '13px' : (isTablet ? '12px' : '11px')}; font-weight: 600;">${allPayments.length} Records</span>
+                    <div style="margin-top: ${isMobile ? '8px' : '12px'};">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: ${isMobile ? '6px' : '10px'}; flex-wrap: wrap;">
+                            <i class="fas fa-history" style="color: #2563eb; font-size: ${isMobile ? '14px' : (isTablet ? '18px' : '16px')};"></i>
+                            <h4 style="font-size: ${isMobile ? '13px' : (isTablet ? '16px' : '14px')}; margin: 0; color: #2563eb; font-weight: 700;">Payment History</h4>
+                            <span style="background: #dbeafe; color: #1e40af; padding: 2px 10px; border-radius: 20px; font-size: ${isMobile ? '10px' : (isTablet ? '12px' : '11px')}; font-weight: 600;">${allPayments.length} Records</span>
                         </div>
                         <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; width: 100%;">
                             <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
                                 <table style="width: 100%; min-width: ${historyMinWidth}; border-collapse: collapse; font-size: ${historyFontSize};">
                                     <thead>
                                         <tr style="background: #f1f5f9; border-bottom: 2px solid #2563eb;">
-                                            <th style="padding: ${isMobile ? '10px 12px' : '8px 12px'}; text-align: left; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
+                                            <th style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: left; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
                                                 <i class="fas fa-calendar-alt" style="margin-right: 4px;"></i> Date
                                             </th>
-                                            <th style="padding: ${isMobile ? '10px 12px' : '8px 12px'}; text-align: right; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
+                                            <th style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: right; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
                                                 <i class="fas fa-rupee-sign" style="margin-right: 4px;"></i> Amount
                                             </th>
-                                            <th style="padding: ${isMobile ? '10px 12px' : '8px 12px'}; text-align: center; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
+                                            <th style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: center; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
                                                 <i class="fas fa-credit-card" style="margin-right: 4px;"></i> Mode
                                             </th>
-                                            <th style="padding: ${isMobile ? '10px 12px' : '8px 12px'}; text-align: center; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
+                                            <th style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: center; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
                                                 <i class="fas fa-receipt" style="margin-right: 4px;"></i> Receipt
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${paymentHistoryRows || '<tr><td colspan="4" style="text-align:center; padding:20px; color:#94a3b8;">No payment history</td></tr>'}
+                                        ${paymentHistoryRows || '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8; font-size:11px;">No payment history</td></tr>'}
                                     </tbody>
                                     <tfoot style="background: #f8fafc; border-top: 2px solid #2563eb;">
                                         <tr>
-                                            <td style="padding: ${isMobile ? '10px 12px' : '8px 12px'}; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
+                                            <td style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
                                                 <i class="fas fa-calculator" style="margin-right: 4px;"></i> Total Paid
                                             </td>
-                                            <td style="padding: ${isMobile ? '10px 12px' : '8px 12px'}; text-align: right; font-weight: 700; font-size: ${historyFontSize}; color: #10b981;">${formatFullCurrency(totalPaid)}</td>
-                                            <td colspan="2" style="padding: ${isMobile ? '10px 12px' : '8px 12px'};"></td>
+                                            <td style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: right; font-weight: 700; font-size: ${historyFontSize}; color: #10b981;">${formatFullCurrency(totalPaid)}</td>
+                                            <td colspan="2" style="padding: ${isMobile ? '6px 8px' : '8px 12px'};"></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -15996,15 +16008,15 @@ function viewReceipt(id) {
                     </div>` : ''}
                     
                     <!-- ===== SIGNATURE ===== -->
-                    <div style="margin-top: ${isMobile ? '20px' : '18px'}; text-align: center; padding-top: ${isMobile ? '14px' : '12px'}; border-top: 1px solid #e2e8f0;">
+                    <div style="margin-top: ${isMobile ? '10px' : '18px'}; text-align: center; padding-top: ${isMobile ? '8px' : '12px'}; border-top: 1px solid #e2e8f0;">
                         <div style="width: ${signatureWidth}; margin: 0 auto;">
-                            <div style="border-top: 1.5px solid #1e293b; margin-bottom: 4px;"></div>
-                            <p style="font-size: ${isMobile ? '13px' : (isTablet ? '12px' : '10px')}; font-weight: 600; color: #475569; margin: 0;">Authorized Signatory</p>
+                            <div style="border-top: 1px solid #1e293b; margin-bottom: 3px;"></div>
+                            <p style="font-size: ${isMobile ? '9px' : (isTablet ? '12px' : '10px')}; font-weight: 600; color: #475569; margin: 0;">Authorized Signatory</p>
                         </div>
                     </div>
                     
                     <!-- ===== FOOTER ===== -->
-                    <div style="margin-top: ${isMobile ? '14px' : '12px'}; text-align: center; font-size: ${footerFontSize}; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: ${isMobile ? '12px' : '10px'};">
+                    <div style="margin-top: ${isMobile ? '8px' : '12px'}; text-align: center; font-size: ${footerFontSize}; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: ${isMobile ? '6px' : '10px'};">
                         This is a computer generated receipt | Valid with school stamp
                     </div>
                     
@@ -16012,20 +16024,20 @@ function viewReceipt(id) {
             </div>
             
             <!-- ===== FOOTER BUTTONS ===== -->
-            <div style="display: flex; gap: ${isMobile ? '8px' : '6px'}; flex-wrap: wrap; justify-content: center; padding: ${isMobile ? '12px 16px' : '10px 16px'}; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-shrink: 0;">
-                <button id="printReceiptBtn" style="padding: ${buttonPadding}; background: #3b82f6; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 6px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
+            <div style="display: flex; gap: ${isMobile ? '4px' : '6px'}; flex-wrap: wrap; justify-content: center; padding: ${isMobile ? '6px 8px' : '10px 16px'}; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-shrink: 0;">
+                <button id="printReceiptBtn" style="padding: ${buttonPadding}; background: #3b82f6; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 4px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
                     <i class="fas fa-print"></i> Print
                 </button>
-                <button id="downloadPngBtn" style="padding: ${buttonPadding}; background: #10b981; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 6px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
+                <button id="downloadPngBtn" style="padding: ${buttonPadding}; background: #10b981; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 4px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
                     <i class="fas fa-image"></i> PNG
                 </button>
-                <button id="downloadPdfBtn" style="padding: ${buttonPadding}; background: #dc2626; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 6px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
+                <button id="downloadPdfBtn" style="padding: ${buttonPadding}; background: #dc2626; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 4px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
                     <i class="fas fa-file-pdf"></i> PDF
                 </button>
-                <button id="shareReceiptBtn" style="padding: ${buttonPadding}; background: #25D366; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 6px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
+                <button id="shareReceiptBtn" style="padding: ${buttonPadding}; background: #25D366; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 4px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
                     <i class="fab fa-whatsapp"></i> Share
                 </button>
-                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: ${buttonPadding}; background: #64748b; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 6px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
+                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: ${buttonPadding}; background: #64748b; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 4px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
                     <i class="fas fa-times"></i> Close
                 </button>
             </div>
