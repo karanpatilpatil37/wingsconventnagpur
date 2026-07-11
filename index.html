@@ -15775,15 +15775,39 @@ function viewReceipt(id) {
         return;
     }
     
-    let totalFee = getStudentTotalFee(f.student_name);
-    let totalPaid = window.fees.filter(p => p && p.student_name === f.student_name && p.status === 'Paid').reduce((sum, p) => sum + (p.amount || 0), 0);
-    let balanceFee = totalFee - totalPaid;
+    // ✅ FIX: Use the actual receipt data, not recalculated values
+    let totalFee = f.total_fee || f.totalFee || getStudentTotalFee(f.student_name);
+    let totalPaid = f.total_paid || f.totalPaid || window.fees.filter(p => p && p.student_name === f.student_name && p.status === 'Paid').reduce((sum, p) => sum + (p.amount || 0), 0);
+    let balanceFee = f.due_amount || f.due || (totalFee - totalPaid);
+    let amountPaid = f.amount || 0;
+    
+    // ✅ FIX: Properly handle date parsing
+    let receiptDate = f.date;
+    if (receiptDate) {
+        // If date is stored as a string, ensure it's parsed correctly
+        if (typeof receiptDate === 'string') {
+            // Check if it's in DD/MM/YYYY format
+            let parts = receiptDate.split('/');
+            if (parts.length === 3) {
+                // Reconstruct as YYYY-MM-DD for proper display
+                receiptDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+        }
+    }
     
     // ✅ Proper student details
     let studentClass = student ? `${student.cls || 'N/A'} ${student.sec || ''}` : 'N/A';
     let rollNo = student ? (student.roll || 'N/A') : 'N/A';
     
-    let allPayments = window.fees.filter(p => p && p.student_name === f.student_name).sort((a, b) => new Date(b.date) - new Date(a.date));
+    let allPayments = window.fees.filter(p => p && p.student_name === f.student_name).sort((a, b) => {
+        // Safe date comparison
+        let dateA = new Date(a.date);
+        let dateB = new Date(b.date);
+        if (isNaN(dateA)) dateA = new Date(0);
+        if (isNaN(dateB)) dateB = new Date(0);
+        return dateB - dateA;
+    });
+    
     let paymentHistoryRows = '';
     for (let p of allPayments) {
         let isCurrent = (p.id === f.id);
@@ -15885,13 +15909,13 @@ function viewReceipt(id) {
                             <!-- Paid -->
                             <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Paid:</span>
-                                <span style="font-weight: 600; color: #10b981; font-size: ${detailFontSize};">${formatFullCurrency(f.amount)}</span>
+                                <span style="font-weight: 600; color: #10b981; font-size: ${detailFontSize};">${formatFullCurrency(amountPaid)}</span>
                             </div>
                             
                             <!-- Date -->
                             <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
                                 <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Date:</span>
-                                <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${formatDateDMY(f.date)}</span>
+                                <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${formatDateDMY(receiptDate)}</span>
                             </div>
                             
                             <!-- Roll No -->
@@ -15951,7 +15975,7 @@ function viewReceipt(id) {
                                     <td style="padding: ${tdPadding}; font-weight: 600; color: #065f46; font-size: ${tableFontSize};">
                                         <i class="fas fa-check-circle" style="color: #10b981; margin-right: 6px;"></i> Amount Paid
                                     </td>
-                                    <td style="padding: ${tdPadding}; text-align: right; font-weight: 700; color: #10b981; font-size: ${tableFontSize};">${formatFullCurrency(f.amount || 0)}</td>
+                                    <td style="padding: ${tdPadding}; text-align: right; font-weight: 700; color: #10b981; font-size: ${tableFontSize};">${formatFullCurrency(amountPaid)}</td>
                                 </tr>
                                 <tr style="background: #ffffff;">
                                     <td style="padding: ${tdPadding}; font-weight: 600; color: #1e293b; font-size: ${tableFontSize};">
@@ -16164,7 +16188,7 @@ function viewReceipt(id) {
     
     // ===== SHARE BUTTON =====
     document.getElementById('shareReceiptBtn').onclick = function() {
-        let message = `🏫 ${localStorage.getItem('schoolName') || 'Wings Convent School'}\n━━━━━━━━━━━━━━━━━━━━\n💰 FEE RECEIPT\n━━━━━━━━━━━━━━━━━━━━\n\nReceipt No: ${f.receipt_no || 'N/A'}\nStudent: ${f.student_name || 'N/A'}\nClass: ${studentClass}\nRoll No: ${rollNo}\nAmount Paid: ${formatFullCurrency(f.amount)}\nBalance: ${formatFullCurrency(balanceFee)}\nMode: ${f.mode}\nDate: ${formatDateDMY(f.date)}\n\n━━━━━━━━━━━━━━━━━━━━\n📞 ${localStorage.getItem('schoolPhone') || ''}\n📧 ${localStorage.getItem('schoolEmail') || ''}`;
+        let message = `🏫 ${localStorage.getItem('schoolName') || 'Wings Convent School'}\n━━━━━━━━━━━━━━━━━━━━\n💰 FEE RECEIPT\n━━━━━━━━━━━━━━━━━━━━\n\nReceipt No: ${f.receipt_no || 'N/A'}\nStudent: ${f.student_name || 'N/A'}\nClass: ${studentClass}\nRoll No: ${rollNo}\nAmount Paid: ${formatFullCurrency(amountPaid)}\nBalance: ${formatFullCurrency(balanceFee)}\nMode: ${f.mode}\nDate: ${formatDateDMY(receiptDate)}\n\n━━━━━━━━━━━━━━━━━━━━\n📞 ${localStorage.getItem('schoolPhone') || ''}\n📧 ${localStorage.getItem('schoolEmail') || ''}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     };
 }
