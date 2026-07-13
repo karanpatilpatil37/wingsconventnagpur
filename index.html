@@ -15761,7 +15761,7 @@ async function exportFeesPDF() {
 }
 
 // ======================= ✅ FIXED: VIEW RECEIPT (ANDROID MOBILE VIEW) =======================
-// ======================= ✅ COMPLETE FIX: VIEW RECEIPT (DESKTOP + TABLET + MOBILE) =======================
+// ======================= ✅ FINAL FIX: VIEW RECEIPT (FULLY RESPONSIVE + NO CUT OFF) =======================
 function viewReceipt(id) {
     let f = window.fees.find(f => f && f.id === id);
     if (!f) {
@@ -15775,27 +15775,26 @@ function viewReceipt(id) {
         return;
     }
     
-    // ✅ FIX: Use the actual receipt data, not recalculated values
+    // ✅ Use the actual receipt data
     let totalFee = f.total_fee || f.totalFee || getStudentTotalFee(f.student_name);
     let totalPaid = f.total_paid || f.totalPaid || window.fees.filter(p => p && p.student_name === f.student_name && p.status === 'Paid').reduce((sum, p) => sum + (p.amount || 0), 0);
     let balanceFee = f.due_amount || f.due || (totalFee - totalPaid);
     let amountPaid = f.amount || 0;
     
-    // ✅ FIX: Properly handle date parsing
+    // ✅ Date parsing
     let receiptDate = f.date;
-    if (receiptDate) {
-        if (typeof receiptDate === 'string') {
-            let parts = receiptDate.split('/');
-            if (parts.length === 3) {
-                receiptDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
+    if (receiptDate && typeof receiptDate === 'string') {
+        let parts = receiptDate.split('/');
+        if (parts.length === 3) {
+            receiptDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
     }
     
-    // ✅ Proper student details
+    // ✅ Student details
     let studentClass = student ? `${student.cls || 'N/A'} ${student.sec || ''}` : 'N/A';
     let rollNo = student ? (student.roll || 'N/A') : 'N/A';
     
+    // ✅ Payment History
     let allPayments = window.fees.filter(p => p && p.student_name === f.student_name).sort((a, b) => {
         let dateA = new Date(a.date);
         let dateB = new Date(b.date);
@@ -15810,10 +15809,10 @@ function viewReceipt(id) {
         let rowStyle = isCurrent ? 'background-color: #e8f5e9;' : '';
         paymentHistoryRows += `
             <tr style="${rowStyle}">
-                <td style="padding: 6px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 10px;">${formatDateDMY(p.date)}</td>
-                <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #e2e8f0; font-size: 10px; font-weight: 600;">${formatFullCurrency(p.amount || 0)}</td>
-                <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 10px;">${p.mode || 'N/A'}</td>
-                <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 10px;">${p.receipt_no || 'N/A'}</td>
+                <td style="padding: 6px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 10px; word-break: break-word;">${formatDateDMY(p.date)}</td>
+                <td style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #e2e8f0; font-size: 10px; font-weight: 600; word-break: break-word;">${formatFullCurrency(p.amount || 0)}</td>
+                <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 10px; word-break: break-word;">${p.mode || 'N/A'}</td>
+                <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 10px; word-break: break-word;">${p.receipt_no || 'N/A'}</td>
             </tr>
         `;
     }
@@ -15827,92 +15826,119 @@ function viewReceipt(id) {
     const isMobile = width < 768;
     
     // ✅ RESPONSIVE SETTINGS
-    let receiptWidth = '100%';
     let modalMaxWidth = isDesktop ? '700px' : (isTablet ? '95%' : '98%');
-    let containerPadding = isDesktop ? '14px 28px' : (isTablet ? '12px 20px' : '6px 10px');
-    let bodyPadding = isDesktop ? '20px 28px' : (isTablet ? '16px 20px' : '6px 10px');
-    let fontSize = isDesktop ? '13px' : (isTablet ? '14px' : '11px');
-    let headingSize = isDesktop ? '18px' : (isTablet ? '19px' : '15px');
-    let thPadding = isDesktop ? '12px 20px' : (isTablet ? '12px 18px' : '6px 10px');
-    let tdPadding = isDesktop ? '12px 20px' : (isTablet ? '12px 18px' : '6px 10px');
-    let buttonPadding = isDesktop ? '10px 22px' : (isTablet ? '10px 18px' : '4px 10px');
-    let buttonFontSize = isDesktop ? '13px' : (isTablet ? '13px' : '10px');
-    let buttonMinHeight = isDesktop ? '40px' : (isTablet ? '44px' : '25px');
+    let containerPadding = isDesktop ? '14px 28px' : (isTablet ? '12px 20px' : '8px 12px');
+    let bodyPadding = isDesktop ? '20px 28px' : (isTablet ? '16px 20px' : '10px 12px');
+    let headingSize = isDesktop ? '18px' : (isTablet ? '19px' : '16px');
+    let thPadding = isDesktop ? '10px 16px' : (isTablet ? '10px 14px' : '8px 8px');
+    let tdPadding = isDesktop ? '10px 16px' : (isTablet ? '10px 14px' : '8px 8px');
+    let buttonPadding = isDesktop ? '10px 22px' : (isTablet ? '10px 18px' : '6px 12px');
+    let buttonFontSize = isDesktop ? '13px' : (isTablet ? '13px' : '11px');
+    let buttonMinHeight = isDesktop ? '40px' : (isTablet ? '44px' : '32px');
     let receiptBorder = isDesktop ? '1px solid #e2e8f0; border-radius: 8px; padding: 16px;' : (isTablet ? '1px solid #e2e8f0; border-radius: 8px; padding: 14px;' : 'none');
     let gridColumns = (isDesktop || isTablet) ? '1fr 1fr' : '1fr';
-    let gridGap = (isDesktop || isTablet) ? '6px 24px' : '2px 0px';
-    let detailFontSize = isDesktop ? '13px' : (isTablet ? '14px' : '11px');
-    let tableFontSize = isDesktop ? '14px' : (isTablet ? '15px' : '12px');
-    let historyFontSize = isDesktop ? '12px' : (isTablet ? '12px' : '10px');
-    let historyMinWidth = isDesktop ? '400px' : (isTablet ? '400px' : '280px');
-    let signatureWidth = isDesktop ? '160px' : (isTablet ? '160px' : '120px');
-    let footerFontSize = isDesktop ? '9px' : (isTablet ? '9px' : '7px');
-    let modalBorderRadius = isDesktop ? '20px' : (isTablet ? '18px' : '12px');
-    let detailPadding = isDesktop ? '8px 0' : (isTablet ? '8px 0' : '4px 0');
-    let detailBorder = isDesktop ? '1px dotted #d1d5db;' : (isTablet ? '1px dotted #d1d5db;' : '1px dotted #d1d5db;');
+    let gridGap = (isDesktop || isTablet) ? '6px 24px' : '4px 0px';
+    let detailFontSize = isDesktop ? '13px' : (isTablet ? '14px' : '12px');
+    let historyFontSize = isDesktop ? '11px' : (isTablet ? '11px' : '10px');
+    let signatureWidth = isDesktop ? '200px' : (isTablet ? '180px' : '160px');
+    let footerFontSize = isDesktop ? '9px' : (isTablet ? '9px' : '8px');
+    let modalBorderRadius = isDesktop ? '20px' : (isTablet ? '18px' : '14px');
+    let detailPadding = isDesktop ? '8px 0' : (isTablet ? '8px 0' : '6px 0');
+    let detailBorder = '1px dotted #d1d5db;';
     
-    // ✅ FIX: Table headers with text only (no icons) for better mobile compatibility
-    let particularHeaders = `
-        <table style="width: 100%; border-collapse: collapse; font-size: ${tableFontSize}; table-layout: fixed;">
-            <thead>
-                <tr style="background: linear-gradient(135deg, #2563eb, #1e40af); color: white;">
-                    <th style="padding: ${thPadding}; text-align: left; font-weight: 700; font-size: ${tableFontSize}; width: 60%; border-radius: 4px 0 0 0;">
-                        📋 Particulars
-                    </th>
-                    <th style="padding: ${thPadding}; text-align: right; font-weight: 700; font-size: ${tableFontSize}; width: 40%; border-radius: 0 4px 0 0;">
-                        💰 Amount (₹)
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr style="border-bottom: 1px solid #e2e8f0; background: #f0fdf4;">
-                    <td style="padding: ${tdPadding}; font-weight: 600; color: #065f46; font-size: ${tableFontSize};">
-                        ✅ Amount Paid
-                    </td>
-                    <td style="padding: ${tdPadding}; text-align: right; font-weight: 700; color: #10b981; font-size: ${tableFontSize};">${formatFullCurrency(amountPaid)}</td>
-                </tr>
-                <tr style="background: #ffffff;">
-                    <td style="padding: ${tdPadding}; font-weight: 600; color: #1e293b; font-size: ${tableFontSize};">
-                        ⏳ Balance Fee
-                    </td>
-                    <td style="padding: ${tdPadding}; text-align: right; font-weight: 700; color: ${balanceFee > 0 ? '#dc2626' : '#10b981'}; font-size: ${tableFontSize};">${formatFullCurrency(balanceFee)}</td>
-                </tr>
-            </tbody>
-        </table>
+    // ✅ RECEIPT DETAILS
+    let receiptDetailsHTML = `
+        <div style="background: #f8fafc; border-radius: 8px; padding: ${isMobile ? '10px 14px' : (isTablet ? '16px 24px' : '16px 24px')}; margin-bottom: ${isMobile ? '10px' : '16px'}; border: 1px solid #e2e8f0;">
+            <div style="display: grid; grid-template-columns: ${gridColumns}; gap: ${gridGap}; font-size: ${detailFontSize};">
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Student:</span>
+                    <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${escapeHtml(f.student_name || 'N/A')}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Class:</span>
+                    <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${escapeHtml(studentClass)}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Roll No:</span>
+                    <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${rollNo}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Date:</span>
+                    <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${formatDateDMY(receiptDate)}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Receipt No:</span>
+                    <span style="font-weight: 600; color: #1e293b; font-size: ${detailFontSize};">${f.receipt_no || 'N/A'}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Mode:</span>
+                    <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${f.mode || 'N/A'}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Total Fee:</span>
+                    <span style="font-weight: 600; color: #2563eb; font-size: ${detailFontSize};">${formatFullCurrency(totalFee)}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Paid:</span>
+                    <span style="font-weight: 600; color: #10b981; font-size: ${detailFontSize};">${formatFullCurrency(amountPaid)}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Due:</span>
+                    <span style="font-weight: 600; color: ${balanceFee > 0 ? '#dc2626' : '#10b981'}; font-size: ${detailFontSize};">${formatFullCurrency(balanceFee)}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; grid-column: 1 / -1; border-bottom: none;">
+                    <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Collected By:</span>
+                    <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${f.collected_by || 'Administrator'}</span>
+                </div>
+                
+            </div>
+        </div>
     `;
     
-    // ✅ FIX: Payment History headers with text only
-    let historyHeaders = `
-        <table style="width: 100%; min-width: ${historyMinWidth}; border-collapse: collapse; font-size: ${historyFontSize};">
-            <thead>
-                <tr style="background: #f1f5f9; border-bottom: 2px solid #2563eb;">
-                    <th style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: left; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
-                        📅 Date
-                    </th>
-                    <th style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: right; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
-                        💰 Amount
-                    </th>
-                    <th style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: center; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
-                        💳 Mode
-                    </th>
-                    <th style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: center; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
-                        📄 Receipt
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                ${paymentHistoryRows || '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8; font-size:11px;">No payment history</td></tr>'}
-            </tbody>
-            <tfoot style="background: #f8fafc; border-top: 2px solid #2563eb;">
-                <tr>
-                    <td style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b;">
-                        📊 Total Paid
-                    </td>
-                    <td style="padding: ${isMobile ? '6px 8px' : '8px 12px'}; text-align: right; font-weight: 700; font-size: ${historyFontSize}; color: #10b981;">${formatFullCurrency(totalPaid)}</td>
-                    <td colspan="2" style="padding: ${isMobile ? '6px 8px' : '8px 12px'};"></td>
-                </tr>
-            </tfoot>
-        </table>
+    // ✅ PAYMENT HISTORY TABLE - FULLY RESPONSIVE (NO CUT OFF)
+    let historyTable = `
+        <div style="width: 100%; overflow: visible;">
+            <table style="width: 100%; border-collapse: collapse; font-size: ${historyFontSize}; table-layout: fixed; min-width: 280px;">
+                <thead>
+                    <tr style="background: #f1f5f9; border-bottom: 2px solid #2563eb;">
+                        <th style="padding: ${thPadding}; text-align: left; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b; width: 22%; word-break: break-word;">
+                            📅 Date
+                        </th>
+                        <th style="padding: ${thPadding}; text-align: right; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b; width: 28%; word-break: break-word;">
+                            💰 Amount
+                        </th>
+                        <th style="padding: ${thPadding}; text-align: center; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b; width: 22%; word-break: break-word;">
+                            💳 Mode
+                        </th>
+                        <th style="padding: ${thPadding}; text-align: center; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b; width: 28%; word-break: break-word;">
+                            📄 Receipt
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${paymentHistoryRows || '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8; font-size:11px;">No payment history</td></tr>'}
+                </tbody>
+                <tfoot style="background: #f8fafc; border-top: 2px solid #2563eb;">
+                    <tr>
+                        <td style="padding: ${thPadding}; font-weight: 700; font-size: ${historyFontSize}; color: #1e293b; word-break: break-word;">
+                            📊 Total
+                        </td>
+                        <td style="padding: ${thPadding}; text-align: right; font-weight: 700; font-size: ${historyFontSize}; color: #10b981; word-break: break-word;">${formatFullCurrency(totalPaid)}</td>
+                        <td colspan="2" style="padding: ${thPadding};"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     `;
     
     const modalHTML = `
@@ -15923,7 +15949,7 @@ function viewReceipt(id) {
                 <h2 style="color: white; margin: 0; font-size: ${headingSize}; display: flex; align-items: center; gap: 6px;">
                     <span>🧾 Receipt - ${f.receipt_no || 'N/A'}</span>
                 </h2>
-                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: ${isMobile ? '28px' : '36px'}; height: ${isMobile ? '28px' : '36px'}; border-radius: 50%; cursor: pointer; font-size: ${isMobile ? '16px' : '22px'}; display: flex; align-items: center; justify-content: center;">✕</button>
+                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: ${isMobile ? '32px' : '38px'}; height: ${isMobile ? '32px' : '38px'}; border-radius: 50%; cursor: pointer; font-size: ${isMobile ? '18px' : '22px'}; display: flex; align-items: center; justify-content: center;">✕</button>
             </div>
             
             <!-- BODY -->
@@ -15933,8 +15959,8 @@ function viewReceipt(id) {
                     max-width: 100%;
                     margin: 0 auto;
                     font-family: 'Segoe UI', Arial, sans-serif;
-                    overflow: hidden;
-                    width: ${receiptWidth};
+                    overflow: visible;
+                    width: 100%;
                     ${!isMobile ? receiptBorder : ''}
                 ">
                     
@@ -15943,99 +15969,43 @@ function viewReceipt(id) {
                         <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 2px;">
                             ${logoHTML}
                         </div>
-                        <h2 style="margin: 0; font-size: ${isDesktop ? '18px' : (isTablet ? '20px' : '14px')}; font-weight: 800; color: #1e293b; letter-spacing: 0.5px; text-transform: uppercase;">${escapeHtml(localStorage.getItem('schoolName') || 'Wings Convent')}</h2>
-                        <p style="margin: ${isMobile ? '4px 0 0' : '6px 0 0'}; font-size: ${isMobile ? '9px' : (isTablet ? '12px' : '11px')}; color: #64748b;">${escapeHtml(localStorage.getItem('schoolAddress') || 'Plot No. 366, Om Nagar, Koradi Road, Nagpur - 440030')}</p>
-                        <p style="margin: ${isMobile ? '2px 0 0' : '3px 0 0'}; font-size: ${isMobile ? '8px' : (isTablet ? '11px' : '10px')}; color: #64748b;">📞 ${escapeHtml(localStorage.getItem('schoolPhone') || '91-9876543210')} | 📧 ${escapeHtml(localStorage.getItem('schoolEmail') || 'info@wingsconvent.edu')}</p>
-                        <h3 style="margin: ${isMobile ? '6px 0 0' : '10px 0 0'}; font-size: ${isDesktop ? '17px' : (isTablet ? '19px' : '14px')}; color: #2563eb; font-weight: 700; letter-spacing: 1px;">💰 FEE RECEIPT</h3>
+                        <h2 style="margin: 0; font-size: ${isDesktop ? '18px' : (isTablet ? '20px' : '15px')}; font-weight: 800; color: #1e293b; letter-spacing: 0.5px; text-transform: uppercase;">${escapeHtml(localStorage.getItem('schoolName') || 'Wings Convent')}</h2>
+                        <p style="margin: ${isMobile ? '3px 0 0' : '4px 0 0'}; font-size: ${isMobile ? '9px' : (isTablet ? '11px' : '10px')}; color: #64748b;">${escapeHtml(localStorage.getItem('schoolAddress') || 'Plot No. 366, Om Nagar, Koradi Road, Nagpur - 440030')}</p>
+                        <p style="margin: ${isMobile ? '2px 0 0' : '3px 0 0'}; font-size: ${isMobile ? '8px' : (isTablet ? '10px' : '9px')}; color: #64748b;">📞 ${escapeHtml(localStorage.getItem('schoolPhone') || '91-9876543210')} | 📧 ${escapeHtml(localStorage.getItem('schoolEmail') || 'info@wingsconvent.edu')}</p>
+                        <h3 style="margin: ${isMobile ? '6px 0 0' : '8px 0 0'}; font-size: ${isDesktop ? '17px' : (isTablet ? '19px' : '14px')}; color: #2563eb; font-weight: 700; letter-spacing: 1px;">💰 FEE RECEIPT</h3>
                     </div>
                     
                     <!-- ===== RECEIPT DETAILS ===== -->
-                    <div style="background: #f8fafc; border-radius: 8px; padding: ${isMobile ? '8px 10px' : (isTablet ? '16px 20px' : '16px 20px')}; margin-bottom: ${isMobile ? '8px' : '14px'}; border: 1px solid #e2e8f0;">
-                        <div style="display: grid; grid-template-columns: ${gridColumns}; gap: ${gridGap}; font-size: ${detailFontSize};">
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Receipt No:</span>
-                                <span style="font-weight: 600; color: #1e293b; font-size: ${detailFontSize};">${f.receipt_no || 'N/A'}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Class:</span>
-                                <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${escapeHtml(studentClass)}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Paid:</span>
-                                <span style="font-weight: 600; color: #10b981; font-size: ${detailFontSize};">${formatFullCurrency(amountPaid)}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Date:</span>
-                                <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${formatDateDMY(receiptDate)}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Roll No:</span>
-                                <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${rollNo}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Due:</span>
-                                <span style="font-weight: 600; color: ${balanceFee > 0 ? '#dc2626' : '#10b981'}; font-size: ${detailFontSize};">${formatFullCurrency(balanceFee)}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Student:</span>
-                                <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${escapeHtml(f.student_name || 'N/A')}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; border-bottom: ${detailBorder};">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Total Fee:</span>
-                                <span style="font-weight: 600; color: #2563eb; font-size: ${detailFontSize};">${formatFullCurrency(totalFee)}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; ${(isDesktop || isTablet) ? 'border-bottom: 1px dotted #d1d5db;' : 'border-bottom: 1px dotted #d1d5db;'}">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Mode:</span>
-                                <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${f.mode || 'N/A'}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; padding: ${detailPadding}; grid-column: 1 / -1;">
-                                <span style="font-weight: 600; color: #475569; font-size: ${detailFontSize};">Collected By:</span>
-                                <span style="font-weight: 500; color: #1e293b; font-size: ${detailFontSize};">${f.collected_by || 'Admin'}</span>
-                            </div>
-                            
-                        </div>
-                    </div>
-                    
-                    <!-- ===== PAYMENT SUMMARY TABLE ===== -->
-                    <div style="margin-bottom: ${isMobile ? '8px' : '14px'}; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; width: 100%;">
-                        ${particularHeaders}
-                    </div>
+                    ${receiptDetailsHTML}
                     
                     <!-- ===== PAYMENT HISTORY ===== -->
                     ${allPayments.length > 1 ? `
-                    <div style="margin-top: ${isMobile ? '8px' : '12px'};">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: ${isMobile ? '6px' : '10px'}; flex-wrap: wrap;">
-                            <span style="color: #2563eb; font-size: ${isMobile ? '14px' : (isTablet ? '18px' : '16px')};">📜</span>
-                            <h4 style="font-size: ${isMobile ? '13px' : (isTablet ? '16px' : '14px')}; margin: 0; color: #2563eb; font-weight: 700;">Payment History</h4>
-                            <span style="background: #dbeafe; color: #1e40af; padding: 2px 10px; border-radius: 20px; font-size: ${isMobile ? '10px' : (isTablet ? '12px' : '11px')}; font-weight: 600;">${allPayments.length} Records</span>
+                    <div style="margin-top: ${isMobile ? '10px' : '16px'};">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: ${isMobile ? '8px' : '10px'}; flex-wrap: wrap;">
+                            <span style="color: #2563eb; font-size: ${isMobile ? '16px' : (isTablet ? '20px' : '18px')};">📜</span>
+                            <h4 style="font-size: ${isMobile ? '14px' : (isTablet ? '17px' : '15px')}; margin: 0; color: #2563eb; font-weight: 700;">Payment History</h4>
+                            <span style="background: #dbeafe; color: #1e40af; padding: 2px 12px; border-radius: 20px; font-size: ${isMobile ? '10px' : (isTablet ? '12px' : '11px')}; font-weight: 600;">${allPayments.length} Records</span>
                         </div>
-                        <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; width: 100%;">
-                            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
-                                ${historyHeaders}
-                            </div>
+                        <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: visible; width: 100%;">
+                            ${historyTable}
                         </div>
                     </div>` : ''}
                     
-                    <!-- ===== SIGNATURE ===== -->
-                    <div style="margin-top: ${isMobile ? '10px' : '18px'}; text-align: center; padding-top: ${isMobile ? '8px' : '12px'}; border-top: 1px solid #e2e8f0;">
+                    <!-- ===== SIGNATURE WITH GAP ===== -->
+                    <div style="margin-top: ${isMobile ? '24px' : '35px'}; text-align: center; padding-top: ${isMobile ? '14px' : '20px'}; border-top: 2px solid #e2e8f0;">
                         <div style="width: ${signatureWidth}; margin: 0 auto;">
-                            <div style="border-top: 1px solid #1e293b; margin-bottom: 3px;"></div>
-                            <p style="font-size: ${isMobile ? '9px' : (isTablet ? '12px' : '10px')}; font-weight: 600; color: #475569; margin: 0;">✍️ Authorized Signatory</p>
+                            <div style="border-top: 2px solid #1e293b; margin-bottom: 5px; width: 100%;"></div>
+                            <p style="font-size: ${isMobile ? '12px' : (isTablet ? '14px' : '13px')}; font-weight: 700; color: #1e293b; margin: 5px 0 3px 0; letter-spacing: 0.5px;">
+                                Administrator
+                            </p>
+                            <p style="font-size: ${isMobile ? '9px' : (isTablet ? '11px' : '10px')}; color: #94a3b8; margin: 3px 0 0 0; font-weight: 400;">
+                                Authorized Signatory
+                            </p>
                         </div>
                     </div>
                     
                     <!-- ===== FOOTER ===== -->
-                    <div style="margin-top: ${isMobile ? '8px' : '12px'}; text-align: center; font-size: ${footerFontSize}; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: ${isMobile ? '6px' : '10px'};">
+                    <div style="margin-top: ${isMobile ? '12px' : '16px'}; text-align: center; font-size: ${footerFontSize}; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: ${isMobile ? '8px' : '10px'};">
                         📌 This is a computer generated receipt | Valid with school stamp
                     </div>
                     
@@ -16043,7 +16013,7 @@ function viewReceipt(id) {
             </div>
             
             <!-- ===== FOOTER BUTTONS ===== -->
-            <div style="display: flex; gap: ${isMobile ? '4px' : '6px'}; flex-wrap: wrap; justify-content: center; padding: ${isMobile ? '6px 8px' : '10px 16px'}; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-shrink: 0;">
+            <div style="display: flex; gap: ${isMobile ? '6px' : '8px'}; flex-wrap: wrap; justify-content: center; padding: ${isMobile ? '8px 10px' : '12px 20px'}; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-shrink: 0;">
                 <button id="printReceiptBtn" style="padding: ${buttonPadding}; background: #3b82f6; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 4px; min-height: ${buttonMinHeight}; touch-action: manipulation;">
                     🖨️ Print
                 </button>
@@ -16070,27 +16040,82 @@ function viewReceipt(id) {
         let printContent = document.getElementById('receiptForPrint').cloneNode(true);
         let printHtml = `<!DOCTYPE html>
         <html>
-        <head><title>Receipt - ${f.receipt_no || 'N/A'}</title><meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            @page { size: A5 portrait; margin: 0.3cm; }
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', 'Arial', sans-serif; background: white; margin: 0; padding: 4px; }
-            .print-receipt { max-width: 100%; margin: 0 auto; background: white; overflow: hidden; }
-            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-            th { background: #2563eb !important; color: white !important; padding: 6px 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            td { padding: 6px 10px; }
-            .text-center { text-align: center; }
-            .text-right { text-align: right; }
-            .fw-bold { font-weight: 700; }
-            .text-success { color: #10b981; }
-            .text-danger { color: #dc2626; }
-            .text-primary { color: #2563eb; }
-            .border-bottom { border-bottom: 1px solid #e2e8f0; }
-            @media print { .no-print { display: none; } body { padding: 0; margin: 0; } }
-            @media print and (max-width: 480px) { body { padding: 2px; } th, td { padding: 4px 6px; font-size: 9px; } }
-            @media (max-width: 768px) { .print-receipt { width: 100% !important; } }
-        </style>
+        <head>
+            <title>Receipt - ${f.receipt_no || 'N/A'}</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                @page { 
+                    size: A5 portrait; 
+                    margin: 0.5cm 0.4cm 0.5cm 0.4cm;
+                }
+                * { 
+                    margin: 0; 
+                    padding: 0; 
+                    box-sizing: border-box; 
+                }
+                body { 
+                    font-family: 'Segoe UI', 'Arial', sans-serif; 
+                    background: white; 
+                    margin: 0; 
+                    padding: 0; 
+                    font-size: 10px;
+                }
+                .print-receipt { 
+                    max-width: 100%; 
+                    margin: 0 auto; 
+                    background: white; 
+                    overflow: visible;
+                    padding: 2px;
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    table-layout: fixed; 
+                }
+                th { 
+                    background: #2563eb !important; 
+                    color: white !important; 
+                    padding: 5px 8px; 
+                    font-size: 9px;
+                    -webkit-print-color-adjust: exact; 
+                    print-color-adjust: exact; 
+                }
+                td { 
+                    padding: 5px 8px; 
+                    font-size: 9px;
+                }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+                .fw-bold { font-weight: 700; }
+                .text-success { color: #10b981; }
+                .text-danger { color: #dc2626; }
+                .text-primary { color: #2563eb; }
+                .border-bottom { border-bottom: 1px solid #e2e8f0; }
+                .signature-section {
+                    margin-top: 30px !important;
+                    padding-top: 18px !important;
+                }
+                @media print { 
+                    .no-print { display: none; } 
+                    body { padding: 0; margin: 0; } 
+                    .signature-section {
+                        margin-top: 30px !important;
+                        padding-top: 18px !important;
+                    }
+                }
+                @media print and (max-width: 480px) { 
+                    body { padding: 0; } 
+                    th, td { padding: 4px 6px; font-size: 8px; } 
+                    .signature-section {
+                        margin-top: 25px !important;
+                        padding-top: 15px !important;
+                    }
+                }
+                @media (max-width: 768px) { 
+                    .print-receipt { width: 100% !important; }
+                }
+            </style>
         </head>
         <body>
             <div class="print-receipt">${printContent.innerHTML}</div>
@@ -16127,6 +16152,7 @@ function viewReceipt(id) {
         showNotification('Generating PNG...', 'info');
         try {
             let element = document.getElementById('receiptForPrint');
+            await new Promise(resolve => setTimeout(resolve, 500));
             let canvas = await html2canvas(element, { 
                 scale: 2.5, 
                 backgroundColor: '#ffffff', 
@@ -16134,7 +16160,15 @@ function viewReceipt(id) {
                 allowTaint: true,
                 logging: false,
                 width: element.scrollWidth,
-                height: element.scrollHeight
+                height: element.scrollHeight,
+                onclone: function(doc) {
+                    let elements = doc.querySelectorAll('*');
+                    elements.forEach(el => {
+                        if (el.style.overflow === 'hidden') {
+                            el.style.overflow = 'visible';
+                        }
+                    });
+                }
             });
             let link = document.createElement('a');
             link.download = `Receipt_${f.receipt_no || 'N/A'}.png`;
@@ -16154,6 +16188,7 @@ function viewReceipt(id) {
         showNotification('Generating PDF...', 'info');
         try {
             let element = document.getElementById('receiptForPrint');
+            await new Promise(resolve => setTimeout(resolve, 500));
             let canvas = await html2canvas(element, { 
                 scale: 2.5, 
                 backgroundColor: '#ffffff', 
@@ -16161,7 +16196,15 @@ function viewReceipt(id) {
                 allowTaint: true,
                 logging: false,
                 width: element.scrollWidth,
-                height: element.scrollHeight
+                height: element.scrollHeight,
+                onclone: function(doc) {
+                    let elements = doc.querySelectorAll('*');
+                    elements.forEach(el => {
+                        if (el.style.overflow === 'hidden') {
+                            el.style.overflow = 'visible';
+                        }
+                    });
+                }
             });
             let imgData = canvas.toDataURL('image/png');
             let { jsPDF } = window.jspdf;
@@ -16172,7 +16215,9 @@ function viewReceipt(id) {
             });
             let imgWidth = 140;
             let imgHeight = (canvas.height * imgWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 3, 3, imgWidth, imgHeight);
+            let marginX = 5;
+            let marginY = 8;
+            pdf.addImage(imgData, 'PNG', marginX, marginY, imgWidth, imgHeight);
             pdf.save(`Receipt_${f.receipt_no || 'N/A'}.pdf`);
             showNotification('✅ PDF downloaded successfully!', 'success');
         } catch(err) {
@@ -16184,7 +16229,7 @@ function viewReceipt(id) {
     
     // ===== SHARE BUTTON =====
     document.getElementById('shareReceiptBtn').onclick = function() {
-        let message = `🏫 ${localStorage.getItem('schoolName') || 'Wings Convent School'}\n━━━━━━━━━━━━━━━━━━━━\n💰 FEE RECEIPT\n━━━━━━━━━━━━━━━━━━━━\n\nReceipt No: ${f.receipt_no || 'N/A'}\nStudent: ${f.student_name || 'N/A'}\nClass: ${studentClass}\nRoll No: ${rollNo}\nAmount Paid: ${formatFullCurrency(amountPaid)}\nBalance: ${formatFullCurrency(balanceFee)}\nMode: ${f.mode}\nDate: ${formatDateDMY(receiptDate)}\n\n━━━━━━━━━━━━━━━━━━━━\n📞 ${localStorage.getItem('schoolPhone') || ''}\n📧 ${localStorage.getItem('schoolEmail') || ''}`;
+        let message = `🏫 ${localStorage.getItem('schoolName') || 'Wings Convent School'}\n━━━━━━━━━━━━━━━━━━━━\n💰 FEE RECEIPT\n━━━━━━━━━━━━━━━━━━━━\n\nStudent: ${f.student_name || 'N/A'}\nClass: ${studentClass}\nRoll No: ${rollNo}\nDate: ${formatDateDMY(receiptDate)}\nReceipt No: ${f.receipt_no || 'N/A'}\nMode: ${f.mode || 'N/A'}\nTotal Fee: ${formatFullCurrency(totalFee)}\nPaid: ${formatFullCurrency(amountPaid)}\nDue: ${formatFullCurrency(balanceFee)}\nCollected By: ${f.collected_by || 'Administrator'}\n\n━━━━━━━━━━━━━━━━━━━━\n📞 ${localStorage.getItem('schoolPhone') || ''}\n📧 ${localStorage.getItem('schoolEmail') || ''}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     };
 }
