@@ -12188,8 +12188,8 @@ console.log('✅ Android WebView Compatible - Camera + Gallery + Crop');
 // ====================================== PART 5 PROFILE MODULE (COMPLETE) ENDS HERE =================================================================================
 // ====================================== PART 5 PROFILE MODULE (COMPLETE) ENDS HERE =================================================================================
 //==================================================================== START PART 06 STUDENTS MODULE (COMPLETE) ==========================================================//
-//==================================================================== START PART 06 STUDENTS MODULE (UPDATED - CAMERA + PDF SUPPORT) ==========================================================//
-// ======================= PART 6: STUDENTS MODULE (UPDATED WITH CAMERA + PDF) =======================
+//==================================================================== START PART 06 STUDENTS MODULE (FULLY RESPONSIVE + ALL CLASSES) ==========================================================//
+// ======================= PART 6: STUDENTS MODULE (FULLY RESPONSIVE + ALL CLASSES) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.studentsModuleLoaded === 'undefined') {
     window.studentsModuleLoaded = true;
@@ -12216,6 +12216,58 @@ let isStudentLoading = false;
 // Chart instances
 let genderChartInstance = null;
 let classChartInstance = null;
+
+// ======================= ✅ ALL CLASSES LIST (UPDATED) =======================
+window.getClassList = function() {
+    return [
+        'Playgroup A', 'Playgroup B',
+        'Nursery A', 'Nursery B',
+        'KG1 A', 'KG1 B',
+        'KG2 A', 'KG2 B'
+    ];
+}
+
+// ======================= ✅ CLASS FEE DATA =======================
+window.getClassFeeData = function(className) {
+    const fee = {
+        'Playgroup A': { baseFee: 24000, transportFee: 6000, totalFee: 30000 },
+        'Playgroup B': { baseFee: 24000, transportFee: 6000, totalFee: 30000 },
+        'Nursery A': { baseFee: 26000, transportFee: 6000, totalFee: 32000 },
+        'Nursery B': { baseFee: 26000, transportFee: 6000, totalFee: 32000 },
+        'KG1 A': { baseFee: 28000, transportFee: 6000, totalFee: 34000 },
+        'KG1 B': { baseFee: 28000, transportFee: 6000, totalFee: 34000 },
+        'KG2 A': { baseFee: 31000, transportFee: 7000, totalFee: 38000 },
+        'KG2 B': { baseFee: 31000, transportFee: 7000, totalFee: 38000 }
+    };
+    
+    let defaultFee = { baseFee: 35000, transportFee: 6000, totalFee: 41000 };
+    let classFee = fee[className] || defaultFee;
+    
+    return {
+        baseFee: classFee.baseFee,
+        transportFee: classFee.transportFee,
+        totalFee: classFee.totalFee
+    };
+}
+
+// ======================= ✅ CLASS PROMOTION MAPPING =======================
+window.getClassPromotionMapping = function() {
+    return {
+        'Playgroup A': 'Nursery A',
+        'Playgroup B': 'Nursery B',
+        'Nursery A': 'KG1 A',
+        'Nursery B': 'KG1 B',
+        'KG1 A': 'KG2 A',
+        'KG1 B': 'KG2 B',
+        'KG2 A': 'Class 1 A',
+        'KG2 B': 'Class 1 B'
+    };
+}
+
+// ======================= RESPONSIVE HELPER FUNCTIONS =======================
+function isMobile() { return window.innerWidth < 768; }
+function isTablet() { return window.innerWidth >= 768 && window.innerWidth < 1024; }
+function isDesktop() { return window.innerWidth >= 1024; }
 
 // ======================= HELPER FUNCTIONS =======================
 window.escapeHtml = function(str) {
@@ -12262,7 +12314,7 @@ window.showNotification = function(msg, type) {
     }
 }
 
-// ======================= CUSTOM MODAL FUNCTIONS =======================
+// ======================= ✅ FIXED: CUSTOM MODAL (FULLY RESPONSIVE) =======================
 window.openCustomModal = function(htmlContent, width = '500px') {
     const overlay = document.createElement('div');
     overlay.className = 'custom-modal-overlay';
@@ -12273,13 +12325,27 @@ window.openCustomModal = function(htmlContent, width = '500px') {
         z-index: 100000; padding: 16px; animation: modalFadeIn 0.25s ease;
     `;
     
+    let modalWidth = width;
+    let maxHeight = '90vh';
+    let borderRadius = '28px';
+    
+    if (isMobile()) {
+        modalWidth = '95%';
+        maxHeight = '95vh';
+        borderRadius = '24px';
+    } else if (isTablet()) {
+        modalWidth = width === '500px' ? '85%' : width;
+        maxHeight = '90vh';
+    }
+    
     overlay.innerHTML = `
         <div class="custom-modal-container" style="
             background: var(--bg-surface, #ffffff);
-            border-radius: 28px; width: 100%; max-width: ${width};
-            max-height: 90vh; overflow-y: auto;
+            border-radius: ${borderRadius}; width: 100%; max-width: ${modalWidth};
+            max-height: ${maxHeight}; overflow-y: auto;
             animation: modalSlideUp 0.3s ease;
             box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            padding: 0;
         ">
             ${htmlContent}
         </div>
@@ -12299,8 +12365,39 @@ window.openCustomModal = function(htmlContent, width = '500px') {
             }
             .custom-modal-overlay { animation: modalFadeIn 0.25s ease; }
             .custom-modal-container { animation: modalSlideUp 0.3s ease; }
+            
             @media (max-width: 768px) {
-                .custom-modal-container { max-width: 95% !important; }
+                .custom-modal-container { max-width: 95% !important; border-radius: 24px !important; max-height: 95vh !important; }
+                .custom-modal-container .modal-body { padding: 14px 16px !important; }
+                .custom-modal-container .modal-header { padding: 12px 16px !important; }
+                .custom-modal-container .modal-header h2 { font-size: 16px !important; }
+                .custom-modal-container .modal-footer { flex-direction: column !important; padding: 12px 16px !important; }
+                .custom-modal-container .modal-footer button { width: 100% !important; padding: 12px !important; font-size: 13px !important; }
+                .custom-modal-container .form-row { grid-template-columns: 1fr !important; gap: 10px !important; }
+                .custom-modal-container .info-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+                .custom-modal-container .card-actions { flex-wrap: wrap !important; justify-content: center !important; }
+                .custom-modal-container .card-actions .action-chip { font-size: 10px !important; padding: 4px 10px !important; }
+                .custom-modal-container .form-control { font-size: 14px !important; padding: 10px 12px !important; }
+                .custom-modal-container .upload-area { padding: 10px !important; }
+                .custom-modal-container .upload-area i { font-size: 20px !important; }
+            }
+            
+            @media (max-width: 480px) {
+                .custom-modal-container { max-width: 98% !important; border-radius: 20px !important; max-height: 98vh !important; }
+                .custom-modal-container .modal-body { padding: 10px 12px !important; }
+                .custom-modal-container .modal-header { padding: 10px 14px !important; }
+                .custom-modal-container .modal-header h2 { font-size: 14px !important; }
+                .custom-modal-container .modal-footer button { font-size: 12px !important; padding: 10px !important; }
+                .custom-modal-container .form-control { font-size: 13px !important; padding: 8px 10px !important; }
+                .custom-modal-container .info-grid { gap: 4px !important; }
+                .custom-modal-container .info-grid .info-label { font-size: 9px !important; }
+                .custom-modal-container .info-grid .info-value { font-size: 11px !important; }
+            }
+            
+            @media (min-width: 769px) and (max-width: 1024px) {
+                .custom-modal-container { max-width: 90% !important; }
+                .custom-modal-container .modal-body { padding: 18px 20px !important; }
+                .custom-modal-container .modal-header { padding: 14px 20px !important; }
             }
         `;
         document.head.appendChild(style);
@@ -12359,8 +12456,20 @@ window.getTeacherClass = function() {
         return savedTeacherClass;
     }
     
-    if (window.currentUser.name === 'Priya Sharma') {
-        return 'Playgroup A';
+    // Default teacher mappings
+    const teacherMap = {
+        'Priya Sharma': 'Playgroup A',
+        'Neha Gupta': 'Playgroup B',
+        'Rajesh Singh': 'Nursery A',
+        'Sneha Sharma': 'Nursery B',
+        'Anjali Kapoor': 'KG1 A',
+        'Vikram Joshi': 'KG1 B',
+        'Meera Nair': 'KG2 A',
+        'Rahul Mehta': 'KG2 B'
+    };
+    
+    if (window.currentUser.name && teacherMap[window.currentUser.name]) {
+        return teacherMap[window.currentUser.name];
     }
     
     return null;
@@ -12407,15 +12516,9 @@ async function calculateStudentTotalFee(cls, transportEnabled = false) {
         return baseFee + transportFee - discount;
     }
     
-    const fee = {
-        'Playgroup': 24000, 'Nursery': 26000, 'KG1': 28000, 'KG2': 31000,
-        'Class 1': 35000, 'Class 2': 38000, 'Class 3': 40000, 'Class 4': 42000,
-        'Class 5': 45000, 'Class 6': 48000, 'Class 7': 50000, 'Class 8': 52000,
-        'Class 9': 55000, 'Class 10': 58000, 'Class 11': 60000, 'Class 12': 62000
-    };
-    let baseFee = fee[cls] || 35000;
-    let transportFee = transportEnabled ? 6000 : 0;
-    return baseFee + transportFee;
+    // Fallback: Use class fee data
+    const feeData = getClassFeeData(cls);
+    return transportEnabled ? feeData.totalFee : feeData.baseFee;
 }
 
 // ======================= GET STUDENT PAID AMOUNT =======================
@@ -12675,7 +12778,6 @@ window.uploadStudentDocumentToSupabase = async function(fileData, folderPath, fi
     try {
         let fileDataToUpload = fileData;
         
-        // अगर image है तो compress करें
         if (fileType === 'image/jpeg' || fileType === 'image/png') {
             if (typeof compressImage === 'function') {
                 fileDataToUpload = await compressImage(fileData, 800, 800, 0.7);
@@ -12703,16 +12805,16 @@ window.uploadStudentDocumentToSupabase = async function(fileData, folderPath, fi
     }
 }
 
-// ======================= ✅ FIXED: OPEN STUDENT PHOTO CAPTURE (Android WebView + Web) =======================
+// ======================= ✅ OPEN STUDENT PHOTO CAPTURE (Android WebView + Web + Responsive) =======================
 window.openStudentPhotoCapture = function(callback) {
     console.log('📸 openStudentPhotoCapture called');
     
-    // Android WebView detection
     const isAndroidWebView = navigator.userAgent.toLowerCase().includes('android') && 
                              !navigator.userAgent.toLowerCase().includes('chrome');
     
+    const modalWidth = isMobile() ? '95%' : '350px';
+    
     if (isAndroidWebView) {
-        // ===== ANDROID WEBVIEW: Direct camera with file input =====
         console.log('📸 Android WebView detected - Opening camera directly');
         const input = document.createElement('input');
         input.type = 'file';
@@ -12723,17 +12825,17 @@ window.openStudentPhotoCapture = function(callback) {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(ev) {
-                    // Crop the image
                     const cropModal = document.createElement('div');
                     cropModal.className = 'modal-overlay';
                     cropModal.style.zIndex = '100001';
+                    cropModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;`;
                     cropModal.innerHTML = `
-                        <div class="modal-content" style="max-width: 500px; text-align: center; background: var(--bg-surface); border-radius: 24px; padding: 20px;">
-                            <h3 style="margin-bottom: 15px; color: var(--text-primary);">Crop Photo (1:1)</h3>
-                            <img id="cropImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px;">
-                            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-                                <button id="cropSaveBtn" class="btn btn-primary" style="padding: 10px 20px; border-radius: 30px;">✂️ Crop & Save</button>
-                                <button id="cancelBtn" class="btn btn-danger" style="padding: 10px 20px; border-radius: 30px;">Cancel</button>
+                        <div class="modal-content" style="max-width:500px; width:${isMobile() ? '95%' : '90%'}; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:${isMobile() ? '90vh' : '85vh'}; overflow-y:auto;">
+                            <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobile() ? '16px' : '18px'};">Crop Photo (1:1)</h3>
+                            <img id="cropImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:${isMobile() ? '50vh' : '60vh'};">
+                            <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                                <button id="cropSaveBtn" class="btn btn-primary" style="padding:${isMobile() ? '8px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobile() ? '12px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
+                                <button id="cancelBtn" class="btn btn-danger" style="padding:${isMobile() ? '8px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobile() ? '12px' : '14px'}; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
                             </div>
                         </div>
                     `;
@@ -12756,20 +12858,20 @@ window.openStudentPhotoCapture = function(callback) {
         };
         input.click();
     } else {
-        // ===== WEB VERSION: Show source selection modal =====
         console.log('📸 Web detected - Showing source selection');
         const sourceModal = document.createElement('div');
         sourceModal.className = 'modal-overlay';
         sourceModal.style.zIndex = '100000';
+        sourceModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100000; padding:16px;`;
         sourceModal.innerHTML = `
-            <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center;">
-                <i class="fas fa-camera" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-                <h3 style="margin-bottom: 15px; color: var(--text-primary);">Choose Source</h3>
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px;">📸 Take Photo</button>
-                    <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px;">🖼️ Gallery</button>
+            <div style="background:var(--bg-surface); border-radius:28px; width:${modalWidth}; max-width:350px; padding:20px; text-align:center;">
+                <i class="fas fa-camera" style="font-size:${isMobile() ? '36px' : '48px'}; color:var(--primary); margin-bottom:15px; display:block;"></i>
+                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobile() ? '16px' : '18px'};">Choose Source</h3>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button id="cameraOptBtn" class="btn btn-primary" style="width:100%; padding:${isMobile() ? '12px' : '14px'}; border-radius:30px; font-size:${isMobile() ? '13px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">📸 Take Photo</button>
+                    <button id="galleryOptBtn" class="btn btn-secondary" style="width:100%; padding:${isMobile() ? '12px' : '14px'}; border-radius:30px; font-size:${isMobile() ? '13px' : '14px'}; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">🖼️ Gallery</button>
                 </div>
-                <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px;">Cancel</button>
+                <button id="closeSourceModal" style="margin-top:15px; background:none; border:none; color:var(--text-secondary); cursor:pointer; padding:10px; font-size:${isMobile() ? '13px' : '14px'};">Cancel</button>
             </div>
         `;
         document.body.appendChild(sourceModal);
@@ -12790,13 +12892,14 @@ window.openStudentPhotoCapture = function(callback) {
                         const cropModal = document.createElement('div');
                         cropModal.className = 'modal-overlay';
                         cropModal.style.zIndex = '100001';
+                        cropModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;`;
                         cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width: 500px; text-align: center; background: var(--bg-surface); border-radius: 24px; padding: 20px;">
-                                <h3 style="margin-bottom: 15px; color: var(--text-primary);">Crop Photo (1:1)</h3>
-                                <img id="cropImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px;">
-                                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-                                    <button id="cropSaveBtn" class="btn btn-primary" style="padding: 10px 20px; border-radius: 30px;">✂️ Crop & Save</button>
-                                    <button id="cancelBtn" class="btn btn-danger" style="padding: 10px 20px; border-radius: 30px;">Cancel</button>
+                            <div class="modal-content" style="max-width:500px; width:${isMobile() ? '95%' : '90%'}; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:${isMobile() ? '90vh' : '85vh'}; overflow-y:auto;">
+                                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobile() ? '16px' : '18px'};">Crop Photo (1:1)</h3>
+                                <img id="cropImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:${isMobile() ? '50vh' : '60vh'};">
+                                <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                                    <button id="cropSaveBtn" class="btn btn-primary" style="padding:${isMobile() ? '8px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobile() ? '12px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
+                                    <button id="cancelBtn" class="btn btn-danger" style="padding:${isMobile() ? '8px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobile() ? '12px' : '14px'}; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
                                 </div>
                             </div>
                         `;
@@ -12826,21 +12929,20 @@ window.openStudentPhotoCapture = function(callback) {
     }
 }
 
-// ======================= ✅ FIXED: OPEN DOCUMENT UPLOAD (Android WebView + Web) =======================
+// ======================= ✅ OPEN DOCUMENT UPLOAD (Android WebView + Web + Responsive) =======================
 window.openDocumentUpload = function(callback, acceptType = 'image/*,application/pdf') {
     console.log('📄 openDocumentUpload called with acceptType:', acceptType);
     
-    // Android WebView detection
     const isAndroidWebView = navigator.userAgent.toLowerCase().includes('android') && 
                              !navigator.userAgent.toLowerCase().includes('chrome');
     
+    const modalWidth = isMobile() ? '95%' : '350px';
+    
     if (isAndroidWebView) {
-        // ===== ANDROID WEBVIEW: Direct file input with camera =====
         console.log('📄 Android WebView detected - Opening document upload');
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = acceptType;
-        // अगर image accept है तो camera enable करें
         if (acceptType.includes('image/')) {
             input.setAttribute('capture', 'environment');
         }
@@ -12853,18 +12955,18 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
                     let fileName = file.name;
                     let fileType = file.type;
                     
-                    // अगर image है तो crop करें
                     if (file.type.startsWith('image/')) {
                         const cropModal = document.createElement('div');
                         cropModal.className = 'modal-overlay';
                         cropModal.style.zIndex = '100001';
+                        cropModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;`;
                         cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width: 500px; text-align: center; background: var(--bg-surface); border-radius: 24px; padding: 20px;">
-                                <h3 style="margin-bottom: 15px; color: var(--text-primary);">Crop Document</h3>
-                                <img id="cropDocImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px;">
-                                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-                                    <button id="cropSaveBtn" class="btn btn-primary" style="padding: 10px 20px; border-radius: 30px;">✂️ Crop & Save</button>
-                                    <button id="cancelBtn" class="btn btn-danger" style="padding: 10px 20px; border-radius: 30px;">Cancel</button>
+                            <div class="modal-content" style="max-width:500px; width:${isMobile() ? '95%' : '90%'}; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:${isMobile() ? '90vh' : '85vh'}; overflow-y:auto;">
+                                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobile() ? '16px' : '18px'};">Crop Document</h3>
+                                <img id="cropDocImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:${isMobile() ? '50vh' : '60vh'};">
+                                <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                                    <button id="cropSaveBtn" class="btn btn-primary" style="padding:${isMobile() ? '8px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobile() ? '12px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
+                                    <button id="cancelBtn" class="btn btn-danger" style="padding:${isMobile() ? '8px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobile() ? '12px' : '14px'}; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
                                 </div>
                             </div>
                         `;
@@ -12882,7 +12984,6 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
                             cropModal.remove();
                         };
                     } else {
-                        // PDF या अन्य files - सीधे callback
                         callback(fileData, fileName, fileType);
                     }
                 };
@@ -12891,21 +12992,21 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
         };
         input.click();
     } else {
-        // ===== WEB VERSION: Show source selection modal =====
         console.log('📄 Web detected - Showing document upload modal');
         const sourceModal = document.createElement('div');
         sourceModal.className = 'modal-overlay';
         sourceModal.style.zIndex = '100000';
+        sourceModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100000; padding:16px;`;
         sourceModal.innerHTML = `
-            <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center;">
-                <i class="fas fa-upload" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-                <h3 style="margin-bottom: 15px; color: var(--text-primary);">Upload Document</h3>
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px;">📸 Take Photo</button>
-                    <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px;">🖼️ Gallery</button>
-                    <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px;">📄 Upload PDF</button>
+            <div style="background:var(--bg-surface); border-radius:28px; width:${modalWidth}; max-width:350px; padding:20px; text-align:center;">
+                <i class="fas fa-upload" style="font-size:${isMobile() ? '36px' : '48px'}; color:var(--primary); margin-bottom:15px; display:block;"></i>
+                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobile() ? '16px' : '18px'};">Upload Document</h3>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button id="cameraOptBtn" class="btn btn-primary" style="width:100%; padding:${isMobile() ? '12px' : '14px'}; border-radius:30px; font-size:${isMobile() ? '13px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">📸 Take Photo</button>
+                    <button id="galleryOptBtn" class="btn btn-secondary" style="width:100%; padding:${isMobile() ? '12px' : '14px'}; border-radius:30px; font-size:${isMobile() ? '13px' : '14px'}; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">🖼️ Gallery</button>
+                    <button id="pdfOptBtn" class="btn btn-info" style="width:100%; padding:${isMobile() ? '12px' : '14px'}; border-radius:30px; font-size:${isMobile() ? '13px' : '14px'}; border:none; cursor:pointer; background:#3b82f6; color:white;">📄 Upload PDF</button>
                 </div>
-                <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px;">Cancel</button>
+                <button id="closeSourceModal" style="margin-top:15px; background:none; border:none; color:var(--text-secondary); cursor:pointer; padding:10px; font-size:${isMobile() ? '13px' : '14px'};">Cancel</button>
             </div>
         `;
         document.body.appendChild(sourceModal);
@@ -12933,13 +13034,14 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
                             const cropModal = document.createElement('div');
                             cropModal.className = 'modal-overlay';
                             cropModal.style.zIndex = '100001';
+                            cropModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;`;
                             cropModal.innerHTML = `
-                                <div class="modal-content" style="max-width: 500px; text-align: center; background: var(--bg-surface); border-radius: 24px; padding: 20px;">
-                                    <h3 style="margin-bottom: 15px; color: var(--text-primary);">Crop Document</h3>
-                                    <img id="cropDocImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px;">
-                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-                                        <button id="cropSaveBtn" class="btn btn-primary" style="padding: 10px 20px; border-radius: 30px;">✂️ Crop & Save</button>
-                                        <button id="cancelBtn" class="btn btn-danger" style="padding: 10px 20px; border-radius: 30px;">Cancel</button>
+                                <div class="modal-content" style="max-width:500px; width:${isMobile() ? '95%' : '90%'}; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:${isMobile() ? '90vh' : '85vh'}; overflow-y:auto;">
+                                    <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobile() ? '16px' : '18px'};">Crop Document</h3>
+                                    <img id="cropDocImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:${isMobile() ? '50vh' : '60vh'};">
+                                    <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                                        <button id="cropSaveBtn" class="btn btn-primary" style="padding:${isMobile() ? '8px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobile() ? '12px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
+                                        <button id="cancelBtn" class="btn btn-danger" style="padding:${isMobile() ? '8px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobile() ? '12px' : '14px'}; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
                                     </div>
                                 </div>
                             `;
@@ -12973,8 +13075,7 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
     }
 }
 
-// ======================= ✅ REST OF THE CODE (SAME AS BEFORE) =======================
-// ======================= PDF EXPORT =======================
+// ======================= ✅ PDF EXPORT =======================
 window.exportStudentsPDF = async function() {
     if (typeof html2canvas === 'undefined') {
         showNotification('html2canvas library not loaded! Please refresh.', 'error');
@@ -13170,15 +13271,21 @@ window.getFilteredStudentsForCurrentUser = function() {
         const teacherName = window.currentUser.name;
         let targetCls = '', targetSec = '';
         
-        if (teacherName === 'Priya Sharma') { targetCls = 'Playgroup'; targetSec = 'A'; }
-        else if (teacherName === 'Neha Gupta') { targetCls = 'Playgroup'; targetSec = 'B'; }
-        else if (teacherName === 'Rajesh Singh') { targetCls = 'Nursery'; targetSec = 'A'; }
-        else if (teacherName === 'Sneha Sharma') { targetCls = 'Nursery'; targetSec = 'B'; }
-        else if (teacherName === 'Anjali Kapoor') { targetCls = 'KG1'; targetSec = 'A'; }
-        else if (teacherName === 'Vikram Joshi') { targetCls = 'KG1'; targetSec = 'B'; }
-        else if (teacherName === 'Meera Nair') { targetCls = 'KG2'; targetSec = 'A'; }
-        else if (teacherName === 'Rahul Mehta') { targetCls = 'KG2'; targetSec = 'B'; }
-        else if (window.currentUser.class_teacher) {
+        const teacherMap = {
+            'Priya Sharma': { cls: 'Playgroup', sec: 'A' },
+            'Neha Gupta': { cls: 'Playgroup', sec: 'B' },
+            'Rajesh Singh': { cls: 'Nursery', sec: 'A' },
+            'Sneha Sharma': { cls: 'Nursery', sec: 'B' },
+            'Anjali Kapoor': { cls: 'KG1', sec: 'A' },
+            'Vikram Joshi': { cls: 'KG1', sec: 'B' },
+            'Meera Nair': { cls: 'KG2', sec: 'A' },
+            'Rahul Mehta': { cls: 'KG2', sec: 'B' }
+        };
+        
+        if (teacherMap[teacherName]) {
+            targetCls = teacherMap[teacherName].cls;
+            targetSec = teacherMap[teacherName].sec;
+        } else if (window.currentUser.class_teacher) {
             let parts = window.currentUser.class_teacher.split(' ');
             targetCls = parts[0];
             targetSec = parts[1] || 'A';
@@ -13210,21 +13317,21 @@ window.deleteStudent = async function(id) {
     if (!student) return;
     
     const modal = openCustomModal(`
-        <div style="padding: 24px;">
+        <div style="padding: ${isMobile() ? '16px' : '24px'};">
             <div style="text-align: center; margin-bottom: 20px;">
                 <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 28px; color: #ef4444;"></i>
                 </div>
-                <h3 style="color: var(--text-primary); margin: 16px 0 8px 0;">Delete Student?</h3>
-                <p style="color: var(--text-secondary); font-size: 14px;">Are you sure you want to delete <strong>"${escapeHtml(student.name)}"</strong>?</p>
-                <p style="color: #ef4444; font-size: 12px; margin-top: 8px;">This action cannot be undone!</p>
+                <h3 style="color: var(--text-primary); margin: 16px 0 8px 0; font-size: ${isMobile() ? '16px' : '18px'};">Delete Student?</h3>
+                <p style="color: var(--text-secondary); font-size: ${isMobile() ? '13px' : '14px'};">Are you sure you want to delete <strong>"${escapeHtml(student.name)}"</strong>?</p>
+                <p style="color: #ef4444; font-size: ${isMobile() ? '11px' : '12px'}; margin-top: 8px;">This action cannot be undone!</p>
             </div>
-            <div style="display: flex; gap: 12px; justify-content: center;">
-                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: 10px 24px; border-radius: 30px; border: 1px solid var(--border-light); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; font-weight: 600;">Cancel</button>
-                <button id="confirmDeleteBtn" style="padding: 10px 24px; border-radius: 30px; border: none; background: #ef4444; color: white; cursor: pointer; font-weight: 600;">Delete</button>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: ${isMobile() ? '10px 20px' : '10px 24px'}; border-radius: 30px; border: 1px solid var(--border-light); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; font-weight: 600; font-size: ${isMobile() ? '13px' : '14px'};">Cancel</button>
+                <button id="confirmDeleteBtn" style="padding: ${isMobile() ? '10px 20px' : '10px 24px'}; border-radius: 30px; border: none; background: #ef4444; color: white; cursor: pointer; font-weight: 600; font-size: ${isMobile() ? '13px' : '14px'};">Delete</button>
             </div>
         </div>
-    `);
+    `, isMobile() ? '90%' : '500px');
     
     document.getElementById('confirmDeleteBtn').onclick = async function() {
         closeCustomModal(modal);
@@ -13238,7 +13345,7 @@ window.deleteStudent = async function(id) {
     };
 }
 
-// ======================= CLASS PROMOTION =======================
+// ======================= ✅ UPDATED: CLASS PROMOTION =======================
 window.promoteStudentsToNextClass = async function() {
     if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) {
         showNotification('Only administrators and accountants can promote students!', 'error');
@@ -13246,38 +13353,36 @@ window.promoteStudentsToNextClass = async function() {
     }
     
     const modal = openCustomModal(`
-        <div style="padding: 24px;">
+        <div style="padding: ${isMobile() ? '16px' : '24px'};">
             <div style="text-align: center; margin-bottom: 20px;">
                 <div style="width: 60px; height: 60px; background: #dbeafe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
                     <i class="fas fa-arrow-up" style="font-size: 28px; color: #2563eb;"></i>
                 </div>
-                <h3 style="color: var(--text-primary); margin: 16px 0 8px 0;">Promote Students</h3>
-                <p style="color: var(--text-secondary); font-size: 14px;">This will promote all students to the next class.</p>
-                <p style="color: #f59e0b; font-size: 12px; margin-top: 8px;">⚠️ This action will change the class of all students!</p>
+                <h3 style="color: var(--text-primary); margin: 16px 0 8px 0; font-size: ${isMobile() ? '16px' : '18px'};">Promote Students</h3>
+                <p style="color: var(--text-secondary); font-size: ${isMobile() ? '13px' : '14px'};">This will promote all students to the next class.</p>
+                <p style="color: #f59e0b; font-size: ${isMobile() ? '11px' : '12px'}; margin-top: 8px;">⚠️ This action will change the class of all students!</p>
             </div>
-            <div style="display: flex; gap: 12px; justify-content: center;">
-                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: 10px 24px; border-radius: 30px; border: 1px solid var(--border-light); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; font-weight: 600;">Cancel</button>
-                <button id="confirmPromoteBtn" style="padding: 10px 24px; border-radius: 30px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: 600;">Promote All</button>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: ${isMobile() ? '10px 20px' : '10px 24px'}; border-radius: 30px; border: 1px solid var(--border-light); background: var(--bg-surface); color: var(--text-primary); cursor: pointer; font-weight: 600; font-size: ${isMobile() ? '13px' : '14px'};">Cancel</button>
+                <button id="confirmPromoteBtn" style="padding: ${isMobile() ? '10px 20px' : '10px 24px'}; border-radius: 30px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: 600; font-size: ${isMobile() ? '13px' : '14px'};">Promote All</button>
             </div>
         </div>
-    `);
+    `, isMobile() ? '90%' : '500px');
     
     document.getElementById('confirmPromoteBtn').onclick = async function() {
         closeCustomModal(modal);
         showLoader();
         
-        let classMapping = {
-            'Playgroup': 'Nursery', 'Nursery': 'KG1', 'KG1': 'KG2', 'KG2': 'Class 1',
-            'Class 1': 'Class 2', 'Class 2': 'Class 3', 'Class 3': 'Class 4', 'Class 4': 'Class 5',
-            'Class 5': 'Class 6', 'Class 6': 'Class 7', 'Class 7': 'Class 8', 'Class 8': 'Class 9',
-            'Class 9': 'Class 10', 'Class 10': 'Class 11', 'Class 11': 'Class 12'
-        };
-        
+        const promotionMap = getClassPromotionMapping();
         let promotedCount = 0;
+        
         for (let s of window.students) {
-            let nextClass = classMapping[s.cls];
+            const fullClass = `${s.cls} ${s.sec}`;
+            let nextClass = promotionMap[fullClass];
             if (nextClass) {
-                s.cls = nextClass;
+                let parts = nextClass.split(' ');
+                s.cls = parts[0];
+                s.sec = parts[1] || 'A';
                 promotedCount++;
             }
         }
@@ -13294,7 +13399,7 @@ window.promoteStudentsToNextClass = async function() {
     };
 }
 
-// ======================= ID CARD MODAL =======================
+// ======================= ID CARD MODAL (RESPONSIVE) =======================
 window.openIDCardModal = function(id) {
     let s = window.students.find(s => s.id === id);
     if (!s) { 
@@ -13337,6 +13442,8 @@ window.openIDCardModal = function(id) {
     const bloodGroup = s.blood_group || 'O+';
     const studentMobile = s.mobile || 'N/A';
     const studentAddress = s.address || schoolAddressSetting;
+    
+    const modalWidth = isMobile() ? '95%' : '380px';
     
     const idCardHTML = `
         <div id="idCardForExport" style="width: 54mm; height: 86mm; background: linear-gradient(135deg, var(--bg-surface), var(--bg-body)); border-radius: 10px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.15); border: 1px solid var(--border-light); margin: 0 auto; font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif; position: relative;">
@@ -13400,22 +13507,22 @@ window.openIDCardModal = function(id) {
     
     const modal = openCustomModal(`
         <div style="border-radius: 24px; overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="color: white; margin: 0; font-size: 16px;"><i class="fas fa-id-card"></i> ID Card - ${studentName}</h2>
-                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px;">&times;</button>
+            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: ${isMobile() ? '10px 16px' : '12px 20px'}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <h2 style="color: white; margin: 0; font-size: ${isMobile() ? '14px' : '16px'};"><i class="fas fa-id-card"></i> ID Card - ${studentName}</h2>
+                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: ${isMobile() ? '28px' : '32px'}; height: ${isMobile() ? '28px' : '32px'}; border-radius: 50%; cursor: pointer; font-size: ${isMobile() ? '16px' : '18px'};">&times;</button>
             </div>
-            <div style="padding: 20px; display: flex; justify-content: center; align-items: center; background: var(--bg-body);">
+            <div style="padding: ${isMobile() ? '12px' : '20px'}; display: flex; justify-content: center; align-items: center; background: var(--bg-body);">
                 ${idCardHTML}
             </div>
-            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 12px 16px; background: var(--bg-body); border-top: 1px solid var(--border-light);">
-                <button id="printIDCardBtn" style="padding: 6px 12px; border-radius: 25px; border: none; background: #3b82f6; color: white; cursor: pointer; font-size: 11px;"><i class="fas fa-print"></i> Print</button>
-                <button id="downloadPNGBtn" style="padding: 6px 12px; border-radius: 25px; border: none; background: #10b981; color: white; cursor: pointer; font-size: 11px;"><i class="fas fa-image"></i> PNG</button>
-                <button id="downloadPDFBtn" style="padding: 6px 12px; border-radius: 25px; border: none; background: #ef4444; color: white; cursor: pointer; font-size: 11px;"><i class="fas fa-file-pdf"></i> PDF</button>
-                <button id="shareWhatsAppBtn" style="padding: 6px 12px; border-radius: 25px; border: none; background: #25D366; color: white; cursor: pointer; font-size: 11px;"><i class="fab fa-whatsapp"></i> Share</button>
-                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: 6px 12px; border-radius: 25px; border: none; background: var(--bg-surface); color: var(--text-primary); cursor: pointer; font-size: 11px;">Close</button>
+            <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; padding: ${isMobile() ? '8px 12px' : '12px 16px'}; background: var(--bg-body); border-top: 1px solid var(--border-light);">
+                <button id="printIDCardBtn" style="padding: ${isMobile() ? '4px 10px' : '6px 12px'}; border-radius: 25px; border: none; background: #3b82f6; color: white; cursor: pointer; font-size: ${isMobile() ? '10px' : '11px'};"><i class="fas fa-print"></i> Print</button>
+                <button id="downloadPNGBtn" style="padding: ${isMobile() ? '4px 10px' : '6px 12px'}; border-radius: 25px; border: none; background: #10b981; color: white; cursor: pointer; font-size: ${isMobile() ? '10px' : '11px'};"><i class="fas fa-image"></i> PNG</button>
+                <button id="downloadPDFBtn" style="padding: ${isMobile() ? '4px 10px' : '6px 12px'}; border-radius: 25px; border: none; background: #ef4444; color: white; cursor: pointer; font-size: ${isMobile() ? '10px' : '11px'};"><i class="fas fa-file-pdf"></i> PDF</button>
+                <button id="shareWhatsAppBtn" style="padding: ${isMobile() ? '4px 10px' : '6px 12px'}; border-radius: 25px; border: none; background: #25D366; color: white; cursor: pointer; font-size: ${isMobile() ? '10px' : '11px'};"><i class="fab fa-whatsapp"></i> Share</button>
+                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: ${isMobile() ? '4px 10px' : '6px 12px'}; border-radius: 25px; border: none; background: var(--bg-surface); color: var(--text-primary); cursor: pointer; font-size: ${isMobile() ? '10px' : '11px'};">Close</button>
             </div>
         </div>
-    `, '380px');
+    `, modalWidth);
     
     document.getElementById('printIDCardBtn').onclick = () => {
         let printContent = document.getElementById('idCardForExport').cloneNode(true);
@@ -13513,7 +13620,7 @@ window.shareStudent = function(id) {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-// ======================= VIEW STUDENT DETAILS =======================
+// ======================= VIEW STUDENT DETAILS (RESPONSIVE) =======================
 window.viewStudentDetails = function(id) {
     let s = window.students.find(s => s.id === id);
     if (!s) return;
@@ -13523,31 +13630,31 @@ window.viewStudentDetails = function(id) {
     
     const modal = openCustomModal(`
         <div style="border-radius: 24px; overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="color: white; margin: 0; font-size: 16px;"><i class="fas fa-user-graduate"></i> Student Profile</h2>
-                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px;">&times;</button>
+            <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: ${isMobile() ? '12px 16px' : '16px 20px'}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <h2 style="color: white; margin: 0; font-size: ${isMobile() ? '15px' : '16px'};"><i class="fas fa-user-graduate"></i> Student Profile</h2>
+                <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: ${isMobile() ? '28px' : '32px'}; height: ${isMobile() ? '28px' : '32px'}; border-radius: 50%; cursor: pointer; font-size: ${isMobile() ? '16px' : '18px'};">&times;</button>
             </div>
-            <div style="padding: 20px;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div style="color: var(--text-primary);"><strong>Name:</strong> ${escapeHtml(s.name)}</div>
-                    <div style="color: var(--text-primary);"><strong>Class:</strong> ${escapeHtml(s.cls)} ${escapeHtml(s.sec)}</div>
-                    <div style="color: var(--text-primary);"><strong>Roll:</strong> ${s.roll}</div>
-                    <div style="color: var(--text-primary);"><strong>ID:</strong> ${s.id}</div>
-                    <div style="color: var(--text-primary);"><strong>Total Fee:</strong> ${formatFullCurrency(s.total_fee || 35000)}</div>
-                    <div style="color: var(--text-primary);"><strong>Paid:</strong> <span style="color:#10b981;">${formatFullCurrency(paidAmount)}</span></div>
-                    <div style="color: var(--text-primary);"><strong>Due:</strong> <span style="color: ${dueAmount > 0 ? '#ef4444' : '#10b981'};">${formatFullCurrency(dueAmount)}</span></div>
-                    <div style="color: var(--text-primary);"><strong>Payment Status:</strong> <span class="badge ${s.fee_paid_status === 'Fully Paid' ? 'badge-success' : s.fee_paid_status === 'Partial Paid' ? 'badge-warning' : 'badge-danger'}">${s.fee_paid_status || 'Pending'}</span></div>
-                    <div style="color: var(--text-primary);"><strong>Father:</strong> ${escapeHtml(s.father_name || 'N/A')}</div>
-                    <div style="color: var(--text-primary);"><strong>Mother:</strong> ${escapeHtml(s.mother_name || 'N/A')}</div>
-                    <div style="color: var(--text-primary);"><strong>Mobile:</strong> ${s.mobile || 'N/A'}</div>
-                    <div style="color: var(--text-primary);"><strong>Blood Group:</strong> ${s.blood_group || 'O+'}</div>
+            <div style="padding: ${isMobile() ? '14px' : '20px'};">
+                <div style="display: grid; grid-template-columns: ${isMobile() ? '1fr' : '1fr 1fr'}; gap: ${isMobile() ? '8px' : '12px'};">
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Name:</strong> ${escapeHtml(s.name)}</div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Class:</strong> ${escapeHtml(s.cls)} ${escapeHtml(s.sec)}</div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Roll:</strong> ${s.roll}</div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>ID:</strong> ${s.id}</div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Total Fee:</strong> ${formatFullCurrency(s.total_fee || 35000)}</div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Paid:</strong> <span style="color:#10b981;">${formatFullCurrency(paidAmount)}</span></div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Due:</strong> <span style="color: ${dueAmount > 0 ? '#ef4444' : '#10b981'};">${formatFullCurrency(dueAmount)}</span></div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Payment Status:</strong> <span class="badge ${s.fee_paid_status === 'Fully Paid' ? 'badge-success' : s.fee_paid_status === 'Partial Paid' ? 'badge-warning' : 'badge-danger'}">${s.fee_paid_status || 'Pending'}</span></div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Father:</strong> ${escapeHtml(s.father_name || 'N/A')}</div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Mother:</strong> ${escapeHtml(s.mother_name || 'N/A')}</div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Mobile:</strong> ${s.mobile || 'N/A'}</div>
+                    <div style="color: var(--text-primary); font-size: ${isMobile() ? '13px' : '14px'};"><strong>Blood Group:</strong> ${s.blood_group || 'O+'}</div>
                 </div>
                 <div style="margin-top: 16px; text-align: center;">
-                    <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: 10px 24px; border-radius: 30px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: 600;">Close</button>
+                    <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding: ${isMobile() ? '10px 20px' : '10px 24px'}; border-radius: 30px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: 600; font-size: ${isMobile() ? '13px' : '14px'};">Close</button>
                 </div>
             </div>
         </div>
-    `, '500px');
+    `, isMobile() ? '95%' : '500px');
 }
 
 // ======================= PAGINATION =======================
@@ -13577,23 +13684,6 @@ window.clearStudentFilter = function() {
     studentFilterText = ''; 
     if (document.getElementById('studentSearch')) document.getElementById('studentSearch').value = ''; 
     loadStudentManagement(); 
-}
-
-// ======================= GET CLASS FEE DATA =======================
-window.getClassFeeData = function(className) {
-    const fee = {
-        'Playgroup': 24000, 'Nursery': 26000, 'KG1': 28000, 'KG2': 31000,
-        'Class 1': 35000, 'Class 2': 38000, 'Class 3': 40000, 'Class 4': 42000,
-        'Class 5': 45000, 'Class 6': 48000, 'Class 7': 50000, 'Class 8': 52000,
-        'Class 9': 55000, 'Class 10': 58000, 'Class 11': 60000, 'Class 12': 62000
-    };
-    let total = fee[className] || 35000;
-    return { baseFee: total - 6000, transportFee: 6000, totalFee: total };
-}
-
-window.getClassList = function() {
-    return ['Playgroup', 'Nursery', 'KG1', 'KG2', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 
-            'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12'];
 }
 
 // ======================= GLOBAL FUNCTIONS FOR FORM =======================
@@ -13635,7 +13725,7 @@ window.removeOtherDoc = function(index) {
     }
 }
 
-// ======================= REFRESH CHARTS =======================
+// ======================= ✅ RESPONSIVE CHARTS =======================
 window.refreshStudentCharts = function() {
     try {
         let visibleStudents = getFilteredStudentsForCurrentUser();
@@ -13647,7 +13737,17 @@ window.refreshStudentCharts = function() {
             if (genderChartInstance) genderChartInstance.destroy();
             genderChartInstance = new Chart(genderCtx, { 
                 type: 'doughnut', 
-                data: { labels: ['Boys', 'Girls'], datasets: [{ data: [boys, girls], backgroundColor: ['#3b82f6', '#ec489a'] }] } 
+                data: { labels: ['Boys', 'Girls'], datasets: [{ data: [boys, girls], backgroundColor: ['#3b82f6', '#ec489a'] }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: isMobile() ? 'bottom' : 'top',
+                            labels: { font: { size: isMobile() ? 10 : 12 } }
+                        }
+                    }
+                }
             });
         }
         
@@ -13662,8 +13762,39 @@ window.refreshStudentCharts = function() {
             if (classChartInstance) classChartInstance.destroy();
             classChartInstance = new Chart(classCtx, { 
                 type: 'bar', 
-                data: { labels: Object.keys(classCount), datasets: [{ label: 'Students', data: Object.values(classCount), backgroundColor: '#2563eb' }] },
-                options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                data: { 
+                    labels: Object.keys(classCount), 
+                    datasets: [{ 
+                        label: 'Students', 
+                        data: Object.values(classCount), 
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6
+                    }] 
+                },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: { font: { size: isMobile() ? 10 : 12 } }
+                        }
+                    },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { 
+                                stepSize: 1,
+                                font: { size: isMobile() ? 9 : 11 }
+                            } 
+                        },
+                        x: {
+                            ticks: {
+                                font: { size: isMobile() ? 9 : 11 },
+                                maxRotation: isMobile() ? 45 : 0
+                            }
+                        }
+                    }
+                }
             });
         }
     } catch(e) { console.error('Chart error:', e); }
@@ -13753,7 +13884,7 @@ window.saveStudent = async function(editId) {
         migration_url: null,
         income_url: null,
         rte_url: null,
-        class_teacher: cls === 'Playgroup' && sec === 'A' ? 'Priya Sharma' : ''
+        class_teacher: getTeacherForClass(cls, sec)
     };
     
     // STEP 1: Update LocalStorage Cache → UI Renders Immediately
@@ -13802,7 +13933,22 @@ window.saveStudent = async function(editId) {
     loadStudentManagement();
 };
 
-// ======================= SHOW ADD STUDENT FORM =======================
+// ======================= GET TEACHER FOR CLASS =======================
+function getTeacherForClass(cls, sec) {
+    const teacherMap = {
+        'Playgroup A': 'Priya Sharma',
+        'Playgroup B': 'Neha Gupta',
+        'Nursery A': 'Rajesh Singh',
+        'Nursery B': 'Sneha Sharma',
+        'KG1 A': 'Anjali Kapoor',
+        'KG1 B': 'Vikram Joshi',
+        'KG2 A': 'Meera Nair',
+        'KG2 B': 'Rahul Mehta'
+    };
+    return teacherMap[`${cls} ${sec}`] || '';
+}
+
+// ======================= ✅ FULLY RESPONSIVE SHOW ADD STUDENT FORM =======================
 window.showAddStudentForm = function(editId = null) {
     if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) { 
         showNotification('Only administrators and accountants can add/edit students!', 'error'); 
@@ -13820,7 +13966,7 @@ window.showAddStudentForm = function(editId = null) {
     currentStudentBirthUrl = isEdit ? studentData?.birth_url : null;
     currentStudentOtherDocs = isEdit ? (studentData?.other_docs || []) : [];
     
-    let feeData = getClassFeeData(isEdit ? studentData?.cls : 'Playgroup');
+    let feeData = getClassFeeData(isEdit ? studentData?.cls : 'Playgroup A');
     let isTransportEnabled = isEdit ? studentData?.transport_enabled : false;
     let totalFeeWithTransport = isTransportEnabled ? feeData.totalFee : feeData.baseFee;
     let defaultInstallment = isEdit ? (studentData?.fee_installment || 'annual') : 'annual';
@@ -13838,28 +13984,32 @@ window.showAddStudentForm = function(editId = null) {
     modal.className = 'modal-overlay';
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:10000;padding:16px;';
     
+    const isMobileDevice = isMobile();
+    const modalMaxWidth = isMobileDevice ? '95%' : '800px';
+    const modalMaxHeight = isMobileDevice ? '92vh' : '85vh';
+    
     modal.innerHTML = `
-        <div class="modal-content" style="max-width:800px; width:95%; max-height:85vh; overflow-y:auto; border-radius:28px; padding:0; background:var(--bg-surface);">
-            <div style="background:linear-gradient(135deg,#667eea,#764ba2); padding:16px 20px; border-radius:28px 28px 0 0; position:sticky; top:0; z-index:10;">
+        <div class="modal-content" style="max-width:${modalMaxWidth}; width:95%; max-height:${modalMaxHeight}; overflow-y:auto; border-radius:28px; padding:0; background:var(--bg-surface);">
+            <div style="background:linear-gradient(135deg,#667eea,#764ba2); padding:${isMobileDevice ? '12px 16px' : '16px 20px'}; border-radius:28px 28px 0 0; position:sticky; top:0; z-index:10;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <h2 style="color:white; margin:0; font-size:18px;"><i class="fas ${isEdit ? 'fa-edit' : 'fa-user-plus'}"></i> ${isEdit ? 'Edit Student' : 'Add New Student'}</h2>
-                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); color:white; border:none; width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:20px;">&times;</button>
+                    <h2 style="color:white; margin:0; font-size:${isMobileDevice ? '16px' : '18px'};"><i class="fas ${isEdit ? 'fa-edit' : 'fa-user-plus'}"></i> ${isEdit ? 'Edit Student' : 'Add New Student'}</h2>
+                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); color:white; border:none; width:${isMobileDevice ? '30px' : '34px'}; height:${isMobileDevice ? '30px' : '34px'}; border-radius:50%; cursor:pointer; font-size:${isMobileDevice ? '18px' : '20px'};">&times;</button>
                 </div>
-                <p style="color:rgba(255,255,255,0.8); margin:5px 0 0; font-size:12px;">Fill the details below to ${isEdit ? 'update' : 'register'} a student</p>
+                <p style="color:rgba(255,255,255,0.8); margin:5px 0 0; font-size:${isMobileDevice ? '11px' : '12px'};">Fill the details below to ${isEdit ? 'update' : 'register'} a student</p>
             </div>
             
-            <div style="padding:20px;">
-                <h3 style="font-size:14px; margin:0 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+            <div style="padding:${isMobileDevice ? '14px' : '20px'};">
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:0 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
                     <i class="fas fa-user-circle"></i> Basic Information
                 </h3>
-                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">👤 Full Name *</label><input id="stuName" class="form-control" placeholder="Enter full name" value="${isEdit ? escapeHtml(studentData?.name || '') : ''}"></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">🎂 Date of Birth</label><input type="date" id="stuDob" class="form-control" value="${isEdit ? (studentData?.dob || '') : ''}"></div>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">👤 Full Name *</label><input id="stuName" class="form-control" placeholder="Enter full name" value="${isEdit ? escapeHtml(studentData?.name || '') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">🎂 Date of Birth</label><input type="date" id="stuDob" class="form-control" value="${isEdit ? (studentData?.dob || '') : ''}"></div>
                 </div>
                 
-                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">⚥ Gender</label><select id="stuGender" class="form-control"><option ${isEdit && studentData?.gender === 'Male' ? 'selected' : ''}>Male</option><option ${isEdit && studentData?.gender === 'Female' ? 'selected' : ''}>Female</option></select></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">🩸 Blood Group</label><select id="stuBlood" class="form-control">
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">⚥ Gender</label><select id="stuGender" class="form-control"><option ${isEdit && studentData?.gender === 'Male' ? 'selected' : ''}>Male</option><option ${isEdit && studentData?.gender === 'Female' ? 'selected' : ''}>Female</option></select></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">🩸 Blood Group</label><select id="stuBlood" class="form-control">
                         <option ${isEdit && studentData?.blood_group === 'O+' ? 'selected' : ''}>O+</option><option ${isEdit && studentData?.blood_group === 'O-' ? 'selected' : ''}>O-</option>
                         <option ${isEdit && studentData?.blood_group === 'A+' ? 'selected' : ''}>A+</option><option ${isEdit && studentData?.blood_group === 'A-' ? 'selected' : ''}>A-</option>
                         <option ${isEdit && studentData?.blood_group === 'B+' ? 'selected' : ''}>B+</option><option ${isEdit && studentData?.blood_group === 'B-' ? 'selected' : ''}>B-</option>
@@ -13867,91 +14017,91 @@ window.showAddStudentForm = function(editId = null) {
                     </select></div>
                 </div>
                 
-                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">🆔 Admission No</label><input id="stuAdmissionNo" class="form-control" placeholder="Admission number" value="${isEdit ? (studentData?.admission_no || '') : 'ADM' + Math.floor(1000 + Math.random() * 9000)}"></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">🔢 Roll Number *</label><input type="number" id="stuRoll" class="form-control" placeholder="Roll number" value="${isEdit ? (studentData?.roll || '') : window.students.length + 1}"></div>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">🆔 Admission No</label><input id="stuAdmissionNo" class="form-control" placeholder="Admission number" value="${isEdit ? (studentData?.admission_no || '') : 'ADM' + Math.floor(1000 + Math.random() * 9000)}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">🔢 Roll Number *</label><input type="number" id="stuRoll" class="form-control" placeholder="Roll number" value="${isEdit ? (studentData?.roll || '') : window.students.length + 1}"></div>
                 </div>
                 
-                <h3 style="font-size:14px; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
                     <i class="fas fa-praying-hands"></i> Religion & Caste Details
                 </h3>
-                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">🕉️ Religion</label><select id="stuReligion" class="form-control">${religionHtml}</select></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">🏷️ Cast Category</label><select id="stuCastCategory" class="form-control">${castCategoryHtml}</select></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">📜 Cast Name (Sub-caste)</label><input id="stuCastName" class="form-control" placeholder="e.g., Sharma, Patel, Khan" value="${isEdit ? escapeHtml(studentData?.cast_name || '') : ''}"></div>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(3,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">🕉️ Religion</label><select id="stuReligion" class="form-control">${religionHtml}</select></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">🏷️ Cast Category</label><select id="stuCastCategory" class="form-control">${castCategoryHtml}</select></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">📜 Cast Name (Sub-caste)</label><input id="stuCastName" class="form-control" placeholder="e.g., Sharma, Patel, Khan" value="${isEdit ? escapeHtml(studentData?.cast_name || '') : ''}"></div>
                 </div>
                 
-                <h3 style="font-size:14px; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
                     <i class="fas fa-address-card"></i> Contact Information
                 </h3>
-                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">📞 Mobile Number</label><input id="stuMobile" class="form-control" placeholder="Student's mobile" value="${isEdit ? (studentData?.mobile || '') : ''}"></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">✉️ Email Address</label><input id="stuEmail" class="form-control" placeholder="Email address" value="${isEdit ? (studentData?.email || '') : ''}"></div>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">📞 Mobile Number</label><input id="stuMobile" class="form-control" placeholder="Student's mobile" value="${isEdit ? (studentData?.mobile || '') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">✉️ Email Address</label><input id="stuEmail" class="form-control" placeholder="Email address" value="${isEdit ? (studentData?.email || '') : ''}"></div>
                 </div>
                 
                 <div class="form-group" style="margin-bottom:15px;">
-                    <label style="color:var(--text-primary);">📍 Residential Address</label>
-                    <textarea id="stuAddress" class="form-control" rows="2" placeholder="Full address">${isEdit ? escapeHtml(studentData?.address || '') : ''}</textarea>
+                    <label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">📍 Residential Address</label>
+                    <textarea id="stuAddress" class="form-control" rows="2" placeholder="Full address" style="font-size:${isMobileDevice ? '13px' : '14px'};">${isEdit ? escapeHtml(studentData?.address || '') : ''}</textarea>
                 </div>
                 
-                <h3 style="font-size:14px; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
                     <i class="fas fa-family"></i> Parent Information
                 </h3>
-                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">👨 Father's Name</label><input id="stuFather" class="form-control" placeholder="Father's full name" value="${isEdit ? escapeHtml(studentData?.father_name || '') : ''}"></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">📞 Father's Mobile</label><input id="stuFatherMobile" class="form-control" placeholder="Father's mobile" value="${isEdit ? (studentData?.father_mobile || '') : ''}"></div>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">👨 Father's Name</label><input id="stuFather" class="form-control" placeholder="Father's full name" value="${isEdit ? escapeHtml(studentData?.father_name || '') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">📞 Father's Mobile</label><input id="stuFatherMobile" class="form-control" placeholder="Father's mobile" value="${isEdit ? (studentData?.father_mobile || '') : ''}"></div>
                 </div>
                 
-                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">👩 Mother's Name</label><input id="stuMother" class="form-control" placeholder="Mother's full name" value="${isEdit ? escapeHtml(studentData?.mother_name || '') : ''}"></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">📞 Mother's Mobile</label><input id="stuMotherMobile" class="form-control" placeholder="Mother's mobile" value="${isEdit ? (studentData?.mother_mobile || '') : ''}"></div>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">👩 Mother's Name</label><input id="stuMother" class="form-control" placeholder="Mother's full name" value="${isEdit ? escapeHtml(studentData?.mother_name || '') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">📞 Mother's Mobile</label><input id="stuMotherMobile" class="form-control" placeholder="Mother's mobile" value="${isEdit ? (studentData?.mother_mobile || '') : ''}"></div>
                 </div>
                 
-                <h3 style="font-size:14px; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
                     <i class="fas fa-graduation-cap"></i> Academic Information
                 </h3>
-                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">🏫 Class *</label><select id="stuClass" class="form-control" onchange="updateTotalFee()">${classOptionsHtml}</select></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">📚 Section</label><select id="stuSec" class="form-control">
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">🏫 Class *</label><select id="stuClass" class="form-control" onchange="updateTotalFee()">${classOptionsHtml}</select></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">📚 Section</label><select id="stuSec" class="form-control">
                         <option ${isEdit && studentData?.sec === 'A' ? 'selected' : ''}>A</option>
                         <option ${isEdit && studentData?.sec === 'B' ? 'selected' : ''}>B</option>
                         <option ${isEdit && studentData?.sec === 'C' ? 'selected' : ''}>C</option>
                     </select></div>
                 </div>
                 
-                <h3 style="font-size:14px; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
                     <i class="fas fa-rupee-sign"></i> Fee Information
                 </h3>
-                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-bottom:15px;">
-                    <div class="form-group"><label style="color:var(--text-primary);">💰 Total Fee</label><input type="number" id="stuTotalFee" class="form-control" value="${totalFeeWithTransport}" readonly style="background:var(--bg-body); font-weight:bold; color:#10b981;"></div>
-                    <div class="form-group"><label style="color:var(--text-primary);">📅 Installment Plan</label>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">💰 Total Fee</label><input type="number" id="stuTotalFee" class="form-control" value="${totalFeeWithTransport}" readonly style="background:var(--bg-body); font-weight:bold; color:#10b981; font-size:${isMobileDevice ? '14px' : '16px'};"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};">📅 Installment Plan</label>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:5px;">
-                            <button type="button" class="installment-btn" data-installment="annual" onclick="selectInstallment('annual')" style="padding:8px 12px; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">📅 Annual</button>
-                            <button type="button" class="installment-btn" data-installment="half_yearly" onclick="selectInstallment('half_yearly')" style="padding:8px 12px; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">📆 Half-Yearly</button>
-                            <button type="button" class="installment-btn" data-installment="quarterly" onclick="selectInstallment('quarterly')" style="padding:8px 12px; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">🗓️ Quarterly</button>
-                            <button type="button" class="installment-btn" data-installment="monthly" onclick="selectInstallment('monthly')" style="padding:8px 12px; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">📅 Monthly</button>
+                            <button type="button" class="installment-btn" data-installment="annual" onclick="selectInstallment('annual')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📅 Annual</button>
+                            <button type="button" class="installment-btn" data-installment="half_yearly" onclick="selectInstallment('half_yearly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📆 Half-Yearly</button>
+                            <button type="button" class="installment-btn" data-installment="quarterly" onclick="selectInstallment('quarterly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">🗓️ Quarterly</button>
+                            <button type="button" class="installment-btn" data-installment="monthly" onclick="selectInstallment('monthly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📅 Monthly</button>
                         </div>
                     </div>
                 </div>
                 
                 <div class="form-group" style="margin-bottom:15px;">
-                    <label style="color:var(--text-primary);"><input type="checkbox" id="transportEnabled" ${isTransportEnabled ? 'checked' : ''} onchange="updateTotalFee()"> 🚌 Enable Transport Facility</label>
+                    <label style="color:var(--text-primary); font-size:${isMobileDevice ? '12px' : '13px'};"><input type="checkbox" id="transportEnabled" ${isTransportEnabled ? 'checked' : ''} onchange="updateTotalFee()"> 🚌 Enable Transport Facility</label>
                 </div>
                 
-                <div style="background:var(--bg-body); border-radius:16px; padding:16px; margin:16px 0;">
-                    <h4 style="color:var(--text-primary);"><i class="fas fa-cloud-upload-alt"></i> Documents</h4>
-                    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
-                        <div id="studentPhotoUpload" class="upload-area" style="padding:10px; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);"><i class="fas fa-camera" style="color:var(--primary);"></i><br style="color:var(--text-primary);">📸 Photo</div>
-                        <div id="studentAadharUpload" class="upload-area" style="padding:10px; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);"><i class="fas fa-id-card" style="color:var(--primary);"></i><br style="color:var(--text-primary);">🆔 Aadhar</div>
-                        <div id="studentBirthUpload" class="upload-area" style="padding:10px; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);"><i class="fas fa-birthday-cake" style="color:var(--primary);"></i><br style="color:var(--text-primary);">🎂 Birth</div>
-                        <div id="studentOtherUpload" class="upload-area" style="padding:10px; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);"><i class="fas fa-paperclip" style="color:var(--primary);"></i><br style="color:var(--text-primary);">📎 Other</div>
+                <div style="background:var(--bg-body); border-radius:16px; padding:${isMobileDevice ? '12px' : '16px'}; margin:16px 0;">
+                    <h4 style="color:var(--text-primary); font-size:${isMobileDevice ? '13px' : '14px'};"><i class="fas fa-cloud-upload-alt"></i> Documents</h4>
+                    <div style="display:grid; grid-template-columns:${isMobileDevice ? 'repeat(2,1fr)' : 'repeat(4,1fr)'}; gap:${isMobileDevice ? '8px' : '10px'};">
+                        <div id="studentPhotoUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);"><i class="fas fa-camera" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">📸 Photo</div>
+                        <div id="studentAadharUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);"><i class="fas fa-id-card" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">🆔 Aadhar</div>
+                        <div id="studentBirthUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);"><i class="fas fa-birthday-cake" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">🎂 Birth</div>
+                        <div id="studentOtherUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);"><i class="fas fa-paperclip" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">📎 Other</div>
                     </div>
                     <div id="otherDocsList" style="margin-top:10px;"></div>
                 </div>
                 
-                <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid var(--border-light);">
-                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding:10px 20px; border-radius:30px;"><i class="fas fa-times"></i> Cancel</button>
-                    <button class="btn btn-primary" onclick="saveStudent('${isEdit ? editId : ''}')" style="padding:10px 25px; border-radius:30px; background:linear-gradient(135deg,#10b981,#059669); color:white;">
+                <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid var(--border-light); flex-wrap:wrap;">
+                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding:${isMobileDevice ? '10px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'};"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn btn-primary" onclick="saveStudent('${isEdit ? editId : ''}')" style="padding:${isMobileDevice ? '10px 16px' : '10px 25px'}; border-radius:30px; background:linear-gradient(135deg,#10b981,#059669); color:white; font-size:${isMobileDevice ? '13px' : '14px'};">
                         <i class="fas fa-save"></i> ${isEdit ? 'Update Student' : 'Save Student'}
                     </button>
                 </div>
@@ -13960,7 +14110,7 @@ window.showAddStudentForm = function(editId = null) {
     `;
     document.body.appendChild(modal);
     
-    // ===== ✅ UPDATED: Setup upload handlers with new functions =====
+    // Setup upload handlers
     document.getElementById('studentPhotoUpload').onclick = () => {
         openStudentPhotoCapture(async (croppedData) => {
             showLoader();
@@ -14009,7 +14159,7 @@ window.showAddStudentForm = function(editId = null) {
     setTimeout(() => selectInstallment(defaultInstallment), 50);
 }
 
-// ======================= RENDER STUDENT LIST =======================
+// ======================= ✅ FULLY RESPONSIVE RENDER STUDENT LIST =======================
 window.renderStudentList = function(studentsToRender) {
     let showEditDeleteButtons = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant'));
     
@@ -14028,38 +14178,38 @@ window.renderStudentList = function(studentsToRender) {
         
         html += `
         <div class="data-card student-card" style="margin-bottom:12px; border-radius:20px; transition:0.3s; background:var(--bg-surface); border:1px solid var(--border-light);">
-            <div class="card-header" style="display:flex; gap:12px; padding:12px; flex-wrap:wrap; border-bottom:1px solid var(--border-light);">
-                <div class="card-photo" style="width:55px; height:55px; border-radius:50%; overflow:hidden; background:linear-gradient(135deg,var(--primary),var(--secondary)); flex-shrink:0;">
+            <div class="card-header" style="display:flex; gap:12px; padding:${isMobile() ? '10px' : '12px'}; flex-wrap:wrap; border-bottom:1px solid var(--border-light);">
+                <div class="card-photo" style="width:${isMobile() ? '45px' : '55px'}; height:${isMobile() ? '45px' : '55px'}; border-radius:50%; overflow:hidden; background:linear-gradient(135deg,var(--primary),var(--secondary)); flex-shrink:0;">
                     <img src="${photoSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%2394a3b8\'/%3E%3Ctext x=\'50\' y=\'67\' font-size=\'45\' text-anchor=\'middle\' fill=\'white\'%3E?%3C/text%3E%3C/svg%3E';">
                 </div>
-                <div class="card-title" style="flex:1; min-width:120px;">
-                    <h3 style="color:var(--text-primary); font-size:15px; margin:0 0 4px 0;">${escapeHtml(s.name)}</h3>
-                    <p style="color:var(--text-secondary); font-size:11px; margin:0;">${escapeHtml(s.cls)} ${escapeHtml(s.sec)} | Roll: ${s.roll}</p>
+                <div class="card-title" style="flex:1; min-width:${isMobile() ? '80px' : '120px'};">
+                    <h3 style="color:var(--text-primary); font-size:${isMobile() ? '14px' : '15px'}; margin:0 0 4px 0;">${escapeHtml(s.name)}</h3>
+                    <p style="color:var(--text-secondary); font-size:${isMobile() ? '10px' : '11px'}; margin:0;">${escapeHtml(s.cls)} ${escapeHtml(s.sec)} | Roll: ${s.roll}</p>
                 </div>
                 <div style="text-align:right;">
-                    <span class="badge ${attendance>=75?'badge-success':'badge-warning'}" style="font-size:11px; padding:4px 12px; border-radius:20px;">📊 ${attendance}%</span>
-                    <div style="margin-top:5px;"><span class="badge ${dueClass}" style="font-size:10px; padding:3px 10px; border-radius:20px;">${dueText}</span></div>
-                    <div style="margin-top:3px;"><span style="background:${statusColor}; color:white; padding:2px 10px; border-radius:20px; font-size:9px;">${feeStatus}</span></div>
+                    <span class="badge ${attendance>=75?'badge-success':'badge-warning'}" style="font-size:${isMobile() ? '10px' : '11px'}; padding:${isMobile() ? '3px 8px' : '4px 12px'}; border-radius:20px;">📊 ${attendance}%</span>
+                    <div style="margin-top:5px;"><span class="badge ${dueClass}" style="font-size:${isMobile() ? '9px' : '10px'}; padding:${isMobile() ? '2px 8px' : '3px 10px'}; border-radius:20px;">${dueText}</span></div>
+                    <div style="margin-top:3px;"><span style="background:${statusColor}; color:white; padding:${isMobile() ? '1px 8px' : '2px 10px'}; border-radius:20px; font-size:${isMobile() ? '8px' : '9px'};">${feeStatus}</span></div>
                 </div>
             </div>
-            <div class="info-grid" style="padding:12px; display:grid; grid-template-columns:repeat(4,1fr); gap:12px; background:var(--bg-body);">
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Total Fee</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">₹${totalFeeAmount.toLocaleString()}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Paid Amount</span><span class="info-value" style="font-weight:600; font-size:13px; color:#10b981;">₹${paidAmount.toLocaleString()}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Due Amount</span><span class="info-value" style="font-weight:600; font-size:13px; color:${dueAmount > 0 ? '#ef4444' : '#10b981'};">₹${dueAmount.toLocaleString()}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Payment Status</span><span class="info-value" style="font-weight:600; font-size:13px; color:${statusColor};">${feeStatus}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Installment</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${s.fee_installment||'annual'}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Transport</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${s.transport_enabled?'✅ Enabled':'❌ Disabled'}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Father</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${escapeHtml(s.father_name||'N/A')}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Mobile</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${s.mobile||'N/A'}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Blood</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${s.blood_group||'O+'}</span></div>
-                <div><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);">Class Teacher</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${s.class_teacher||'N/A'}</span></div>
+            <div class="info-grid" style="padding:${isMobile() ? '10px' : '12px'}; display:grid; grid-template-columns:${isMobile() ? 'repeat(2,1fr)' : 'repeat(4,1fr)'}; gap:${isMobile() ? '8px' : '12px'}; background:var(--bg-body);">
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Total Fee</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:var(--text-primary);">₹${totalFeeAmount.toLocaleString()}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Paid Amount</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:#10b981;">₹${paidAmount.toLocaleString()}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Due Amount</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:${dueAmount > 0 ? '#ef4444' : '#10b981'};">₹${dueAmount.toLocaleString()}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Payment Status</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:${statusColor};">${feeStatus}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Installment</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:var(--text-primary);">${s.fee_installment||'annual'}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Transport</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:var(--text-primary);">${s.transport_enabled?'✅ Enabled':'❌ Disabled'}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Father</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:var(--text-primary);">${escapeHtml(s.father_name||'N/A')}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Mobile</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:var(--text-primary);">${s.mobile||'N/A'}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Blood</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:var(--text-primary);">${s.blood_group||'O+'}</span></div>
+                <div><span class="info-label" style="display:block; font-size:${isMobile() ? '9px' : '10px'}; color:var(--text-secondary);">Class Teacher</span><span class="info-value" style="font-weight:600; font-size:${isMobile() ? '12px' : '13px'}; color:var(--text-primary);">${s.class_teacher||'N/A'}</span></div>
             </div>
-            <div class="card-actions" style="padding:10px; gap:6px; flex-wrap:wrap; border-top:1px solid var(--border-light); background:var(--bg-surface);">
-                <button class="action-chip" onclick="viewStudentDetails('${s.id}')" style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:11px;"><i class="fas fa-eye"></i> View</button>
-                ${showEditDeleteButtons ? `<button class="action-chip" onclick="showAddStudentForm('${s.id}')" style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:11px;"><i class="fas fa-edit"></i> Edit</button>` : ''}
-                ${showEditDeleteButtons ? `<button class="action-chip" onclick="deleteStudent('${s.id}')" style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:#fee2e2; color:#dc2626; font-size:11px;"><i class="fas fa-trash"></i> Delete</button>` : ''}
-                <button class="action-chip" onclick="openIDCardModal('${s.id}')" style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:11px;"><i class="fas fa-id-card"></i> ID Card</button>
-                <button class="action-chip" onclick="shareStudent('${s.id}')" style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:#25D366; color:white; font-size:11px;"><i class="fab fa-whatsapp"></i> Share</button>
+            <div class="card-actions" style="padding:${isMobile() ? '8px' : '10px'}; gap:${isMobile() ? '4px' : '6px'}; flex-wrap:wrap; border-top:1px solid var(--border-light); background:var(--bg-surface);">
+                <button class="action-chip" onclick="viewStudentDetails('${s.id}')" style="padding:${isMobile() ? '4px 8px' : '6px 12px'}; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobile() ? '10px' : '11px'};"><i class="fas fa-eye"></i> View</button>
+                ${showEditDeleteButtons ? `<button class="action-chip" onclick="showAddStudentForm('${s.id}')" style="padding:${isMobile() ? '4px 8px' : '6px 12px'}; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobile() ? '10px' : '11px'};"><i class="fas fa-edit"></i> Edit</button>` : ''}
+                ${showEditDeleteButtons ? `<button class="action-chip" onclick="deleteStudent('${s.id}')" style="padding:${isMobile() ? '4px 8px' : '6px 12px'}; border-radius:20px; border:none; cursor:pointer; background:#fee2e2; color:#dc2626; font-size:${isMobile() ? '10px' : '11px'};"><i class="fas fa-trash"></i> Delete</button>` : ''}
+                <button class="action-chip" onclick="openIDCardModal('${s.id}')" style="padding:${isMobile() ? '4px 8px' : '6px 12px'}; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobile() ? '10px' : '11px'};"><i class="fas fa-id-card"></i> ID Card</button>
+                <button class="action-chip" onclick="shareStudent('${s.id}')" style="padding:${isMobile() ? '4px 8px' : '6px 12px'}; border-radius:20px; border:none; cursor:pointer; background:#25D366; color:white; font-size:${isMobile() ? '10px' : '11px'};"><i class="fab fa-whatsapp"></i> Share</button>
             </div>
         </div>`;
     }
@@ -14070,16 +14220,16 @@ window.renderStudentList = function(studentsToRender) {
             let myClass = getTeacherClass();
             noDataMsg = myClass ? `No students found in your class: ${myClass}.` : 'You have not been assigned to any class. Please contact administrator.';
         }
-        html = `<div class="profile-card" style="text-align:center; padding:40px; background:var(--bg-surface); border-radius:20px; border:1px solid var(--border-light);">
-            <i class="fas fa-users-slash" style="font-size:48px; color:var(--text-secondary);"></i>
-            <p style="color:var(--text-primary); margin-top:10px;">${noDataMsg}</p>
+        html = `<div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'}; background:var(--bg-surface); border-radius:20px; border:1px solid var(--border-light);">
+            <i class="fas fa-users-slash" style="font-size:${isMobile() ? '36px' : '48px'}; color:var(--text-secondary);"></i>
+            <p style="color:var(--text-primary); margin-top:10px; font-size:${isMobile() ? '14px' : '16px'};">${noDataMsg}</p>
         </div>`;
     }
     
     document.getElementById('studentsList').innerHTML = html;
 }
 
-// ======================= RENDER STUDENT UI =======================
+// ======================= ✅ FULLY RESPONSIVE RENDER STUDENT UI =======================
 window.renderStudentUI = function() {
     console.log('🎨 renderStudentUI called');
     
@@ -14121,55 +14271,100 @@ window.renderStudentUI = function() {
         roleBadgeText = `👨‍🏫 Teacher Mode - ${myClass || 'Playgroup A'}`;
         roleBadgeColor = '#2563eb';
         myClassInfo = `
-            <div style="background:linear-gradient(135deg, #2563eb10, #1e40af10); padding:15px; border-radius:16px; margin:15px 0; text-align:center; border:1px solid #2563eb20;">
-                <i class="fas fa-chalkboard-teacher" style="color:#2563eb; font-size:20px;"></i>
-                <strong style="margin-left:8px; color:var(--text-primary);">Your Class: ${myClass || 'Playgroup A'}</strong>
-                <span style="margin-left:15px; font-size:13px; color:var(--text-secondary);">| ${total} Students | ${boys} Boys | ${girls} Girls</span>
+            <div style="background:linear-gradient(135deg, #2563eb10, #1e40af10); padding:${isMobile() ? '12px' : '15px'}; border-radius:16px; margin:${isMobile() ? '10px' : '15px'} 0; text-align:center; border:1px solid #2563eb20;">
+                <i class="fas fa-chalkboard-teacher" style="color:#2563eb; font-size:${isMobile() ? '18px' : '20px'};"></i>
+                <strong style="margin-left:8px; color:var(--text-primary); font-size:${isMobile() ? '13px' : '14px'};">Your Class: ${myClass || 'Playgroup A'}</strong>
+                <span style="margin-left:15px; font-size:${isMobile() ? '12px' : '13px'}; color:var(--text-secondary);">| ${total} Students | ${boys} Boys | ${girls} Girls</span>
             </div>
         `;
     }
     
     let content = `
     <style>
-        .student-card { margin-bottom:12px; border-radius:20px; transition:0.3s; background:var(--bg-surface); border:1px solid var(--border-light); }
+        .student-card { margin-bottom:12px; border-radius:20px; transition:0.3s; background:var(--bg-surface); border:1px solid var(--border-light); overflow:hidden; }
         .student-card:hover { transform:translateY(-3px); box-shadow:0 10px 25px -5px rgba(0,0,0,0.1); }
         .online-badge { background:#10b981; color:white; padding:4px 12px; border-radius:20px; font-size:10px; }
         .offline-badge { background:#f59e0b; color:white; padding:4px 12px; border-radius:20px; font-size:10px; }
-        .role-badge { background:${roleBadgeColor}; color:white; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:500; }
-        .summary-cards { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:20px; }
-        .summary-item { background:linear-gradient(135deg,#667eea10,#764ba210); padding:15px; border-radius:16px; text-align:center; }
-        .summary-value { font-size:24px; font-weight:bold; color:#667eea; }
-        .chart-card { background:var(--bg-surface); padding:15px; border-radius:16px; margin-bottom:15px; border:1px solid var(--border-light); }
+        .role-badge { background:${roleBadgeColor}; color:white; padding:4px 12px; border-radius:20px; font-size:${isMobile() ? '10px' : '12px'}; font-weight:500; }
+        .summary-cards { display:grid; grid-template-columns:${isMobile() ? 'repeat(2,1fr)' : 'repeat(3,1fr)'}; gap:${isMobile() ? '8px' : '12px'}; margin-bottom:20px; }
+        .summary-item { background:linear-gradient(135deg,#667eea10,#764ba210); padding:${isMobile() ? '10px' : '15px'}; border-radius:16px; text-align:center; }
+        .summary-value { font-size:${isMobile() ? '20px' : '24px'}; font-weight:bold; color:#667eea; }
+        .chart-card { background:var(--bg-surface); padding:${isMobile() ? '10px' : '15px'}; border-radius:16px; margin-bottom:15px; border:1px solid var(--border-light); }
         .action-buttons { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-        .action-chip { padding:5px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:12px; margin:2px; }
+        .action-chip { padding:5px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobile() ? '11px' : '12px'}; margin:2px; }
         .action-chip:hover { background:var(--border-light); }
         .upload-area { transition: all 0.3s; }
         .upload-area:hover { background: var(--bg-body); border-color: var(--primary); }
         .form-control { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary); }
         .info-label { display: block; font-size: 11px; color: var(--text-secondary); }
         .info-value { font-weight: 600; font-size: 14px; color:var(--text-primary); }
-        @media (max-width:768px){
-            .action-buttons{flex-direction:column}
-            .action-buttons .search-box{width:100%}
-            .info-grid{grid-template-columns:1fr!important}
-            .card-header{flex-direction:column!important;text-align:center}
-            .card-photo{margin:0 auto}
+        
+        @media (max-width: 768px) {
+            .action-buttons { flex-direction: column; }
+            .action-buttons .search-box { width: 100% !important; padding: 12px 16px 12px 40px !important; font-size: 14px !important; }
+            .action-buttons .btn-sm { width: 100% !important; text-align: center; padding: 12px !important; font-size: 13px !important; }
+            .info-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+            .card-header { flex-direction: column !important; text-align: center; }
+            .card-photo { margin: 0 auto; }
+            .card-actions { justify-content: center; flex-wrap: wrap; }
+            .card-actions .action-chip { font-size: 10px !important; padding: 4px 8px !important; }
+            .summary-cards { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+            .summary-item { padding: 10px !important; }
+            .summary-value { font-size: 18px !important; }
+            .chart-container { grid-template-columns: 1fr !important; gap: 12px !important; }
+            .chart-card { padding: 10px !important; }
+            .chart-card h3 { font-size: 13px !important; }
+            .chart-card canvas { max-height: 180px !important; width: 100% !important; }
+            .student-card .info-grid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+            .student-card .info-grid .info-label { font-size: 9px !important; }
+            .student-card .info-grid .info-value { font-size: 12px !important; }
+            .student-card .card-header h3 { font-size: 14px !important; }
+            .student-card .card-header p { font-size: 10px !important; }
+            .student-card .card-actions { gap: 4px !important; }
+            .student-card .card-actions .action-chip { font-size: 9px !important; padding: 3px 8px !important; }
+            .my-class-info { padding: 10px !important; font-size: 12px !important; }
+            .my-class-info strong { font-size: 13px !important; }
+            .my-class-info span { font-size: 11px !important; }
+            .pagination-controls { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+            .pagination-controls > div { text-align: center; }
+            .pagination-controls select { width: 100% !important; }
+            .pagination-controls .pagination-buttons { justify-content: center; }
+            .role-badge { font-size: 10px !important; padding: 3px 8px !important; }
+        }
+        
+        @media (max-width: 480px) {
+            .info-grid { grid-template-columns: 1fr !important; gap: 4px !important; }
+            .summary-cards { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+            .summary-item { padding: 8px !important; }
+            .summary-value { font-size: 16px !important; }
+            .card-header { padding: 10px !important; }
+            .card-photo { width: 45px !important; height: 45px !important; }
+            .student-card .info-grid .info-value { font-size: 11px !important; }
+            .student-card .info-grid .info-label { font-size: 8px !important; }
+            .action-buttons .btn-sm { font-size: 12px !important; padding: 10px !important; }
+            .role-badge { font-size: 9px !important; padding: 2px 6px !important; }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .info-grid { grid-template-columns: repeat(3,1fr) !important; }
+            .summary-cards { grid-template-columns: repeat(3,1fr) !important; }
+            .chart-container { grid-template-columns: repeat(2,1fr) !important; }
         }
     </style>
     
     <div class="action-buttons">
         <div style="position:relative; flex:1;">
             <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary);"></i>
-            <input type="text" id="studentSearch" class="search-box" placeholder="Search students..." value="${studentFilterText}" style="padding-left:35px; width:100%; padding:10px; border-radius:25px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary);">
+            <input type="text" id="studentSearch" class="search-box" placeholder="Search students..." value="${studentFilterText}" style="padding-left:35px; width:100%; padding:${isMobile() ? '12px' : '10px'}; border-radius:25px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary); font-size:${isMobile() ? '14px' : '14px'};">
         </div>
-        <button class="btn btn-primary btn-sm" onclick="filterStudentList()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:12px;"><i class="fas fa-search"></i> Search</button>
-        <button class="btn btn-info btn-sm" onclick="clearStudentFilter()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:12px;"><i class="fas fa-eraser"></i> Clear</button>
-        <button class="btn btn-warning btn-sm" onclick="window.print()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:#f59e0b; color:white; font-size:12px;"><i class="fas fa-print"></i> Print</button>
-        ${showRefreshButton ? `<button class="btn btn-success btn-sm" onclick="refreshStudentsData()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; font-size:12px;"><i class="fas fa-sync-alt"></i> Refresh</button>` : ''}
-        ${showExportButtons ? `<button class="btn btn-info btn-sm" onclick="exportStudentsCSV()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:#3b82f6; color:white; font-size:12px;"><i class="fas fa-file-csv"></i> CSV</button>` : ''}
-        ${showExportButtons ? `<button class="btn btn-danger btn-sm" onclick="exportStudentsPDF()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:#dc2626; color:white; font-size:12px;"><i class="fas fa-file-pdf"></i> PDF</button>` : ''}
-        ${showPromoteButton ? `<button class="btn btn-primary btn-sm" onclick="promoteStudentsToNextClass()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:12px;"><i class="fas fa-arrow-up"></i> Promote Class</button>` : ''}
-        ${showAddButton ? `<button class="btn btn-primary btn-sm" onclick="showAddStudentForm()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; font-size:12px;"><i class="fas fa-plus"></i> Add Student</button>` : ''}
+        <button class="btn btn-primary btn-sm" onclick="filterStudentList()" style="padding:${isMobile() ? '10px' : '8px'} 16px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:${isMobile() ? '13px' : '12px'};"><i class="fas fa-search"></i> Search</button>
+        <button class="btn btn-info btn-sm" onclick="clearStudentFilter()" style="padding:${isMobile() ? '10px' : '8px'} 16px; border-radius:30px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobile() ? '13px' : '12px'};"><i class="fas fa-eraser"></i> Clear</button>
+        <button class="btn btn-warning btn-sm" onclick="window.print()" style="padding:${isMobile() ? '10px' : '8px'} 16px; border-radius:30px; border:none; cursor:pointer; background:#f59e0b; color:white; font-size:${isMobile() ? '13px' : '12px'};"><i class="fas fa-print"></i> Print</button>
+        ${showRefreshButton ? `<button class="btn btn-success btn-sm" onclick="refreshStudentsData()" style="padding:${isMobile() ? '10px' : '8px'} 16px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; font-size:${isMobile() ? '13px' : '12px'};"><i class="fas fa-sync-alt"></i> Refresh</button>` : ''}
+        ${showExportButtons ? `<button class="btn btn-info btn-sm" onclick="exportStudentsCSV()" style="padding:${isMobile() ? '10px' : '8px'} 16px; border-radius:30px; border:none; cursor:pointer; background:#3b82f6; color:white; font-size:${isMobile() ? '13px' : '12px'};"><i class="fas fa-file-csv"></i> CSV</button>` : ''}
+        ${showExportButtons ? `<button class="btn btn-danger btn-sm" onclick="exportStudentsPDF()" style="padding:${isMobile() ? '10px' : '8px'} 16px; border-radius:30px; border:none; cursor:pointer; background:#dc2626; color:white; font-size:${isMobile() ? '13px' : '12px'};"><i class="fas fa-file-pdf"></i> PDF</button>` : ''}
+        ${showPromoteButton ? `<button class="btn btn-primary btn-sm" onclick="promoteStudentsToNextClass()" style="padding:${isMobile() ? '10px' : '8px'} 16px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:${isMobile() ? '13px' : '12px'};"><i class="fas fa-arrow-up"></i> Promote Class</button>` : ''}
+        ${showAddButton ? `<button class="btn btn-primary btn-sm" onclick="showAddStudentForm()" style="padding:${isMobile() ? '10px' : '8px'} 16px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; font-size:${isMobile() ? '13px' : '12px'};"><i class="fas fa-plus"></i> Add Student</button>` : ''}
     </div>
     
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:10px; gap:8px;">
@@ -14188,25 +14383,25 @@ window.renderStudentUI = function() {
     ${myClassInfo}
     
     <div class="summary-cards">
-        <div class="summary-item"><div class="summary-value">${total}</div><div style="color:var(--text-primary);">${window.currentUser && window.currentUser.role === 'teacher' ? 'My Students' : 'Total Students'}</div></div>
-        <div class="summary-item"><div class="summary-value">${boys}/${girls}</div><div style="color:var(--text-primary);">Boys/Girls</div></div>
-        <div class="summary-item"><div class="summary-value">${fullyPaid}</div><div style="color:var(--text-primary);">✅ Fully Paid</div></div>
-        <div class="summary-item"><div class="summary-value">${partialPaid}</div><div style="color:var(--text-primary);">🟡 Partial Paid</div></div>
-        <div class="summary-item"><div class="summary-value">${notPaid}</div><div style="color:var(--text-primary);">🔴 Not Paid</div></div>
+        <div class="summary-item"><div class="summary-value">${total}</div><div style="color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};">${window.currentUser && window.currentUser.role === 'teacher' ? 'My Students' : 'Total Students'}</div></div>
+        <div class="summary-item"><div class="summary-value">${boys}/${girls}</div><div style="color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};">Boys/Girls</div></div>
+        <div class="summary-item"><div class="summary-value">${fullyPaid}</div><div style="color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};">✅ Fully Paid</div></div>
+        <div class="summary-item"><div class="summary-value">${partialPaid}</div><div style="color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};">🟡 Partial Paid</div></div>
+        <div class="summary-item"><div class="summary-value">${notPaid}</div><div style="color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};">🔴 Not Paid</div></div>
     </div>
     
-    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin:16px 0;">
-        <div class="chart-card"><h3 style="color:var(--text-primary); margin:0 0 10px 0;">📊 Gender Distribution</h3><canvas id="genderChart"></canvas></div>
-        <div class="chart-card"><h3 style="color:var(--text-primary); margin:0 0 10px 0;">📈 Class-wise Strength</h3><canvas id="classStrengthChart"></canvas></div>
+    <div class="chart-container" style="display:grid; grid-template-columns:${isMobile() ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobile() ? '12px' : '16px'}; margin:16px 0;">
+        <div class="chart-card"><h3 style="color:var(--text-primary); margin:0 0 10px 0; font-size:${isMobile() ? '13px' : '14px'};">📊 Gender Distribution</h3><canvas id="genderChart" style="max-height:200px; width:100%;"></canvas></div>
+        <div class="chart-card"><h3 style="color:var(--text-primary); margin:0 0 10px 0; font-size:${isMobile() ? '13px' : '14px'};">📈 Class-wise Strength</h3><canvas id="classStrengthChart" style="max-height:200px; width:100%;"></canvas></div>
     </div>
     
-    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin:15px 0; padding:12px; background:var(--bg-surface); border-radius:16px; border:1px solid var(--border-light);">
-        <div style="color:var(--text-primary);"><span>Show </span><select id="studentRowsPerPage" onchange="changeStudentRowsPerPage()" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary);"><option value="10" ${studentRowsPerPage===10?'selected':''}>10</option><option value="25" ${studentRowsPerPage===25?'selected':''}>25</option><option value="50" ${studentRowsPerPage===50?'selected':''}>50</option><option value="100" ${studentRowsPerPage===100?'selected':''}>100</option></select><span> entries</span></div>
-        <div style="color:var(--text-primary);">Showing ${startIndex+1} to ${Math.min(startIndex+studentRowsPerPage,total)} of ${total}</div>
-        <div style="display:flex; gap:8px;">
-            <button class="btn-sm btn-info" onclick="previousStudentPage()" ${studentCurrentPage===1?'disabled':''} style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">◀ Prev</button>
-            <span style="padding:5px 12px; background:var(--primary); color:white; border-radius:8px; margin:0 5px;">${studentCurrentPage} / ${studentTotalPages||1}</span>
-            <button class="btn-sm btn-info" onclick="nextStudentPage()" ${studentCurrentPage===studentTotalPages?'disabled':''} style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">Next ▶</button>
+    <div class="pagination-controls" style="display:flex; justify-content:space-between; flex-wrap:wrap; margin:15px 0; padding:${isMobile() ? '10px' : '12px'}; background:var(--bg-surface); border-radius:16px; border:1px solid var(--border-light);">
+        <div style="color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};"><span>Show </span><select id="studentRowsPerPage" onchange="changeStudentRowsPerPage()" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary);"><option value="10" ${studentRowsPerPage===10?'selected':''}>10</option><option value="25" ${studentRowsPerPage===25?'selected':''}>25</option><option value="50" ${studentRowsPerPage===50?'selected':''}>50</option><option value="100" ${studentRowsPerPage===100?'selected':''}>100</option></select><span> entries</span></div>
+        <div style="color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};">Showing ${startIndex+1} to ${Math.min(startIndex+studentRowsPerPage,total)} of ${total}</div>
+        <div class="pagination-buttons" style="display:flex; gap:8px;">
+            <button class="btn-sm btn-info" onclick="previousStudentPage()" ${studentCurrentPage===1?'disabled':''} style="padding:${isMobile() ? '6px 10px' : '6px 12px'}; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};">◀ Prev</button>
+            <span style="padding:5px 12px; background:var(--primary); color:white; border-radius:8px; margin:0 5px; font-size:${isMobile() ? '12px' : '14px'};">${studentCurrentPage} / ${studentTotalPages||1}</span>
+            <button class="btn-sm btn-info" onclick="nextStudentPage()" ${studentCurrentPage===studentTotalPages?'disabled':''} style="padding:${isMobile() ? '6px 10px' : '6px 12px'}; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobile() ? '12px' : '14px'};">Next ▶</button>
         </div>
     </div>
     
@@ -14214,7 +14409,7 @@ window.renderStudentUI = function() {
     
     document.getElementById('moduleContent').innerHTML = content;
     renderStudentList(paginatedStudents);
-    setTimeout(() => refreshStudentCharts(), 100);
+    setTimeout(() => refreshStudentCharts(), 300);
 }
 
 // ======================= MAIN LOAD FUNCTION =======================
@@ -14236,12 +14431,12 @@ window.loadStudentManagement = async function() {
     
     if (!window.currentUser) {
         moduleContent.innerHTML = `
-            <div class="profile-card" style="text-align:center; padding:40px; background:var(--bg-surface); border-radius:20px; border:1px solid var(--border-light);">
-                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
-                <h3 style="color:var(--text-primary);">Please Login First</h3>
-                <button class="btn btn-primary" onclick="demoLoginAsAdmin()" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:13px;">Login as Admin</button>
-                <button class="btn btn-success" onclick="demoLoginAsTeacher()" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; font-size:13px; margin-left:8px;">Login as Teacher</button>
-                <button class="btn btn-info" onclick="demoLoginAsAccountant()" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:#3b82f6; color:white; font-size:13px; margin-left:8px;">Login as Accountant</button>
+            <div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'}; background:var(--bg-surface); border-radius:20px; border:1px solid var(--border-light);">
+                <i class="fas fa-lock" style="font-size:${isMobile() ? '36px' : '48px'}; color:#ef4444;"></i>
+                <h3 style="color:var(--text-primary); font-size:${isMobile() ? '16px' : '20px'};">Please Login First</h3>
+                <button class="btn btn-primary" onclick="demoLoginAsAdmin()" style="padding:${isMobile() ? '10px' : '10px'} 20px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:${isMobile() ? '13px' : '13px'};">Login as Admin</button>
+                <button class="btn btn-success" onclick="demoLoginAsTeacher()" style="padding:${isMobile() ? '10px' : '10px'} 20px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; font-size:${isMobile() ? '13px' : '13px'}; margin-left:8px;">Login as Teacher</button>
+                <button class="btn btn-info" onclick="demoLoginAsAccountant()" style="padding:${isMobile() ? '10px' : '10px'} 20px; border-radius:30px; border:none; cursor:pointer; background:#3b82f6; color:white; font-size:${isMobile() ? '13px' : '13px'}; margin-left:8px;">Login as Accountant</button>
             </div>
         `;
         isStudentLoading = false;
@@ -14250,12 +14445,12 @@ window.loadStudentManagement = async function() {
     
     if (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant' && window.currentUser.role !== 'teacher') {
         moduleContent.innerHTML = `
-            <div class="profile-card" style="text-align:center; padding:40px; background:var(--bg-surface); border-radius:20px; border:1px solid var(--border-light);">
-                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
-                <h3 style="color:var(--text-primary);">⛔ Access Denied</h3>
-                <p style="color:var(--text-secondary);">Only Admin, Accountant, and Teacher can access this module.</p>
-                <button onclick="demoLoginAsAdmin()" class="btn btn-primary" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:13px;">Login as Admin</button>
-                <button onclick="demoLoginAsTeacher()" class="btn btn-success" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; font-size:13px; margin-left:8px;">Login as Teacher</button>
+            <div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'}; background:var(--bg-surface); border-radius:20px; border:1px solid var(--border-light);">
+                <i class="fas fa-lock" style="font-size:${isMobile() ? '36px' : '48px'}; color:#ef4444;"></i>
+                <h3 style="color:var(--text-primary); font-size:${isMobile() ? '16px' : '20px'};">⛔ Access Denied</h3>
+                <p style="color:var(--text-secondary); font-size:${isMobile() ? '14px' : '16px'};">Only Admin, Accountant, and Teacher can access this module.</p>
+                <button onclick="demoLoginAsAdmin()" class="btn btn-primary" style="padding:${isMobile() ? '10px' : '10px'} 20px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:${isMobile() ? '13px' : '13px'}; margin-top:10px;">Login as Admin</button>
+                <button onclick="demoLoginAsTeacher()" class="btn btn-success" style="padding:${isMobile() ? '10px' : '10px'} 20px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; font-size:${isMobile() ? '13px' : '13px'}; margin-left:8px; margin-top:10px;">Login as Teacher</button>
             </div>
         `;
         isStudentLoading = false;
@@ -14360,18 +14555,27 @@ setTimeout(() => {
     }
 })();
 
-console.log('✅ PART 6 COMPLETE - Students Module with Camera + PDF Support!');
+console.log('✅ PART 6 COMPLETE - Students Module FULLY RESPONSIVE + ALL CLASSES + Camera + PDF Support!');
+console.log('📚 All Classes: Playgroup A/B, Nursery A/B, KG1 A/B, KG2 A/B');
+console.log('📱 Responsive Breakpoints: Mobile (<768px) | Tablet (768-1024px) | Desktop (>1024px)');
 console.log('📋 Access Matrix:');
 console.log('   - Admin: FULL ACCESS (Add/Edit/Delete/Promote/All Students)');
 console.log('   - Accountant: FULL ACCESS (Add/Edit/Delete/Promote/All Students)');
-console.log('   - Teacher Priya Sharma: ONLY Playgroup A Students');
+console.log('   - Teacher: ONLY Their Class Students');
+console.log('✅ Teacher Mappings:');
+console.log('   - Priya Sharma → Playgroup A | Neha Gupta → Playgroup B');
+console.log('   - Rajesh Singh → Nursery A | Sneha Sharma → Nursery B');
+console.log('   - Anjali Kapoor → KG1 A | Vikram Joshi → KG1 B');
+console.log('   - Meera Nair → KG2 A | Rahul Mehta → KG2 B');
 console.log('✅ New Columns Added: total_paid_fee, fee_paid_status, all document URLs');
 console.log('✅ Online/Offline Flow Implemented with Pending Queue');
 console.log('✅ Auto Sync on Internet Connect');
 console.log('✅ Theme Support - Day/Night Mode Compatible');
 console.log('✅ Camera + Gallery + PDF Upload Support for Mobile & Web');
+console.log('✅ Fully Responsive Custom Modal, Charts, Cards, Forms, Pagination');
 
 } // End of duplicate check
+// ====================================== PART 6 STUDENTS MODULE (COMPLETE) ENDS HERE =================================================================================
 // ====================================== PART 6 STUDENTS MODULE (COMPLETE) ENDS HERE =================================================================================
 
 //======================================= START PART 07 FEES MODULE (COMPLETE) ===========================================================================//
