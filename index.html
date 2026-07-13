@@ -17445,10 +17445,9 @@ console.log('📌 Pending items:', window.pendingFeesQueue ? window.pendingFeesQ
 } // End of duplicate check
 // ====================================== PART 07 FEES MODULE (COMPLETE) ENDS HERE ====================================================================
 // ======================= PART 8: ATTENDANCE MODULE (FIXED - NO REDECLARATION AT ALL) =======================
+// ======================= PART 8: ATTENDANCE MODULE (COMPLETE - RESPONSIVE + ANDROID APK READY) =======================
 
-// DO NOT DECLARE ANY VARIABLES HERE - THEY ARE ALREADY DECLARED IN PART 2/3
-// Only assign values if they are undefined, but do NOT use var/let again
-
+// ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 // Only set values if not already set - NO var/let keywords
 if (typeof window.attendanceFilterText === 'undefined') {
     window.attendanceFilterText = '';
@@ -17478,7 +17477,6 @@ if (typeof window.pendingAttendanceQueue === 'undefined') {
     window.pendingAttendanceQueue = [];
 }
 
-// IMPORTANT: Do NOT redeclare isBulkSaving - just check if it exists
 // Use window.isBulkSaving directly without redeclaration
 if (typeof window.isBulkSaving === 'undefined') {
     window.isBulkSaving = false;
@@ -17490,7 +17488,7 @@ if (typeof window.attendance === 'undefined') {
     console.log('✅ Initialized attendance array');
 }
 
-// Also set local references for convenience (but don't redeclare with var/let)
+// Local references (no redeclaration)
 var attendanceFilterText = window.attendanceFilterText;
 var attendanceCurrentPage = window.attendanceCurrentPage;
 var attendanceTotalPages = window.attendanceTotalPages;
@@ -17773,9 +17771,8 @@ function getTodayAttendanceStats(studentsList) {
     return { present, absent, late, notMarked, total: studentsList.length };
 }
 
-// ======================= SAVE BULK ATTENDANCE (OPTIMIZED - NO INFINITE LOOP) =======================
+// ======================= SAVE BULK ATTENDANCE =======================
 async function saveBulkAttendance(attendanceRecords, date) {
-    // Use window.isBulkSaving directly - no redeclaration
     if (window.isBulkSaving === true) {
         console.log('⚠️ Bulk save already in progress');
         return;
@@ -17788,7 +17785,6 @@ async function saveBulkAttendance(attendanceRecords, date) {
         let presentCount = 0;
         let lateCount = 0;
         
-        // Update local storage in batch
         for (const record of attendanceRecords) {
             const existingIndex = window.attendance.findIndex(a => 
                 a.student_name === record.student_name && a.date === record.date
@@ -17805,10 +17801,8 @@ async function saveBulkAttendance(attendanceRecords, date) {
             else if (record.status === 'Late') lateCount++;
         }
         
-        // Save to localStorage once
         localStorage.setItem('cache_attendance', JSON.stringify(window.attendance));
         
-        // Show summary
         let message = `📊 Attendance Summary for ${formatDateDMY(date)}:\n`;
         message += `✅ Present: ${presentCount}\n`;
         message += `❌ Absent: ${absentCount}\n`;
@@ -17827,7 +17821,6 @@ async function saveBulkAttendance(attendanceRecords, date) {
         
         showNotification(message, 'success');
         
-        // Sync only ABSENT records to Supabase (in background, not blocking UI)
         const supabase = getSupabaseClientWorking();
         if (supabase && navigator.onLine) {
             const absentRecords = attendanceRecords.filter(r => r.status === 'Absent');
@@ -17847,14 +17840,12 @@ async function saveBulkAttendance(attendanceRecords, date) {
                 await new Promise(r => setTimeout(r, 50));
             }
         } else if (absentCount > 0) {
-            // Add to pending queue for offline sync
             const absentRecords = attendanceRecords.filter(r => r.status === 'Absent');
             for (const record of absentRecords) {
                 addToPendingAttendanceQueue('upsert', record);
             }
         }
         
-        // Reload UI once after all saves
         await loadAttendance();
         
     } finally {
@@ -17959,20 +17950,31 @@ async function uploadAttendanceProofToSupabase(fileData, studentName, date) {
     }
 }
 
+// ======================= OPEN ATTENDANCE PROOF CAPTURE =======================
 function openAttendanceProofCapture(callback) {
     const sourceModal = document.createElement('div');
     sourceModal.className = 'modal-overlay';
     sourceModal.style.zIndex = '100001';
+    sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+    
     sourceModal.innerHTML = `
-        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center;">
-            <i class="fas fa-camera" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-            <h3>Choose Upload Source</h3>
+        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
+            <i class="fas fa-upload" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Choose Upload Source</h3>
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-camera"></i> Take Photo</button>
-                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-images"></i> Choose from Gallery</button>
-                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-file-pdf"></i> Upload PDF</button>
+                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px;">
+                    <i class="fas fa-camera"></i> 📸 Take Photo
+                </button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px;">
+                    <i class="fas fa-images"></i> 🖼️ Choose from Gallery
+                </button>
+                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px;">
+                    <i class="fas fa-file-pdf"></i> 📄 Upload PDF
+                </button>
             </div>
-            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px;">Cancel</button>
+            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px; font-size: 14px;">
+                <i class="fas fa-times"></i> Cancel
+            </button>
         </div>
     `;
     document.body.appendChild(sourceModal);
@@ -17996,25 +17998,53 @@ function openAttendanceProofCapture(callback) {
                         const cropModal = document.createElement('div');
                         cropModal.className = 'modal-overlay';
                         cropModal.style.zIndex = '100002';
+                        cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100002; padding:16px;';
+                        
                         cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width: 500px; text-align: center;">
-                                <div class="modal-header"><h2>Crop Image</h2><button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
-                                <img id="cropAttendanceImg" src="${ev.target.result}" style="max-width:100%;">
-                                <div style="margin-top:15px;">
-                                    <button class="btn btn-primary" id="cropSaveBtn">Crop & Save</button>
-                                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                            <div class="modal-content" style="max-width: 500px; width: 95%; text-align: center; border-radius: 24px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
+                                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 15px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                    <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-crop-alt"></i> Crop Image</h2>
+                                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
+                                </div>
+                                <div style="padding: 20px;">
+                                    <img id="cropAttendanceImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                        <button class="btn btn-primary" id="cropSaveBtn" style="padding: 10px 20px; border-radius: 30px; font-size: 14px;">
+                                            <i class="fas fa-check"></i> Crop & Save
+                                        </button>
+                                        <button class="btn btn-danger" id="cancelBtn" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size: 14px;">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         `;
                         document.body.appendChild(cropModal);
-                        const img = cropModal.querySelector('#cropAttendanceImg');
-                        let cropper = new Cropper(img, { aspectRatio: null, viewMode: 1, autoCropArea: 1 });
-                        cropModal.querySelector('#cropSaveBtn').onclick = () => {
-                            const canvas = cropper.getCroppedCanvas();
-                            const croppedData = canvas.toDataURL('image/jpeg', 0.9);
-                            cropper.destroy();
+                        
+                        const img = document.getElementById('cropAttendanceImg');
+                        let cropper = new Cropper(img, { 
+                            aspectRatio: null, 
+                            viewMode: 1,
+                            autoCropArea: 1
+                        });
+                        
+                        document.getElementById('cropSaveBtn').onclick = function() {
+                            try {
+                                const canvas = cropper.getCroppedCanvas();
+                                const croppedData = canvas.toDataURL('image/jpeg', 0.9);
+                                cropper.destroy();
+                                cropModal.remove();
+                                callback(croppedData, file.name, file.type);
+                            } catch(err) {
+                                console.error('Crop error:', err);
+                                showNotification('Error cropping image. Please try again.', 'error');
+                                cropModal.remove();
+                            }
+                        };
+                        
+                        document.getElementById('cancelBtn').onclick = function() {
+                            if (cropper) cropper.destroy();
                             cropModal.remove();
-                            callback(croppedData, file.name, file.type);
                         };
                     };
                     reader.readAsDataURL(file);
@@ -18060,6 +18090,7 @@ async function openEditDateModal(date) {
     
     bulkAttendanceProofs = {};
     
+    // ========== ✅ RESPONSIVE MODAL CONTENT ==========
     let modalContent = `<div style="max-height: 60vh; overflow-y: auto; padding: 5px;">
         <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 12px; border-radius: 12px; margin-bottom: 15px; color: white;">
             <strong><i class="fas fa-calendar-alt"></i> Date: ${formatDateDMY(date)}</strong><br>
@@ -18079,17 +18110,17 @@ async function openEditDateModal(date) {
         let currentStatus = existingRecord ? existingRecord.status : 'Present';
         
         modalContent += `
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; padding: 12px; background: var(--bg-body); border-radius: 12px; border: 1px solid var(--border-light);">
-            <div style="min-width: 130px; flex: 2;">
-                <strong>${escapeHtml(s.name)}</strong><br>
-                <small>${escapeHtml(s.cls)} ${escapeHtml(s.sec)} | Roll: ${s.roll}</small>
+        <div class="attendance-student-row" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; padding: 10px; background: var(--bg-body); border-radius: 12px; border: 1px solid var(--border-light);">
+            <div style="min-width: 110px; flex: 2;">
+                <strong style="font-size: 13px;">${escapeHtml(s.name)}</strong><br>
+                <small style="font-size: 10px;">${escapeHtml(s.cls)} ${escapeHtml(s.sec)} | Roll: ${s.roll}</small>
             </div>
-            <select id="bulk_status_${s.id}" class="form-control" style="width: 120px; border-radius: 20px; padding: 8px;">
+            <select id="bulk_status_${s.id}" class="form-control" style="width: 110px; border-radius: 20px; padding: 6px 8px; font-size: 12px; flex: 1; min-width: 100px;">
                 <option ${currentStatus === 'Present' ? 'selected' : ''}>✅ Present</option>
                 <option ${currentStatus === 'Absent' ? 'selected' : ''}>❌ Absent</option>
                 <option ${currentStatus === 'Late' ? 'selected' : ''}>⏰ Late</option>
             </select>
-            <button id="bulk_proof_${s.id}" class="btn-sm btn-info" onclick="triggerBulkProofUpload('${s.id}', '${date}')" style="padding: 8px 12px; border-radius: 20px; cursor: pointer;">
+            <button id="bulk_proof_${s.id}" class="btn-sm btn-info" onclick="triggerBulkProofUpload('${s.id}', '${date}')" style="padding: 6px 10px; border-radius: 20px; cursor: pointer; font-size: 11px; white-space: nowrap;">
                 <i class="fas fa-camera"></i> Proof
             </button>
             ${existingRecord && existingRecord.proof_url ? '<span style="font-size: 10px; color:#10b981;"><i class="fas fa-check-circle"></i></span>' : ''}
@@ -18130,14 +18161,20 @@ async function openEditDateModal(date) {
         });
     };
     
+    // ========== ✅ RESPONSIVE SWAL ==========
     Swal.fire({
         title: `📋 Bulk Attendance - ${formatDateDMY(date)}`,
         html: modalContent,
-        width: window.innerWidth <= 768 ? '95%' : '700px',
+        width: window.innerWidth <= 480 ? '95%' : window.innerWidth <= 768 ? '95%' : '700px',
         showCancelButton: true,
         confirmButtonText: '💾 Save All Attendance',
         cancelButtonText: 'Cancel',
         confirmButtonColor: '#10b981',
+        customClass: {
+            popup: window.innerWidth <= 480 ? 'mobile-swal-popup' : '',
+            confirmButton: window.innerWidth <= 480 ? 'mobile-swal-btn' : '',
+            cancelButton: window.innerWidth <= 480 ? 'mobile-swal-btn' : ''
+        },
         preConfirm: async () => {
             showLoader();
             
@@ -18182,7 +18219,6 @@ async function openEditDateModal(date) {
                 });
             }
             
-            // Save all records at once (optimized)
             await saveBulkAttendance(attendanceRecords, date);
             
             hideLoader();
@@ -18197,27 +18233,41 @@ function openMarkAttendanceModal(studentName, existingDate = null) {
     let existingRecord = window.attendance.find(a => a.student_name === studentName && a.date === date);
     let currentStatus = existingRecord ? existingRecord.status : 'Present';
     
+    // ========== ✅ RESPONSIVE SWAL ==========
     Swal.fire({
         title: `✏️ Mark Attendance - ${studentName}`,
         html: `
             <div style="text-align: left;">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <button id="statusPresentBtn" class="btn ${currentStatus === 'Present' ? 'btn-success' : 'btn-secondary'}" style="flex: 1;">✅ Present</button>
-                    <button id="statusAbsentBtn" class="btn ${currentStatus === 'Absent' ? 'btn-danger' : 'btn-secondary'}" style="flex: 1;">❌ Absent</button>
-                    <button id="statusLateBtn" class="btn ${currentStatus === 'Late' ? 'btn-warning' : 'btn-secondary'}" style="flex: 1;">⏰ Late</button>
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <button id="statusPresentBtn" class="btn ${currentStatus === 'Present' ? 'btn-success' : 'btn-secondary'}" style="flex: 1; font-size: 12px; padding: 10px;">✅ Present</button>
+                    <button id="statusAbsentBtn" class="btn ${currentStatus === 'Absent' ? 'btn-danger' : 'btn-secondary'}" style="flex: 1; font-size: 12px; padding: 10px;">❌ Absent</button>
+                    <button id="statusLateBtn" class="btn ${currentStatus === 'Late' ? 'btn-warning' : 'btn-secondary'}" style="flex: 1; font-size: 12px; padding: 10px;">⏰ Late</button>
                 </div>
                 <input type="hidden" id="selectedStatusValue" value="${currentStatus}">
-                <div class="form-group"><label>📅 Date</label><input type="date" id="attendanceDate" class="form-control" value="${date}"></div>
-                <div class="form-group"><label>📎 Proof (Optional)</label><button type="button" id="uploadProofBtn" class="btn btn-info btn-sm" style="width:100%;"><i class="fas fa-camera"></i> Upload Proof</button></div>
-                <div id="proofPreview" style="margin-top: 10px;"></div>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label style="font-size: 12px; font-weight: 600;">📅 Date</label>
+                    <input type="date" id="attendanceDate" class="form-control" value="${date}" style="padding: 10px; border-radius: 10px; font-size: 14px; width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label style="font-size: 12px; font-weight: 600;">📎 Proof (Optional)</label>
+                    <button type="button" id="uploadProofBtn" class="btn btn-info btn-sm" style="width: 100%; padding: 10px; border-radius: 30px; font-size: 12px;">
+                        <i class="fas fa-camera"></i> Upload Proof
+                    </button>
+                </div>
+                <div id="proofPreview" style="margin-top: 8px;"></div>
                 <div style="margin-top: 10px; padding: 8px; background: #f0fdf4; border-radius: 8px;">
-                    <small><i class="fas fa-info-circle"></i> Only <strong>ABSENT</strong> records will be synced to cloud.</small>
+                    <small style="font-size: 11px;"><i class="fas fa-info-circle"></i> Only <strong>ABSENT</strong> records will be synced to cloud.</small>
                 </div>
             </div>
         `,
         showCancelButton: true,
         confirmButtonText: '💾 Save',
         width: window.innerWidth <= 480 ? '95%' : '500px',
+        customClass: {
+            popup: window.innerWidth <= 480 ? 'mobile-swal-popup' : '',
+            confirmButton: window.innerWidth <= 480 ? 'mobile-swal-btn' : '',
+            cancelButton: window.innerWidth <= 480 ? 'mobile-swal-btn' : ''
+        },
         didOpen: () => {
             document.getElementById('statusPresentBtn').onclick = () => {
                 document.getElementById('selectedStatusValue').value = 'Present';
@@ -18245,7 +18295,7 @@ function openMarkAttendanceModal(studentName, existingDate = null) {
                     currentAttendanceProofUrl = uploadedUrl;
                     let previewDiv = document.getElementById('proofPreview');
                     if (previewDiv) {
-                        previewDiv.innerHTML = `<div style="background:#d1fae5; padding:8px; border-radius:8px;">
+                        previewDiv.innerHTML = `<div style="background:#d1fae5; padding:8px; border-radius:8px; font-size:11px;">
                             <i class="fas fa-check-circle"></i> Proof ${uploadedUrl ? 'uploaded to cloud!' : 'saved locally'}
                         </div>`;
                     }
@@ -18341,6 +18391,7 @@ async function loadAttendance() {
         roleTitle = `👑 Admin Mode - All Classes | Total Students: ${window.students.length}`;
     }
     
+    // ========== ✅ RESPONSIVE UI ==========
     let content = `
     <style>
         .attendance-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; margin: 2px; }
@@ -18354,12 +18405,51 @@ async function loadAttendance() {
         .offline-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .pending-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .role-badge { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; }
+        
+        /* ✅ RESPONSIVE STYLES */
         @media (max-width: 768px) {
             .action-buttons { flex-direction: column; gap: 8px; }
-            .action-buttons .search-box { width: 100%; }
-            .action-buttons .btn-sm { width: 100%; }
-            .summary-cards { grid-template-columns: repeat(2, 1fr) !important; }
+            .action-buttons .search-box { width: 100%; padding: 12px 16px 12px 40px; font-size: 14px; }
+            .action-buttons .btn-sm { width: 100%; padding: 12px; font-size: 13px; text-align: center; justify-content: center; }
+            .summary-cards { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+            .summary-item { padding: 12px !important; }
+            .summary-value { font-size: 18px !important; }
+            .chart-container { grid-template-columns: 1fr !important; gap: 12px !important; }
+            .chart-card { padding: 12px !important; }
+            .chart-card h3 { font-size: 13px !important; }
+            .chart-card canvas { max-height: 160px !important; }
+            .attendance-stats { gap: 4px !important; flex-wrap: wrap !important; justify-content: center !important; }
+            .attendance-badge { font-size: 9px !important; padding: 3px 8px !important; }
+            .data-card .card-header { flex-direction: column !important; text-align: center !important; }
+            .data-card .card-photo { margin: 0 auto !important; }
+            .data-card .card-actions { justify-content: center !important; flex-wrap: wrap !important; }
+            .data-card .card-actions .action-chip { font-size: 10px !important; padding: 5px 10px !important; }
+            .role-badge { font-size: 10px !important; padding: 3px 10px !important; }
+            .online-badge, .offline-badge, .pending-badge { font-size: 9px !important; padding: 3px 10px !important; }
+            .attendance-student-row { flex-direction: row !important; gap: 6px !important; }
+            .attendance-student-row select { width: 100px !important; font-size: 11px !important; }
+            .attendance-student-row button { font-size: 10px !important; padding: 4px 8px !important; }
         }
+        
+        @media (max-width: 480px) {
+            .summary-cards { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+            .summary-item { padding: 10px !important; }
+            .summary-value { font-size: 16px !important; }
+            .attendance-stats { gap: 4px !important; flex-wrap: wrap !important; justify-content: center !important; }
+            .attendance-badge { font-size: 8px !important; padding: 2px 6px !important; }
+            .attendance-student-row { flex-direction: column !important; align-items: stretch !important; gap: 6px !important; }
+            .attendance-student-row select { width: 100% !important; }
+            .attendance-student-row button { width: 100% !important; justify-content: center !important; }
+            .data-card .card-header h3 { font-size: 14px !important; }
+            .data-card .card-header p { font-size: 10px !important; }
+            .date-picker-container { flex-direction: column !important; gap: 8px !important; }
+            .date-picker-container input { width: 100% !important; }
+            .date-picker-container button { width: 100% !important; }
+        }
+        
+        /* Mobile SweetAlert Styles */
+        .mobile-swal-popup { width: 95% !important; padding: 12px !important; border-radius: 16px !important; }
+        .mobile-swal-btn { font-size: 12px !important; padding: 10px !important; min-height: 44px !important; }
     </style>
     
     <div class="action-buttons">
@@ -18431,7 +18521,7 @@ async function loadAttendance() {
         <div class="chart-card"><h3><i class="fas fa-chart-pie"></i> Today's Distribution</h3><canvas id="todayDistCanvas" style="max-height: 200px;"></canvas></div>
     </div>
     
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 15px 0; padding: 12px; background: var(--bg-surface); border-radius: 16px;">
+    <div class="date-picker-container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 15px 0; padding: 12px; background: var(--bg-surface); border-radius: 16px;">
         <div><i class="fas fa-calendar-alt"></i> <strong>Date:</strong> <span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 20px;">${formatDateDMY(selectedDate)}</span></div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn-sm btn-info" onclick="previousAttendanceDate()" ${attendanceCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i> Prev</button>
@@ -18455,6 +18545,7 @@ async function loadAttendance() {
     hideLoader();
 }
 
+// ======================= RENDER ATTENDANCE RECORDS =======================
 function renderAttendanceRecords(records) {
     let container = document.getElementById('attendanceRecordsContainer');
     if (!container) return;
@@ -18523,6 +18614,7 @@ function renderAttendanceRecords(records) {
     container.innerHTML = html;
 }
 
+// ======================= CHART FUNCTIONS =======================
 function renderWeeklyChart(data, labels) {
     let canvas = document.getElementById('weeklyTrendCanvas');
     if (!canvas) return;
@@ -18555,17 +18647,21 @@ function renderTodayDistributionChart(present, absent, late, notMarked) {
     }
 }
 
+// ======================= NAVIGATION FUNCTIONS =======================
 function previousAttendanceDate() { if (attendanceCurrentPage > 1) { attendanceCurrentPage--; loadAttendance(); } }
 function nextAttendanceDate() { if (attendanceCurrentPage < attendanceTotalPages) { attendanceCurrentPage++; loadAttendance(); } }
 function applyAttendanceFilter() { attendanceFilterText = document.getElementById('attendanceSearchInput')?.value || ''; attendanceCurrentPage = 1; loadAttendance(); }
 function clearAttendanceFilter() { attendanceFilterText = ''; if (document.getElementById('attendanceSearchInput')) document.getElementById('attendanceSearchInput').value = ''; loadAttendance(); showNotification('Filter cleared', 'info'); }
 function goToSelectedDate() { let selectedDate = document.getElementById('datePickerInput').value; if (selectedDate) { loadAttendance(); } }
 
+// ======================= SHARE ATTENDANCE =======================
 function shareAttendance(studentName, status, date) {
-    let msg = `🏫 *Attendance Update*\n\n👨‍🎓 Student: ${studentName}\n📅 Date: ${formatDateDMY(date)}\n${status === 'Present' ? '✅ Present' : (status === 'Absent' ? '❌ Absent' : '⏰ Late')}\n\n${schoolName || 'Wings Convent School'}`;
+    let schoolName = localStorage.getItem('schoolName') || 'Wings Convent School';
+    let msg = `🏫 *Attendance Update*\n\n👨‍🎓 Student: ${studentName}\n📅 Date: ${formatDateDMY(date)}\n${status === 'Present' ? '✅ Present' : (status === 'Absent' ? '❌ Absent' : '⏰ Late')}\n\n${schoolName}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
+// ======================= VIEW STUDENT ATTENDANCE HISTORY =======================
 function viewStudentAttendanceHistory(studentName) {
     let records = window.attendance.filter(a => a.student_name === studentName).sort((a,b) => new Date(b.date) - new Date(a.date));
     let present = records.filter(r => r.status === 'Present').length;
@@ -18573,14 +18669,33 @@ function viewStudentAttendanceHistory(studentName) {
     let late = records.filter(r => r.status === 'Late').length;
     let percent = records.length > 0 ? Math.round((present / records.length) * 100) : 0;
     
+    // ========== ✅ RESPONSIVE SWAL ==========
     Swal.fire({
         title: `📊 Attendance - ${studentName}`,
-        html: `<div style="text-align:center"><div style="display:flex; justify-content:space-around; margin:15px 0;"><div><span style="font-size:24px; color:#10b981;">${present}</span><br>✅ Present</div><div><span style="font-size:24px; color:#ef4444;">${absent}</span><br>❌ Absent</div><div><span style="font-size:24px; color:#f59e0b;">${late}</span><br>⏰ Late</div></div><div class="progress-container" style="height:8px;"><div class="progress-bar" style="width:${percent}%"></div></div><p><strong>Attendance: ${percent}%</strong></p><div style="max-height:200px; overflow-y:auto; margin-top:15px;">${records.slice(0,10).map(r => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;"><span>${formatDateDMY(r.date)}</span><span class="badge ${r.status === 'Present' ? 'badge-success' : (r.status === 'Absent' ? 'badge-danger' : 'badge-warning')}">${r.status}</span></div>`).join('')}</div></div>`,
+        html: `<div style="text-align:center">
+            <div style="display:flex; justify-content:space-around; margin:15px 0; flex-wrap:wrap; gap:8px;">
+                <div><span style="font-size:24px; color:#10b981;">${present}</span><br>✅ Present</div>
+                <div><span style="font-size:24px; color:#ef4444;">${absent}</span><br>❌ Absent</div>
+                <div><span style="font-size:24px; color:#f59e0b;">${late}</span><br>⏰ Late</div>
+            </div>
+            <div class="progress-container" style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                <div class="progress-bar" style="width:${percent}%; height:100%; background:linear-gradient(90deg,#10b981,#059669); border-radius:4px;"></div>
+            </div>
+            <p><strong>Attendance: ${percent}%</strong> (${records.length} days)</p>
+            <div style="max-height:200px; overflow-y:auto; margin-top:15px; text-align:left;">
+                ${records.slice(0,10).map(r => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;"><span>${formatDateDMY(r.date)}</span><span class="badge ${r.status === 'Present' ? 'badge-success' : (r.status === 'Absent' ? 'badge-danger' : 'badge-warning')}">${r.status}</span></div>`).join('')}
+                ${records.length > 10 ? `<div style="padding:8px; text-align:center; color:#94a3b8;">+ ${records.length - 10} more records</div>` : ''}
+            </div>
+        </div>`,
         width: window.innerWidth <= 480 ? '95%' : '500px',
+        customClass: {
+            popup: window.innerWidth <= 480 ? 'mobile-swal-popup' : ''
+        },
         confirmButtonText: 'Close'
     });
 }
 
+// ======================= EXPORT ATTENDANCE TO CSV =======================
 function exportAttendanceToCSV() {
     let csv = "Date,Student Name,Class,Status,Cloud Sync Status\n";
     for (let a of window.attendance) {
@@ -18611,11 +18726,44 @@ window.addEventListener('offline', () => {
     updatePendingQueueStatus();
 });
 
+// ======================= INITIALIZATION =======================
 loadPendingAttendanceQueue();
 
-console.log('✅ PART 8 COMPLETE - Attendance Module (Fixed - No Variable Redeclaration!)');
+// ======================= EXPOSE FUNCTIONS =======================
+window.loadAttendance = loadAttendance;
+window.loadAttendanceFromSupabase = loadAttendanceFromSupabase;
+window.refreshAttendanceData = refreshAttendanceData;
+window.openBulkAttendanceModal = openBulkAttendanceModal;
+window.openEditDateModal = openEditDateModal;
+window.openMarkAttendanceModal = openMarkAttendanceModal;
+window.processPendingAttendanceQueue = processPendingAttendanceQueue;
+window.exportAttendanceToCSV = exportAttendanceToCSV;
+window.viewStudentAttendanceHistory = viewStudentAttendanceHistory;
+window.shareAttendance = shareAttendance;
+window.previousAttendanceDate = previousAttendanceDate;
+window.nextAttendanceDate = nextAttendanceDate;
+window.applyAttendanceFilter = applyAttendanceFilter;
+window.clearAttendanceFilter = clearAttendanceFilter;
+window.goToSelectedDate = goToSelectedDate;
+window.uploadAttendanceProofToSupabase = uploadAttendanceProofToSupabase;
+window.openAttendanceProofCapture = openAttendanceProofCapture;
+
+console.log('✅ PART 8 COMPLETE - Attendance Module (Responsive + Android APK Ready)');
+console.log('📌 Features:');
+console.log('   ✅ Single & Bulk Attendance Marking');
+console.log('   ✅ Only ABSENT records sync to Supabase');
+console.log('   ✅ Proof Upload (Camera, Gallery, PDF)');
+console.log('   ✅ Responsive Design (Mobile, Tablet, Desktop)');
+console.log('   ✅ Mobile-Friendly Popups (SweetAlert2)');
+console.log('   ✅ Offline Support with Pending Queue');
+console.log('   ✅ Auto Sync on Internet Connect');
+console.log('   ✅ Charts: Weekly Trend & Today\'s Distribution');
+console.log('   ✅ Export to CSV');
+console.log('   ✅ Attendance History View');
+console.log('   ✅ WhatsApp Share');
+console.log('   ✅ Android WebView Compatible');
 // ======================= PART 8 ENDS HERE =======================
-// ======================= PART 9: EMPLOYEE ATTENDANCE MODULE (COMPLETE FIXED) =======================
+// ======================= PART 9: EMPLOYEE ATTENDANCE MODULE (COMPLETE RESPONSIVE) =======================
 // ======================= FEATURES =======================
 // 1. ✅ Employee Attendance - Mark Present/Absent/Late
 // 2. ✅ Bulk Attendance - Mark all employees at once
@@ -18625,6 +18773,7 @@ console.log('✅ PART 8 COMPLETE - Attendance Module (Fixed - No Variable Redecl
 // 6. ✅ Pagination - Date-wise navigation
 // 7. ✅ Offline Support - Works without internet
 // 8. ✅ Role-Based Access - Admin/Cashier
+// 9. ✅ Fully Responsive - Mobile, Tablet, Desktop
 // ============================================================
 
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
@@ -18722,17 +18871,14 @@ function getEmployeePhotoFromEmployees(empName) {
         for (let i = 0; i < window.emp_attendance.length; i++) {
             let att = window.emp_attendance[i];
             if (att && att.emp_name === empName) {
-                // Check emp_photo_url
                 if (att.emp_photo_url && att.emp_photo_url.startsWith('http')) {
                     console.log('📸 [EMP ATT] ✅ Found emp_photo_url in emp_attendance for:', empName);
                     return att.emp_photo_url;
                 }
-                // Check photo_url (alternative column name)
                 if (att.photo_url && att.photo_url.startsWith('http')) {
                     console.log('📸 [EMP ATT] ✅ Found photo_url in emp_attendance for:', empName);
                     return att.photo_url;
                 }
-                // Check emp_photo_data
                 if (att.emp_photo_data && att.emp_photo_data.startsWith('data:image')) {
                     console.log('📸 [EMP ATT] ✅ Found emp_photo_data in emp_attendance for:', empName);
                     return att.emp_photo_data;
@@ -18766,16 +18912,11 @@ function getEmployeePhotoFromEmployees(empName) {
  * Generate photo HTML with fallback
  */
 function getPhotoHtml(photoUrl, empName, size = 50, fallbackIcon = 'fas fa-user-tie') {
-    // Check if photo exists
-    if (photoUrl && photoUrl.startsWith('http')) {
-        return `<img src="${photoUrl}" style="width:${size}px; height:${size}px; object-fit:cover; border-radius:50%;" 
-                     onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'${fallbackIcon}\\' style=\\'font-size:${size/2}px; color:white;\\'></i>';">`;
-    } else if (photoUrl && photoUrl.startsWith('data:image')) {
+    if (photoUrl && (photoUrl.startsWith('http') || photoUrl.startsWith('data:image'))) {
         return `<img src="${photoUrl}" style="width:${size}px; height:${size}px; object-fit:cover; border-radius:50%;" 
                      onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'${fallbackIcon}\\' style=\\'font-size:${size/2}px; color:white;\\'></i>';">`;
     }
     
-    // Fallback: Initial letter avatar
     const initial = empName ? empName.charAt(0).toUpperCase() : 'E';
     const colors = ['#8b5cf6', '#2563eb', '#10b981', '#ec489a', '#f59e0b', '#6366f1', '#ef4444', '#14b8a6'];
     const colorIndex = empName ? empName.length % colors.length : 0;
@@ -18877,12 +19018,6 @@ async function loadEmpAttendanceFromSupabase() {
             localStorage.setItem('cache_emp_attendance', JSON.stringify(window.emp_attendance));
             console.log(`✅ [EMP ATT] Loaded ${window.emp_attendance.length} emp_attendance records from Supabase`);
             console.log('📸 [EMP ATT] Sample emp_photo_url from DB:', data[0]?.emp_photo_url || 'NULL');
-            
-            // 🔥 Check if emp_photo_url column exists
-            if (data[0] && data[0].emp_photo_url === undefined) {
-                console.warn('⚠️ [EMP ATT] emp_photo_url column not found in emp_attendance table!');
-                console.warn('⚠️ [EMP ATT] Please add column: ALTER TABLE emp_attendance ADD COLUMN emp_photo_url TEXT;');
-            }
             return true;
         }
         return false;
@@ -18934,7 +19069,6 @@ async function deleteEmpAttendanceFromSupabase(attendanceId) {
     }
     
     try {
-        // Delete from Supabase
         const { error } = await supabase
             .from('emp_attendance')
             .delete()
@@ -18942,7 +19076,6 @@ async function deleteEmpAttendanceFromSupabase(attendanceId) {
         
         if (error) throw error;
         
-        // Delete from local array
         const index = window.emp_attendance.findIndex(a => a.id === attendanceId);
         if (index !== -1) {
             window.emp_attendance.splice(index, 1);
@@ -19038,7 +19171,7 @@ async function loadEmpAttendance() {
     isEmpAttendanceLoading = false;
 }
 
-// ======================= RENDER UI =======================
+// ======================= RENDER UI (FULLY RESPONSIVE) =======================
 
 function renderEmpAttendanceUI() {
     const totalEmployees = window.employees?.length || 0;
@@ -19070,6 +19203,7 @@ function renderEmpAttendanceUI() {
     let attendancePercentage = totalEmployees > 0 ? Math.round((todayStats.present / totalEmployees) * 100) : 0;
     let formattedDate = formatDateToDMY(selectedDate);
     
+    // ========== RESPONSIVE CSS ==========
     let content = `
     <style>
         .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
@@ -19080,17 +19214,57 @@ function renderEmpAttendanceUI() {
         .badge-absent { background: #fee2e2; color: #991b1b; }
         .badge-late { background: #fed7aa; color: #9b2c1d; }
         .badge-notmarked { background: #e2e8f0; color: #475569; }
+        
+        /* ✅ RESPONSIVE STYLES */
         @media (max-width: 768px) {
             .action-buttons { flex-direction: column; gap: 8px; }
-            .action-buttons .search-box { width: 100%; }
-            .action-buttons .btn-sm { width: 100%; }
-            .summary-cards { grid-template-columns: repeat(2, 1fr) !important; }
-            .info-grid { grid-template-columns: 1fr !important; }
+            .action-buttons .search-box { width: 100%; padding: 12px 16px 12px 40px; font-size: 14px; }
+            .action-buttons .btn-sm { width: 100%; padding: 12px; font-size: 13px; text-align: center; justify-content: center; }
+            .summary-cards { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+            .summary-item { padding: 12px !important; }
+            .summary-value { font-size: 18px !important; }
+            .chart-container { grid-template-columns: 1fr !important; gap: 12px !important; }
+            .chart-card { padding: 12px !important; }
+            .chart-card h3 { font-size: 13px !important; }
+            .chart-card canvas { max-height: 160px !important; }
+            .attendance-stats { gap: 4px; flex-wrap: wrap; justify-content: center; }
+            .attendance-badge { font-size: 9px; padding: 3px 8px; }
+            .data-card .card-header { flex-direction: column; text-align: center; }
+            .data-card .card-photo { margin: 0 auto; }
+            .data-card .card-actions { justify-content: center; flex-wrap: wrap; }
+            .data-card .card-actions .action-chip { font-size: 10px; padding: 5px 10px; }
+            .info-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+            .role-badge { font-size: 10px; padding: 3px 10px; }
+            .online-badge, .offline-badge { font-size: 9px; padding: 3px 10px; }
+        }
+        
+        @media (max-width: 480px) {
+            .summary-cards { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+            .summary-item { padding: 10px !important; }
+            .summary-value { font-size: 16px !important; }
+            .attendance-stats { gap: 4px; flex-wrap: wrap; justify-content: center; }
+            .attendance-badge { font-size: 8px; padding: 2px 6px; }
+            .data-card .card-header h3 { font-size: 14px; }
+            .data-card .card-header p { font-size: 10px; }
+            .data-card .info-grid { grid-template-columns: 1fr !important; gap: 6px !important; }
+            .data-card .info-grid .info-item { padding: 4px 0; }
+            .data-card .info-grid .info-label { font-size: 8px; }
+            .data-card .info-grid .info-value { font-size: 11px; }
+            .swal2-popup { width: 95% !important; padding: 12px !important; border-radius: 16px !important; }
+            .swal2-popup .btn { font-size: 12px !important; padding: 10px !important; }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .summary-cards { grid-template-columns: repeat(3, 1fr) !important; gap: 12px !important; }
+            .chart-container { grid-template-columns: repeat(2, 1fr) !important; gap: 16px !important; }
+            .info-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            .action-buttons { flex-wrap: wrap; gap: 10px; }
+            .action-buttons .search-box { max-width: 300px; }
         }
     </style>
     
     <div class="action-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
-        <div style="position: relative; flex: 1;">
+        <div style="position: relative; flex: 1; min-width: 180px;">
             <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
             <input type="text" id="empAttendanceSearch" class="search-box" placeholder="Search employee..." value="${empAttendanceFilterText}" style="padding-left: 35px; width: 100%; border-radius:30px; padding:10px 10px 10px 35px; border:2px solid #e2e8f0;">
         </div>
@@ -19173,7 +19347,7 @@ function renderEmpAttendanceUI() {
     }, 100);
 }
 
-// ======================= RENDER EMP ATTENDANCE LIST (FIXED - WITH PHOTOS) =======================
+// ======================= RENDER EMP ATTENDANCE LIST =======================
 
 function renderEmpAttendanceList(attendanceToRender) {
     console.log('🎨 [EMP ATT] renderEmpAttendanceList called with', attendanceToRender.length, 'records');
@@ -19184,41 +19358,20 @@ function renderEmpAttendanceList(attendanceToRender) {
         let a = attendanceToRender[i];
         let emp = window.employees ? window.employees.find(e => e && e.name === a.emp_name) : null;
         
-        // ========== 🔥 FIXED: Get photo from emp_attendance table ==========
         let photoUrl = null;
         
-        // ✅ PRIORITY 1: Directly from emp_attendance record (Trigger se aaya)
         if (a.emp_photo_url && a.emp_photo_url.startsWith('http')) {
             photoUrl = a.emp_photo_url;
-            console.log('📸 [EMP ATT] ✅ Using emp_photo_url from emp_attendance for:', a.emp_name);
-        }
-        // ✅ PRIORITY 2: Check photo_url (alternative column)
-        else if (a.photo_url && a.photo_url.startsWith('http')) {
+        } else if (a.photo_url && a.photo_url.startsWith('http')) {
             photoUrl = a.photo_url;
-            console.log('📸 [EMP ATT] ✅ Using photo_url from emp_attendance for:', a.emp_name);
-        }
-        // ✅ PRIORITY 3: From employees table
-        else if (emp && emp.photo_url && emp.photo_url.startsWith('http')) {
+        } else if (emp && emp.photo_url && emp.photo_url.startsWith('http')) {
             photoUrl = emp.photo_url;
-            console.log('📸 [EMP ATT] ✅ Using photo_url from employees for:', a.emp_name);
-        }
-        // ✅ PRIORITY 4: From emp_photo_data
-        else if (a.emp_photo_data && a.emp_photo_data.startsWith('data:image')) {
+        } else if (a.emp_photo_data && a.emp_photo_data.startsWith('data:image')) {
             photoUrl = a.emp_photo_data;
-            console.log('📸 [EMP ATT] ✅ Using emp_photo_data from emp_attendance for:', a.emp_name);
-        }
-        // ✅ PRIORITY 5: From employee photo_data
-        else if (emp && emp.photo_data && emp.photo_data.startsWith('data:image')) {
+        } else if (emp && emp.photo_data && emp.photo_data.startsWith('data:image')) {
             photoUrl = emp.photo_data;
-            console.log('📸 [EMP ATT] ✅ Using photo_data from employees for:', a.emp_name);
         }
         
-        // If no photo found, log it
-        if (!photoUrl) {
-            console.log('📸 [EMP ATT] ❌ No photo found for:', a.emp_name);
-        }
-        
-        // Generate photo HTML
         let photoHtml = getPhotoHtml(photoUrl, a.emp_name, 50, 'fas fa-user-tie');
         
         let statusClass = a.status === 'Present' ? 'badge-success' : (a.status === 'Absent' ? 'badge-danger' : 'badge-warning');
@@ -19274,7 +19427,8 @@ function deleteEmpAttendance(attendanceId, empName, date) {
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#64748b',
         confirmButtonText: '🗑️ Yes, Delete',
-        cancelButtonText: 'Cancel'
+        cancelButtonText: 'Cancel',
+        width: window.innerWidth <= 480 ? '95%' : '500px'
     }).then(async (result) => {
         if (result.isConfirmed) {
             await deleteEmpAttendanceFromSupabase(attendanceId);
@@ -19288,7 +19442,6 @@ function markSingleEmpAttendance(empName, existingDate = null) {
     let date = existingDate || new Date().toISOString().split('T')[0];
     let existing = (window.emp_attendance || []).find(a => a.emp_name === empName && a.date === date);
     
-    // Get employee photo
     let empPhotoUrl = null;
     if (window.employees) {
         let emp = window.employees.find(e => e.name === empName);
@@ -19328,26 +19481,26 @@ function markSingleEmpAttendance(empName, existingDate = null) {
         confirmButtonText: '💾 Save', 
         cancelButtonText: 'Cancel',
         didOpen: () => { 
-            document.getElementById('statusPresentBtn').onclick = () => {
+            document.getElementById('statusPresentBtn').onclick = function() {
                 document.getElementById('selectedStatusValue').value = 'Present';
                 document.getElementById('statusPresentBtn').className = 'btn btn-success';
                 document.getElementById('statusAbsentBtn').className = 'btn btn-secondary';
                 document.getElementById('statusLateBtn').className = 'btn btn-secondary';
             };
-            document.getElementById('statusAbsentBtn').onclick = () => {
+            document.getElementById('statusAbsentBtn').onclick = function() {
                 document.getElementById('selectedStatusValue').value = 'Absent';
                 document.getElementById('statusPresentBtn').className = 'btn btn-secondary';
                 document.getElementById('statusAbsentBtn').className = 'btn btn-danger';
                 document.getElementById('statusLateBtn').className = 'btn btn-secondary';
             };
-            document.getElementById('statusLateBtn').onclick = () => {
+            document.getElementById('statusLateBtn').onclick = function() {
                 document.getElementById('selectedStatusValue').value = 'Late';
                 document.getElementById('statusPresentBtn').className = 'btn btn-secondary';
                 document.getElementById('statusAbsentBtn').className = 'btn btn-secondary';
                 document.getElementById('statusLateBtn').className = 'btn btn-warning';
             };
         },
-        preConfirm: async () => { 
+        preConfirm: async function() { 
             let selectedDate = document.getElementById('attendanceDate').value; 
             let status = document.getElementById('selectedStatusValue').value; 
             let inTime = document.getElementById('inTime').value; 
@@ -19359,7 +19512,6 @@ function markSingleEmpAttendance(empName, existingDate = null) {
                 return false;
             }
             
-            // Get employee photo URL again (in case it changed)
             let empPhoto = null;
             if (window.employees) {
                 let emp = window.employees.find(e => e.name === empName);
@@ -19375,7 +19527,7 @@ function markSingleEmpAttendance(empName, existingDate = null) {
                 in_time: inTime, 
                 out_time: outTime, 
                 hours: hours,
-                emp_photo_url: empPhoto  // 🔥 Save photo URL
+                emp_photo_url: empPhoto
             };
             
             console.log('📸 [EMP ATT] Saving attendance with emp_photo_url:', empPhoto || 'NULL');
@@ -19422,7 +19574,6 @@ function openEmpBulkAttendanceForDate(date) {
         let todayRecord = (window.emp_attendance || []).find(a => a.emp_name === e.name && a.date === date);
         let currentStatus = todayRecord ? todayRecord.status : 'Present';
         
-        // Get employee photo for display
         let photoSrc = e.photo_url || null;
         let photoHtml = photoSrc ? 
             `<img src="${photoSrc}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px;" onerror="this.style.display='none';">` :
@@ -19457,7 +19608,7 @@ function openEmpBulkAttendanceForDate(date) {
         showCancelButton: true, 
         confirmButtonText: '💾 Save All', 
         cancelButtonText: 'Cancel',
-        preConfirm: async () => { 
+        preConfirm: async function() { 
             showLoader();
             
             for (let i = 0; i < employeesList.length; i++) {
@@ -19481,7 +19632,7 @@ function openEmpBulkAttendanceForDate(date) {
                     in_time: inTime,
                     out_time: outTime,
                     hours: hours,
-                    emp_photo_url: e.photo_url || null  // 🔥 Save photo URL
+                    emp_photo_url: e.photo_url || null
                 };
                 
                 console.log('📸 [EMP ATT] Bulk saving emp_photo_url for', e.name, ':', e.photo_url || 'NULL');
@@ -19600,14 +19751,14 @@ function viewEmpAttendanceHistory(empName) {
 
 // ======================= ONLINE/OFFLINE HANDLERS =======================
 
-window.addEventListener('online', async () => {
+window.addEventListener('online', async function() {
     console.log('🟢 Back online! Syncing employee attendance...');
     showNotification('🟢 Back online! Syncing employee attendance...', 'success');
     await loadEmpAttendanceFromSupabase();
     loadEmpAttendance();
 });
 
-window.addEventListener('offline', () => {
+window.addEventListener('offline', function() {
     console.log('🔴 Offline mode');
     showNotification('🔴 Offline mode - Employee attendance saved locally', 'warning');
 });
@@ -19632,16 +19783,19 @@ window.deleteEmpAttendanceFromSupabase = deleteEmpAttendanceFromSupabase;
 window.getEmployeePhotoFromEmployees = getEmployeePhotoFromEmployees;
 window.getPhotoHtml = getPhotoHtml;
 
-console.log('✅ PART 9 COMPLETE - Employee Attendance Module Updated!');
+console.log('✅ PART 9 COMPLETE - Employee Attendance Module (Fully Responsive)!');
 console.log('📌 Employee photos will display from emp_photo_url (Trigger se aayi)');
 console.log('📌 CRUD Operations: Create, Read, Update, Delete (Supabase)');
 console.log('📌 Features: Bulk Attendance | Charts | History | Share | Offline Support');
+console.log('📌 Fully Responsive: Mobile, Tablet, Desktop');
 
 } // End of duplicate check
 // ======================= PART 9 ENDS HERE =======================
 // ======================= PART 10: COMPLETE EMPLOYEES MODULE =======================
 // ======================= WITH CAMERA + GALLERY + ALL 16 DOCUMENTS =======================
+// ======================= FULLY RESPONSIVE - WEB + ANDROID APK =======================
 
+// ======================= GLOBAL VARIABLES =======================
 let employeeFilterText = '';
 let employeeCurrentPage = 1;
 let employeeRowsPerPage = 10;
@@ -19714,7 +19868,7 @@ async function processPendingEmployeesQueue() {
         return;
     }
     
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
     if (!supabase) {
         console.log('❌ No Supabase client');
         return;
@@ -20449,6 +20603,7 @@ async function loadEmployeeManagement() {
     isEmployeeLoading = false;
 }
 
+// ======================= RENDER EMPLOYEE MANAGEMENT UI (FULLY RESPONSIVE) =======================
 function renderEmployeeManagementUI() {
     if (!window.employees) window.employees = [];
     
@@ -20470,76 +20625,334 @@ function renderEmployeeManagementUI() {
     let pendingCount = window.pendingEmployeesQueue ? window.pendingEmployeesQueue.length : 0;
     
     let content = `
-        <style>
-            .employee-info-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; padding: 12px; background: var(--bg-body); border-radius: 12px; }
-            .upload-area { border: 2px dashed var(--border-light); border-radius: 16px; padding: 12px; text-align: center; cursor: pointer; margin: 5px; }
-            .upload-area:hover { background: rgba(37,99,235,0.05); border-color: #2563eb; }
-            .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
-            .offline-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
-            .pending-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
-            @media (max-width:768px){
-                .employee-info-grid { grid-template-columns: 1fr; }
-                .action-buttons { flex-direction: column; }
-                .action-buttons .search-box { width: 100%; }
-                .action-buttons .btn-sm { width: 100%; }
-                .summary-cards { grid-template-columns: repeat(2, 1fr) !important; }
+    <style>
+        /* ========== EMPLOYEE MODULE RESPONSIVE STYLES ========== */
+        .employee-info-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px; 
+            padding: 12px; 
+            background: var(--bg-body); 
+            border-radius: 12px; 
+        }
+        .upload-area { 
+            border: 2px dashed var(--border-light); 
+            border-radius: 16px; 
+            padding: 12px; 
+            text-align: center; 
+            cursor: pointer; 
+            margin: 5px; 
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover { 
+            background: rgba(37,99,235,0.05); 
+            border-color: #2563eb; 
+        }
+        .upload-area.uploaded { 
+            background: #d1fae5; 
+            border-color: #10b981; 
+        }
+        .online-badge { 
+            background: #10b981; 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 10px; 
+        }
+        .offline-badge { 
+            background: #f59e0b; 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 10px; 
+        }
+        .pending-badge { 
+            background: #f59e0b; 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 10px; 
+        }
+        
+        /* ========== RESPONSIVE: TABLETS & MOBILE ========== */
+        @media (max-width: 992px) {
+            .employee-info-grid { 
+                grid-template-columns: repeat(2, 1fr); 
             }
-        </style>
+            .summary-cards { 
+                grid-template-columns: repeat(3, 1fr) !important; 
+            }
+        }
         
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
-            <span class="${navigator.onLine ? 'online-badge' : 'offline-badge'}">
-                <i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i>
-                ${navigator.onLine ? 'Connected' : 'Offline'} | <strong>${window.employees.length}</strong> Employees
-                ${pendingCount > 0 ? `<span class="pending-badge" style="margin-left:8px;"><i class="fas fa-clock"></i> ${pendingCount} Pending</span>` : ''}
-            </span>
-            ${pendingCount > 0 ? `<button class="btn btn-warning btn-sm" onclick="processPendingEmployeesQueue()"><i class="fas fa-sync-alt"></i> Sync Now</button>` : ''}
+        @media (max-width: 768px) {
+            .action-buttons { 
+                flex-direction: column; 
+                gap: 8px; 
+            }
+            .action-buttons .search-box { 
+                width: 100%; 
+                padding: 12px 16px 12px 40px; 
+                font-size: 14px; 
+            }
+            .action-buttons .btn-sm { 
+                width: 100%; 
+                padding: 12px; 
+                font-size: 13px; 
+                text-align: center; 
+                justify-content: center; 
+            }
+            .employee-info-grid { 
+                grid-template-columns: 1fr; 
+                gap: 8px; 
+            }
+            .summary-cards { 
+                grid-template-columns: repeat(2, 1fr) !important; 
+                gap: 8px; 
+            }
+            .summary-item { 
+                padding: 12px !important; 
+            }
+            .summary-value { 
+                font-size: 18px !important; 
+            }
+            .chart-container { 
+                grid-template-columns: 1fr !important; 
+                gap: 12px; 
+            }
+            .chart-card { 
+                padding: 12px !important; 
+            }
+            .chart-card h3 { 
+                font-size: 13px !important; 
+            }
+            .chart-card canvas { 
+                max-height: 160px !important; 
+            }
+            .data-card .card-header { 
+                flex-direction: column !important; 
+                text-align: center !important; 
+            }
+            .data-card .card-photo { 
+                margin: 0 auto !important; 
+            }
+            .data-card .card-actions { 
+                justify-content: center !important; 
+                flex-wrap: wrap !important; 
+            }
+            .data-card .card-actions .action-chip { 
+                font-size: 10px !important; 
+                padding: 5px 10px !important; 
+            }
+            .online-badge, .offline-badge, .pending-badge { 
+                font-size: 9px !important; 
+                padding: 3px 10px !important; 
+            }
+            .employee-pagination { 
+                flex-direction: column !important; 
+                gap: 10px !important; 
+                align-items: center !important; 
+            }
+            .employee-pagination > div { 
+                width: 100%; 
+                text-align: center; 
+            }
+            .employee-pagination select { 
+                width: auto; 
+                display: inline-block; 
+            }
+            .swal2-popup { 
+                width: 95% !important; 
+                padding: 12px !important; 
+                border-radius: 16px !important; 
+            }
+            .swal2-popup .btn { 
+                font-size: 12px !important; 
+                padding: 10px !important; 
+            }
+            .modal-content { 
+                max-width: 95% !important; 
+                padding: 15px !important; 
+            }
+            .modal-content .form-row { 
+                grid-template-columns: 1fr !important; 
+                gap: 10px !important; 
+            }
+            .modal-content .documents-grid { 
+                grid-template-columns: repeat(2, 1fr) !important; 
+                gap: 8px !important; 
+            }
+            .modal-content .documents-grid .upload-area { 
+                padding: 8px !important; 
+                font-size: 10px !important; 
+            }
+            .modal-content .upload-area i { 
+                font-size: 18px !important; 
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .summary-cards { 
+                grid-template-columns: 1fr 1fr !important; 
+                gap: 6px !important; 
+            }
+            .summary-item { 
+                padding: 10px !important; 
+            }
+            .summary-value { 
+                font-size: 16px !important; 
+            }
+            .data-card .card-header h3 { 
+                font-size: 14px !important; 
+            }
+            .data-card .card-header p { 
+                font-size: 10px !important; 
+            }
+            .data-card .employee-info-grid { 
+                grid-template-columns: 1fr !important; 
+                gap: 6px !important; 
+            }
+            .data-card .employee-info-grid .info-item { 
+                padding: 4px 0 !important; 
+            }
+            .data-card .employee-info-grid .info-label { 
+                font-size: 8px !important; 
+            }
+            .data-card .employee-info-grid .info-value { 
+                font-size: 11px !important; 
+            }
+            .modal-content .documents-grid { 
+                grid-template-columns: 1fr 1fr !important; 
+                gap: 6px !important; 
+            }
+            .modal-content .documents-grid .upload-area { 
+                padding: 6px !important; 
+                font-size: 9px !important; 
+            }
+            .modal-content .documents-grid .upload-area i { 
+                font-size: 14px !important; 
+            }
+            .modal-content .modal-header h2 { 
+                font-size: 16px !important; 
+            }
+            .modal-content .modal-header .close-btn { 
+                width: 30px !important; 
+                height: 30px !important; 
+                font-size: 16px !important; 
+            }
+            .modal-content .modal-footer { 
+                flex-direction: column !important; 
+                gap: 8px !important; 
+            }
+            .modal-content .modal-footer .btn { 
+                width: 100% !important; 
+            }
+        }
+        
+        /* ========== PRINT STYLES ========== */
+        @media print {
+            .action-buttons, .btn, .btn-sm, .card-actions, 
+            .fab, .fab-menu, .bottom-nav, .app-header, 
+            .back-btn, .module-header, .action-chip {
+                display: none !important;
+            }
+            .data-card { 
+                break-inside: avoid; 
+                page-break-inside: avoid; 
+                box-shadow: none !important; 
+                border: 1px solid #ddd !important; 
+            }
+            body { background: white !important; }
+        }
+        
+        /* ========== DOCUMENTS GRID ========== */
+        .documents-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        @media (max-width: 768px) {
+            .documents-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+        }
+        @media (max-width: 480px) {
+            .documents-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+        }
+    </style>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 10px; gap: 8px;">
+        <span class="${navigator.onLine ? 'online-badge' : 'offline-badge'}">
+            <i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i>
+            ${navigator.onLine ? 'Connected' : 'Offline'} | <strong>${window.employees.length}</strong> Employees
+            ${pendingCount > 0 ? `<span class="pending-badge" style="margin-left:8px;"><i class="fas fa-clock"></i> ${pendingCount} Pending</span>` : ''}
+        </span>
+        ${pendingCount > 0 ? `<button class="btn btn-warning btn-sm" onclick="processPendingEmployeesQueue()" style="padding:8px 16px; border-radius:30px; font-size:12px;"><i class="fas fa-sync-alt"></i> Sync Now</button>` : ''}
+    </div>
+    
+    <div class="action-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+        <div style="position:relative; flex:1; min-width:150px;">
+            <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8;"></i>
+            <input type="text" id="employeeSearch" class="search-box" placeholder="Search by name or department..." value="${employeeFilterText}" style="padding-left:35px; width:100%; padding:10px 12px 10px 35px; border-radius:30px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary);">
         </div>
-        
-        <div class="action-buttons">
-            <div style="position:relative; flex:1">
-                <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%)"></i>
-                <input type="text" id="employeeSearch" class="search-box" placeholder="Search by name or department..." value="${employeeFilterText}" style="padding-left:35px; width:100%">
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="filterEmployeeList()"><i class="fas fa-search"></i> Search</button>
-            <button class="btn btn-info btn-sm" onclick="clearEmployeeFilter()"><i class="fas fa-eraser"></i> Clear</button>
-            <button class="btn btn-warning btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-            <button class="btn btn-success btn-sm" onclick="refreshEmployeeData()"><i class="fas fa-sync-alt"></i> Refresh</button>
-            <button class="btn btn-info btn-sm" onclick="exportEmployeesCSV()"><i class="fas fa-file-csv"></i> CSV</button>
-            <button class="btn btn-info btn-sm" onclick="exportEmployeesPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
-            <button class="btn btn-primary btn-sm" onclick="showAddEmployeeForm()"><i class="fas fa-plus"></i> Add Employee</button>
+        <button class="btn btn-primary btn-sm" onclick="filterEmployeeList()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:12px; font-weight:600;"><i class="fas fa-search"></i> Search</button>
+        <button class="btn btn-info btn-sm" onclick="clearEmployeeFilter()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:12px; font-weight:600;"><i class="fas fa-eraser"></i> Clear</button>
+        <button class="btn btn-warning btn-sm" onclick="window.print()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:#f59e0b; color:white; font-size:12px; font-weight:600;"><i class="fas fa-print"></i> Print</button>
+        <button class="btn btn-success btn-sm" onclick="refreshEmployeeData()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; font-size:12px; font-weight:600;"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn btn-info btn-sm" onclick="exportEmployeesCSV()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:#3b82f6; color:white; font-size:12px; font-weight:600;"><i class="fas fa-file-csv"></i> CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="exportEmployeesPDF()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:#dc2626; color:white; font-size:12px; font-weight:600;"><i class="fas fa-file-pdf"></i> PDF</button>
+        <button class="btn btn-primary btn-sm" onclick="showAddEmployeeForm()" style="padding:8px 16px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; font-size:12px; font-weight:600;"><i class="fas fa-plus"></i> Add Employee</button>
+    </div>
+    
+    <div class="summary-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+        <div class="summary-item" style="background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:16px; padding:15px; text-align:center; color:white;">
+            <div class="summary-value" style="font-size:24px; font-weight:800;">${total}</div>
+            <div style="font-size:12px; opacity:0.9;">Total Staff</div>
         </div>
-        
-        <div class="summary-cards" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="summary-item"><div class="summary-value">${total}</div><div>Total Staff</div></div>
-            <div class="summary-item"><div class="summary-value">${active}</div><div>Active</div></div>
-            <div class="summary-item"><div class="summary-value">${formatFullCurrency(totalSalary)}</div><div>Salary</div></div>
+        <div class="summary-item" style="background:linear-gradient(135deg,#10b981,#059669); border-radius:16px; padding:15px; text-align:center; color:white;">
+            <div class="summary-value" style="font-size:24px; font-weight:800;">${active}</div>
+            <div style="font-size:12px; opacity:0.9;">Active</div>
         </div>
-        
-        <div class="chart-container">
-            <div class="chart-card"><h3>Department-wise Staff</h3><canvas id="deptChart"></canvas></div>
-            <div class="chart-card"><h3>Salary Distribution</h3><canvas id="salaryChart"></canvas></div>
+        <div class="summary-item" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9); border-radius:16px; padding:15px; text-align:center; color:white;">
+            <div class="summary-value" style="font-size:24px; font-weight:800;">${formatFullCurrency(totalSalary)}</div>
+            <div style="font-size:12px; opacity:0.9;">Salary</div>
         </div>
-        
-        <div class="employee-pagination" style="display:flex; justify-content:space-between; flex-wrap:wrap; margin:15px 0; padding:10px; background:var(--bg-surface); border-radius:16px">
-            <div>
-                <span>Show</span>
-                <select id="employeeRowsPerPage" onchange="changeEmployeeRowsPerPage()">
-                    <option value="10" ${employeeRowsPerPage===10?'selected':''}>10</option>
-                    <option value="25" ${employeeRowsPerPage===25?'selected':''}>25</option>
-                    <option value="50" ${employeeRowsPerPage===50?'selected':''}>50</option>
-                    <option value="100" ${employeeRowsPerPage===100?'selected':''}>100</option>
-                </select>
-                <span>entries</span>
-            </div>
-            <div>Showing ${start+1} to ${Math.min(start+employeeRowsPerPage,total)} of ${total}</div>
-            <div>
-                <button class="btn-sm btn-info" onclick="previousEmployeePage()" ${employeeCurrentPage===1?'disabled':''}>◀ Prev</button>
-                <span style="padding:5px 12px; background:var(--primary); color:white; border-radius:8px">${employeeCurrentPage} of ${employeeTotalPages||1}</span>
-                <button class="btn-sm btn-info" onclick="nextEmployeePage()" ${employeeCurrentPage===employeeTotalPages||employeeTotalPages===0?'disabled':''}>Next ▶</button>
-            </div>
+    </div>
+    
+    <div class="chart-container" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 16px 0;">
+        <div class="chart-card" style="background:var(--bg-surface); border-radius:16px; padding:16px; border:1px solid var(--border-light);">
+            <h3 style="color:var(--text-primary); font-size:14px; margin-bottom:12px;">Department-wise Staff</h3>
+            <canvas id="deptChart" style="max-height:200px; width:100%;"></canvas>
         </div>
-        
-        <div id="employeeList" class="cards-container"></div>
+        <div class="chart-card" style="background:var(--bg-surface); border-radius:16px; padding:16px; border:1px solid var(--border-light);">
+            <h3 style="color:var(--text-primary); font-size:14px; margin-bottom:12px;">Salary Distribution</h3>
+            <canvas id="salaryChart" style="max-height:200px; width:100%;"></canvas>
+        </div>
+    </div>
+    
+    <div class="employee-pagination" style="display:flex; justify-content:space-between; flex-wrap:wrap; margin:15px 0; padding:12px 16px; background:var(--bg-surface); border-radius:16px; border:1px solid var(--border-light); align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-size:12px; color:var(--text-secondary);">Show</span>
+            <select id="employeeRowsPerPage" onchange="changeEmployeeRowsPerPage()" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary); font-size:12px;">
+                <option value="10" ${employeeRowsPerPage===10?'selected':''}>10</option>
+                <option value="25" ${employeeRowsPerPage===25?'selected':''}>25</option>
+                <option value="50" ${employeeRowsPerPage===50?'selected':''}>50</option>
+                <option value="100" ${employeeRowsPerPage===100?'selected':''}>100</option>
+            </select>
+            <span style="font-size:12px; color:var(--text-secondary);">entries</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary);">Showing ${start+1} to ${Math.min(start+employeeRowsPerPage,total)} of ${total}</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-sm btn-info" onclick="previousEmployeePage()" ${employeeCurrentPage===1?'disabled':''} style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:12px;">◀ Prev</button>
+            <span style="padding:5px 12px; background:var(--primary); color:white; border-radius:8px; font-size:12px;">${employeeCurrentPage} of ${employeeTotalPages||1}</span>
+            <button class="btn-sm btn-info" onclick="nextEmployeePage()" ${employeeCurrentPage===employeeTotalPages||employeeTotalPages===0?'disabled':''} style="padding:6px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:12px;">Next ▶</button>
+        </div>
+    </div>
+    
+    <div id="employeeList" class="cards-container"></div>
     `;
     document.getElementById('moduleContent').innerHTML = content;
     renderEmployeeList(paginated);
@@ -20553,9 +20966,10 @@ function renderEmployeeManagementUI() {
                     labels: Object.keys(deptCount),
                     datasets: [{
                         data: Object.values(deptCount),
-                        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+                        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec489a', '#06b6d4', '#f97316']
                     }]
-                }
+                },
+                options: { responsive: true, maintainAspectRatio: true }
             });
         }
         let salaryCtx = document.getElementById('salaryChart')?.getContext('2d');
@@ -20566,10 +20980,22 @@ function renderEmployeeManagementUI() {
                 data: {
                     labels: top.map(e=>e.name.substring(0,15)),
                     datasets: [{
-                        label: 'Salary',
+                        label: 'Salary (₹)',
                         data: top.map(e=>e.salary),
-                        backgroundColor: '#3b82f6'
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
                     }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { callback: function(value) { return '₹' + value.toLocaleString(); } }
+                        }
+                    }
                 }
             });
         }
@@ -20588,43 +21014,45 @@ function renderEmployeeList(employeesToRender) {
         let isPendingDelete = pendingQueue.some(item => item.data.id === e.id && item.operation === 'delete');
         
         html += `
-        <div class="data-card" style="margin-bottom:12px; border-radius:20px; ${isPendingDelete ? 'opacity:0.5; background:#fef2f2;' : ''}">
-            <div class="card-header" style="display:flex; gap:12px; padding:12px; flex-wrap:wrap">
-                <div class="card-photo" style="position:relative; width:55px; height:55px; border-radius:50%; overflow:hidden; background:linear-gradient(135deg,var(--primary),var(--secondary))">
+        <div class="data-card" style="margin-bottom:12px; border-radius:20px; background:var(--bg-surface); border:1px solid var(--border-light); ${isPendingDelete ? 'opacity:0.5; background:#fef2f2;' : ''}">
+            <div class="card-header" style="display:flex; gap:12px; padding:12px; flex-wrap:wrap; align-items:center;">
+                <div class="card-photo" style="position:relative; width:55px; height:55px; border-radius:50%; overflow:hidden; background:linear-gradient(135deg,var(--primary),var(--secondary)); flex-shrink:0;">
                     <img src="${photo}" style="width:100%;height:100%;object-fit:cover" 
                         onerror="if(this.parentElement){this.style.display='none';this.parentElement.innerHTML='<i class=\\'fas fa-user-tie\\' style=\\'font-size:24px; color:white;\\'></i>';}else{this.style.display='none';}">
-                    ${isCloud ? '<span style="position:absolute; bottom:-2px; right:-2px; background:#10b981; color:white; border-radius:50%; width:16px; height:16px; font-size:8px; display:flex; align-items:center; justify-content:center">☁️</span>' : ''}
-                    ${isPending ? '<span style="position:absolute; top:-2px; right:-2px; background:#f59e0b; color:white; border-radius:50%; width:16px; height:16px; font-size:8px; display:flex; align-items:center; justify-content:center">⏳</span>' : ''}
-                    ${isPendingDelete ? '<span style="position:absolute; top:-2px; right:-2px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:8px; display:flex; align-items:center; justify-content:center">🗑️</span>' : ''}
+                    ${isCloud ? '<span style="position:absolute; bottom:-2px; right:-2px; background:#10b981; color:white; border-radius:50%; width:16px; height:16px; font-size:8px; display:flex; align-items:center; justify-content:center; border:1px solid white;">☁️</span>' : ''}
+                    ${isPending ? '<span style="position:absolute; top:-2px; right:-2px; background:#f59e0b; color:white; border-radius:50%; width:16px; height:16px; font-size:8px; display:flex; align-items:center; justify-content:center; border:1px solid white;">⏳</span>' : ''}
+                    ${isPendingDelete ? '<span style="position:absolute; top:-2px; right:-2px; background:#ef4444; color:white; border-radius:50%; width:16px; height:16px; font-size:8px; display:flex; align-items:center; justify-content:center; border:1px solid white;">🗑️</span>' : ''}
                 </div>
-                <div class="card-title" style="flex:1">
-                    <h3>${escapeHtml(e.name)}</h3>
-                    <p>${escapeHtml(e.designation || 'N/A')} | ${escapeHtml(e.department || 'N/A')}</p>
+                <div class="card-title" style="flex:1; min-width:120px;">
+                    <h3 style="color:var(--text-primary); font-size:15px; margin:0 0 4px 0;">${escapeHtml(e.name)}</h3>
+                    <p style="color:var(--text-secondary); font-size:11px; margin:0;">${escapeHtml(e.designation || 'N/A')} | ${escapeHtml(e.department || 'N/A')}</p>
                 </div>
-                <span class="badge ${e.status==='Active'?'badge-success':'badge-danger'}">${e.status || 'Active'}</span>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span class="badge ${e.status==='Active'?'badge-success':'badge-danger'}" style="font-size:11px; padding:4px 12px; border-radius:20px;">${e.status || 'Active'}</span>
+                </div>
             </div>
             <div class="employee-info-grid">
-                <div><span class="info-label"><i class="fas fa-phone"></i> Mobile</span><span class="info-value">${e.mobile || 'N/A'}</span></div>
-                <div><span class="info-label"><i class="fas fa-rupee-sign"></i> Salary</span><span class="info-value">${formatFullCurrency(e.salary || 0)}</span></div>
-                <div><span class="info-label"><i class="fas fa-chalkboard-teacher"></i> Class Teacher</span><span class="info-value">${e.class_teacher || 'N/A'}</span></div>
-                <div><span class="info-label"><i class="fas fa-calendar-alt"></i> Joining</span><span class="info-value">${e.joining_date || 'N/A'}</span></div>
+                <div class="info-item"><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);"><i class="fas fa-phone"></i> Mobile</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${e.mobile || 'N/A'}</span></div>
+                <div class="info-item"><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);"><i class="fas fa-rupee-sign"></i> Salary</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${formatFullCurrency(e.salary || 0)}</span></div>
+                <div class="info-item"><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);"><i class="fas fa-chalkboard-teacher"></i> Class Teacher</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${e.class_teacher || 'N/A'}</span></div>
+                <div class="info-item"><span class="info-label" style="display:block; font-size:10px; color:var(--text-secondary);"><i class="fas fa-calendar-alt"></i> Joining</span><span class="info-value" style="font-weight:600; font-size:13px; color:var(--text-primary);">${e.joining_date || 'N/A'}</span></div>
             </div>
-            <div class="card-actions" style="padding:10px; gap:6px; flex-wrap:wrap">
-                <button class="action-chip" onclick="viewEmployeeDetails('${e.id}')"><i class="fas fa-eye"></i> View</button>
-                <button class="action-chip" onclick="showAddEmployeeForm('${e.id}')"><i class="fas fa-edit"></i> Edit</button>
-                <button class="action-chip" onclick="deleteEmployee('${e.id}')" style="color:#dc2626" ${isPendingDelete ? 'disabled' : ''}><i class="fas fa-trash"></i> Delete</button>
-                <button class="action-chip" onclick="processSalary('${e.id}')"><i class="fas fa-rupee-sign"></i> Salary</button>
-                <button class="action-chip" onclick="printEmployeeIDCard('${e.id}')"><i class="fas fa-id-card"></i> ID Card</button>
-                <button class="action-chip" onclick="shareEmployee('${e.id}')"><i class="fab fa-whatsapp"></i> Share</button>
+            <div class="card-actions" style="padding:10px; gap:6px; flex-wrap:wrap; border-top:1px solid var(--border-light); background:var(--bg-body);">
+                <button class="action-chip" onclick="viewEmployeeDetails('${e.id}')" style="padding:5px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:11px;"><i class="fas fa-eye"></i> View</button>
+                <button class="action-chip" onclick="showAddEmployeeForm('${e.id}')" style="padding:5px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:11px;"><i class="fas fa-edit"></i> Edit</button>
+                <button class="action-chip" onclick="deleteEmployee('${e.id}')" style="padding:5px 12px; border-radius:20px; border:none; cursor:pointer; background:#fee2e2; color:#dc2626; font-size:11px;" ${isPendingDelete ? 'disabled' : ''}><i class="fas fa-trash"></i> Delete</button>
+                <button class="action-chip" onclick="processSalary('${e.id}')" style="padding:5px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:11px;"><i class="fas fa-rupee-sign"></i> Salary</button>
+                <button class="action-chip" onclick="printEmployeeIDCard('${e.id}')" style="padding:5px 12px; border-radius:20px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:11px;"><i class="fas fa-id-card"></i> ID Card</button>
+                <button class="action-chip" onclick="shareEmployee('${e.id}')" style="padding:5px 12px; border-radius:20px; border:none; cursor:pointer; background:#25D366; color:white; font-size:11px;"><i class="fab fa-whatsapp"></i> Share</button>
             </div>
         </div>`;
     }
     if(employeesToRender.length===0) {
         html = `
-            <div class="profile-card" style="text-align:center; padding:40px;">
+            <div class="profile-card" style="text-align:center; padding:40px; background:var(--bg-surface); border-radius:20px; border:1px solid var(--border-light);">
                 <i class="fas fa-users-slash" style="font-size:48px; color:#94a3b8;"></i>
-                <p style="margin-top:10px;">No employees found. Click "Add Employee" to create.</p>
-                <button class="btn btn-primary btn-sm" onclick="showAddEmployeeForm()">+ Add Employee</button>
+                <p style="color:var(--text-primary); margin-top:10px;">No employees found. Click "Add Employee" to create.</p>
+                <button class="btn btn-primary btn-sm" onclick="showAddEmployeeForm()" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; font-size:13px; font-weight:600; margin-top:10px;">+ Add Employee</button>
             </div>
         `;
     }
@@ -20659,7 +21087,7 @@ function viewEmployeeDetails(id){
                 <div><strong>Qualification:</strong> ${e.qualification || 'N/A'}</div>
             </div>
         `, 
-        width: '500px', 
+        width: window.innerWidth <= 480 ? '95%' : '500px',
         confirmButtonText: 'Close' 
     });
 }
@@ -20719,7 +21147,7 @@ function showAddEmployeeForm(editId = null) {
         currentPhotoPreview = `
             <div style="margin-top:10px; text-align:center">
                 <img src="${ps}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid #10b981">
-                <p style="font-size:11px; margin-top:5px">Current Photo</p>
+                <p style="font-size:11px; margin-top:5px; color:var(--text-secondary);">Current Photo</p>
             </div>
         `;
     }
@@ -20727,22 +21155,22 @@ function showAddEmployeeForm(editId = null) {
     modal.innerHTML = `
         <div class="modal-content" style="max-width:900px; width:95%; max-height:90vh; overflow-y:auto; border-radius:28px; background:var(--bg-surface);">
             <!-- HEADER -->
-            <div style="background:linear-gradient(135deg,#667eea,#764ba2); padding:16px 20px; border-radius:28px 28px 0 0; position:sticky; top:0; z-index:10">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
-                    <h2 style="color:white; margin:0; font-size:18px"><i class="fas ${isEdit ? 'fa-edit' : 'fa-user-tie'}"></i> ${isEdit ? 'Edit Employee' : 'Add New Employee'}</h2>
-                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); color:white; border:none; width:34px; height:34px; border-radius:50%; cursor:pointer">&times;</button>
+            <div class="modal-header" style="background:linear-gradient(135deg,#667eea,#764ba2); padding:16px 20px; border-radius:28px 28px 0 0; position:sticky; top:0; z-index:10; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <h2 style="color:white; margin:0; font-size:18px;"><i class="fas ${isEdit ? 'fa-edit' : 'fa-user-tie'}"></i> ${isEdit ? 'Edit Employee' : 'Add New Employee'}</h2>
+                    <p style="color:rgba(255,255,255,0.8); margin:5px 0 0; font-size:12px;">Fill the details below</p>
                 </div>
-                <p style="color:rgba(255,255,255,0.8); margin:5px 0 0; font-size:11px">Fill the details below</p>
+                <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); color:white; border:none; width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:20px;">&times;</button>
             </div>
             
-            <div style="padding:16px">
+            <div style="padding:20px;">
                 <!-- BASIC INFO -->
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px; margin-bottom:16px">
-                    <div><label>👤 Full Name *</label><input id="empName" class="form-control" value="${isEdit ? (empData?.name||'').replace(/"/g,'&quot;') : ''}"></div>
-                    <div><label>📞 Mobile</label><input id="empMobile" class="form-control" value="${isEdit ? (empData?.mobile||'') : ''}"></div>
-                    <div><label>✉️ Email</label><input id="empEmail" class="form-control" value="${isEdit ? (empData?.email||'') : ''}"></div>
-                    <div><label>🏢 Department</label>
-                        <select id="empDept" class="form-control">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:16px;">
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">👤 Full Name *</label><input id="empName" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.name||'').replace(/"/g,'&quot;') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">📞 Mobile</label><input id="empMobile" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.mobile||'') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">✉️ Email</label><input id="empEmail" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.email||'') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">🏢 Department</label>
+                        <select id="empDept" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;">
                             <option ${isEdit && empData?.department==='Teaching'?'selected':''}>Teaching</option>
                             <option ${isEdit && empData?.department==='Admin'?'selected':''}>Admin</option>
                             <option ${isEdit && empData?.department==='Accounts'?'selected':''}>Accounts</option>
@@ -20750,86 +21178,86 @@ function showAddEmployeeForm(editId = null) {
                             <option ${isEdit && empData?.department==='Support'?'selected':''}>Support</option>
                         </select>
                     </div>
-                    <div><label>💼 Designation</label><input id="empDesignation" class="form-control" value="${isEdit ? (empData?.designation||'').replace(/"/g,'&quot;') : ''}"></div>
-                    <div><label>💰 Salary</label><input type="number" id="empSalary" class="form-control" value="${isEdit ? (empData?.salary||'') : ''}"></div>
-                    <div><label>📅 Joining Date</label><input type="date" id="empJoining" class="form-control" value="${isEdit ? (empData?.joining_date||'') : new Date().toISOString().split('T')[0]}"></div>
-                    <div><label>🏫 Class Teacher</label><input id="empClassTeacher" class="form-control" placeholder="e.g., Playgroup A" value="${isEdit ? (empData?.class_teacher||'').replace(/"/g,'&quot;') : ''}"></div>
-                    <div><label>✅ Status</label>
-                        <select id="empStatus" class="form-control">
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">💼 Designation</label><input id="empDesignation" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.designation||'').replace(/"/g,'&quot;') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">💰 Salary</label><input type="number" id="empSalary" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.salary||'') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">📅 Joining Date</label><input type="date" id="empJoining" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.joining_date||'') : new Date().toISOString().split('T')[0]}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">🏫 Class Teacher</label><input id="empClassTeacher" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" placeholder="e.g., Playgroup A" value="${isEdit ? (empData?.class_teacher||'').replace(/"/g,'&quot;') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">✅ Status</label>
+                        <select id="empStatus" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;">
                             <option ${isEdit && empData?.status==='Active'?'selected':''}>Active</option>
                             <option ${isEdit && empData?.status==='Inactive'?'selected':''}>Inactive</option>
                         </select>
                     </div>
-                    <div><label>🩸 Blood Group</label><input id="empBlood" class="form-control" value="${isEdit ? (empData?.blood_group||'O+') : 'O+'}"></div>
-                    <div><label>🎓 Qualification</label><input id="empQualification" class="form-control" value="${isEdit ? (empData?.qualification||'').replace(/"/g,'&quot;') : ''}"></div>
-                    <div><label>🚨 Emergency Contact</label><input id="empEmergency" class="form-control" value="${isEdit ? (empData?.emergency_contact||'') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">🩸 Blood Group</label><input id="empBlood" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.blood_group||'O+') : 'O+'}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">🎓 Qualification</label><input id="empQualification" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.qualification||'').replace(/"/g,'&quot;') : ''}"></div>
+                    <div class="form-group"><label style="color:var(--text-primary); font-weight:600; font-size:12px;">🚨 Emergency Contact</label><input id="empEmergency" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${isEdit ? (empData?.emergency_contact||'') : ''}"></div>
                 </div>
                 
                 <!-- DOCUMENTS SECTION - ALL 16 DOCUMENTS -->
-                <div style="background:#f8fafc; border-radius:12px; padding:12px; margin:15px 0">
-                    <h4 style="margin:0 0 10px; font-size:14px; color:#2563eb"><i class="fas fa-cloud-upload-alt"></i> 📄 Documents (Click to Upload)</h4>
-                    <p style="font-size:10px; color:#64748b; margin-bottom:8px;">☁️ Uploads to: employee_docs bucket | 📁 PDF, JPG, PNG</p>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px">
+                <div style="background:var(--bg-body); border-radius:16px; padding:16px; margin:15px 0;">
+                    <h4 style="margin:0 0 10px; font-size:14px; color:#2563eb;"><i class="fas fa-cloud-upload-alt"></i> 📄 Documents (Click to Upload)</h4>
+                    <p style="font-size:10px; color:var(--text-secondary); margin-bottom:8px;">☁️ Uploads to: employee_docs bucket | 📁 PDF, JPG, PNG</p>
+                    <div class="documents-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
                         <!-- Photo - Camera + Gallery -->
-                        <div id="empPhotoUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-camera" style="color:#2563eb;"></i><br> 📸 Photo
+                        <div id="empPhotoUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-camera" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📸 Photo
                         </div>
-                        <div id="empAadharUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-id-card" style="color:#2563eb;"></i><br> 🆔 Aadhar
+                        <div id="empAadharUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-id-card" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 🆔 Aadhar
                         </div>
-                        <div id="empPanUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-credit-card" style="color:#2563eb;"></i><br> 📇 Pan
+                        <div id="empPanUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-credit-card" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📇 Pan
                         </div>
-                        <div id="empBirthUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-birthday-cake" style="color:#2563eb;"></i><br> 🎂 Birth
+                        <div id="empBirthUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-birthday-cake" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 🎂 Birth
                         </div>
-                        <div id="empTenthUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-graduation-cap" style="color:#2563eb;"></i><br> 📘 10th
+                        <div id="empTenthUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-graduation-cap" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📘 10th
                         </div>
-                        <div id="empTwelfthUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-graduation-cap" style="color:#2563eb;"></i><br> 📙 12th
+                        <div id="empTwelfthUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-graduation-cap" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📙 12th
                         </div>
-                        <div id="empGraduationUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-university" style="color:#2563eb;"></i><br> 🎓 Graduation
+                        <div id="empGraduationUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-university" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 🎓 Graduation
                         </div>
-                        <div id="empGradCertUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-certificate" style="color:#2563eb;"></i><br> 📜 Grad Cert
+                        <div id="empGradCertUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-certificate" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📜 Grad Cert
                         </div>
-                        <div id="empPgMarksheetUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-university" style="color:#2563eb;"></i><br> 📚 PG Marksheet
+                        <div id="empPgMarksheetUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-university" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📚 PG Marksheet
                         </div>
-                        <div id="empPgCertificateUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-certificate" style="color:#2563eb;"></i><br> 📄 PG Cert
+                        <div id="empPgCertificateUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-certificate" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📄 PG Cert
                         </div>
-                        <div id="empBankUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-bank" style="color:#2563eb;"></i><br> 🏦 Bank
+                        <div id="empBankUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-bank" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 🏦 Bank
                         </div>
-                        <div id="empResumeUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-file-alt" style="color:#2563eb;"></i><br> 📄 Resume
+                        <div id="empResumeUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-file-alt" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📄 Resume
                         </div>
-                        <div id="empExperienceUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-briefcase" style="color:#2563eb;"></i><br> 📋 Experience
+                        <div id="empExperienceUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-briefcase" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📋 Experience
                         </div>
-                        <div id="empAppointmentUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-envelope-open-text" style="color:#2563eb;"></i><br> 📝 Appointment
+                        <div id="empAppointmentUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-envelope-open-text" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📝 Appointment
                         </div>
-                        <div id="empSalarySlipUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-receipt" style="color:#2563eb;"></i><br> 💰 Salary Slip
+                        <div id="empSalarySlipUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-receipt" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 💰 Salary Slip
                         </div>
-                        <div id="empOtherUpload" class="upload-area" style="padding:8px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
-                            <i class="fas fa-paperclip" style="color:#2563eb;"></i><br> 📎 Other
+                        <div id="empOtherUpload" class="upload-area" style="padding:10px; font-size:11px; cursor:pointer; text-align:center; border:2px dashed var(--border-light); border-radius:12px; background:var(--bg-body);">
+                            <i class="fas fa-paperclip" style="color:#2563eb; font-size:22px;"></i><br style="color:var(--text-primary);"> 📎 Other
                         </div>
                     </div>
-                    <div id="uploadStatus" style="margin-top:10px; font-size:11px; color:#64748b; text-align:center"></div>
+                    <div id="uploadStatus" style="margin-top:10px; font-size:11px; color:var(--text-secondary); text-align:center;"></div>
                 </div>
                 
                 <!-- PHOTO PREVIEW -->
-                <div id="photoPreview" style="margin-top:10px; text-align:center">${currentPhotoPreview}</div>
+                <div id="photoPreview" style="margin-top:10px; text-align:center;">${currentPhotoPreview}</div>
                 
                 <!-- BUTTONS -->
-                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:15px">
-                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding:8px 20px; border-radius:25px">Cancel</button>
-                    <button class="btn btn-primary" id="saveEmployeeBtn" style="padding:8px 20px; border-radius:25px">${isEdit ? 'Update' : 'Save'}</button>
+                <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:15px; flex-wrap:wrap;">
+                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding:10px 20px; border-radius:30px; font-size:13px; font-weight:600; border:none; cursor:pointer;"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn btn-primary" id="saveEmployeeBtn" style="padding:10px 24px; border-radius:30px; font-size:13px; font-weight:600; border:none; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white;">${isEdit ? 'Update' : 'Save'}</button>
                 </div>
             </div>
         </div>
@@ -20858,14 +21286,15 @@ function showAddEmployeeForm(editId = null) {
             window.empPhoto = croppedData;
             window.empPhotoUrl = url;
             
-            document.getElementById('empPhotoUpload').innerHTML = `<i class="fas fa-check-circle" style="color:#10b981"></i><br>Photo ${url ? '☁️' : '📁'}`;
+            document.getElementById('empPhotoUpload').innerHTML = `<i class="fas fa-check-circle" style="color:#10b981; font-size:22px;"></i><br style="color:var(--text-primary);">Photo ${url ? '☁️' : '📁'}`;
+            document.getElementById('empPhotoUpload').classList.add('uploaded');
             
             let previewDiv = document.getElementById('photoPreview');
             if (previewDiv) {
                 previewDiv.innerHTML = `
                     <div style="text-align:center">
-                        <img src="${url || croppedData}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid ${url ? '#10b981' : '#f59e0b'}">
-                        <p style="font-size:11px; margin-top:5px; color:${url ? '#10b981' : '#f59e0b'}">
+                        <img src="${url || croppedData}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid ${url ? '#10b981' : '#f59e0b'};">
+                        <p style="font-size:11px; margin-top:5px; color:${url ? '#10b981' : '#f59e0b'};">
                             ${url ? '☁️ Uploaded to Cloud (profile_photos)' : '📸 Photo saved locally'}
                         </p>
                     </div>
@@ -20889,7 +21318,8 @@ function showAddEmployeeForm(editId = null) {
                 let url = await uploadEmployeeDocToStorage(fileData, folder, newName, fileType);
                 window[`emp${docType}`] = fileData;
                 window[`emp${docType}Url`] = url;
-                document.getElementById(uploadId).innerHTML = `<i class="fas fa-check-circle" style="color:#10b981"></i><br>${docType} ${url ? '☁️' : '📁'}`;
+                document.getElementById(uploadId).innerHTML = `<i class="fas fa-check-circle" style="color:#10b981; font-size:22px;"></i><br>${docType} ${url ? '☁️' : '📁'}`;
+                document.getElementById(uploadId).classList.add('uploaded');
                 updateUploadStatus(`✅ ${docType} uploaded`);
                 hideLoaderSafe();
             });
@@ -20938,7 +21368,8 @@ function showAddEmployeeForm(editId = null) {
             let el = document.getElementById(id);
             if (el && value) {
                 let docName = id.replace('emp', '').replace('Upload', '');
-                el.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981"></i><br>${docName} ☁️`;
+                el.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981; font-size:22px;"></i><br>${docName} ☁️`;
+                el.classList.add('uploaded');
             }
         }
     }
@@ -21058,7 +21489,8 @@ async function deleteEmployee(id) {
         showCancelButton: true,
         confirmButtonText: 'Delete',
         confirmButtonColor: '#ef4444',
-        cancelButtonText: 'Cancel'
+        cancelButtonText: 'Cancel',
+        width: window.innerWidth <= 480 ? '95%' : '500px'
     }).then(async function(result) {
         if (result.isConfirmed) {
             window.employees = window.employees.filter(e => e.id !== id);
@@ -21099,13 +21531,16 @@ function processSalary(id) {
     Swal.fire({
         title: `💰 Salary - ${e.name}`,
         html: `
-            <div><label>Month</label><input id="salaryMonth" class="form-control" value="${month} ${year}" readonly></div>
-            <div><label>Basic Salary</label><input type="number" id="basicSalary" class="form-control" value="${e.salary||0}"></div>
-            <div><label>Allowances</label><input type="number" id="allowances" class="form-control" value="0"></div>
-            <div><label>Deductions</label><input type="number" id="deductions" class="form-control" value="0"></div>
-            <div><label><strong>Net Salary</strong></label><input type="number" id="netSalary" class="form-control" readonly></div>
+            <div style="text-align:left;">
+                <div class="form-group" style="margin-bottom:12px;"><label style="font-weight:600; font-size:13px;">Month</label><input id="salaryMonth" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${month} ${year}" readonly></div>
+                <div class="form-group" style="margin-bottom:12px;"><label style="font-weight:600; font-size:13px;">Basic Salary</label><input type="number" id="basicSalary" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="${e.salary||0}"></div>
+                <div class="form-group" style="margin-bottom:12px;"><label style="font-weight:600; font-size:13px;">Allowances</label><input type="number" id="allowances" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="0"></div>
+                <div class="form-group" style="margin-bottom:12px;"><label style="font-weight:600; font-size:13px;">Deductions</label><input type="number" id="deductions" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%;" value="0"></div>
+                <div class="form-group" style="margin-bottom:12px;"><label style="font-weight:600; font-size:13px;"><strong>Net Salary</strong></label><input type="number" id="netSalary" class="form-control" style="padding:10px 14px; border-radius:12px; width:100%; font-weight:700; color:#10b981;" readonly></div>
+            </div>
         `,
         confirmButtonText: 'Process',
+        width: window.innerWidth <= 480 ? '95%' : '500px',
         didOpen: function() {
             function calc() {
                 let basic = parseFloat(document.getElementById('basicSalary').value) || 0;
@@ -21152,13 +21587,13 @@ async function exportEmployeesPDF() {
     for (let e of window.employees) {
         rows += `
             <tr>
-                <td>${e.id}</td>
-                <td>${e.name}</td>
-                <td>${e.department}</td>
-                <td>${e.designation}</td>
-                <td>${e.mobile}</td>
-                <td style="text-align:right">${formatFullCurrency(e.salary||0)}</td>
-                <td>${e.status}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${e.id}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${e.name}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${e.department}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${e.designation}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${e.mobile}</td>
+                <td style="padding:8px; border:1px solid #ddd; text-align:right;">${formatFullCurrency(e.salary||0)}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${e.status}</td>
             </tr>
         `;
     }
@@ -21167,29 +21602,37 @@ async function exportEmployeesPDF() {
         <head>
             <title>Employees Report</title>
             <style>
-                body{font-family:Arial;padding:20px}
-                th{background:#2563eb;color:white;padding:8px}
-                td{border:1px solid #ddd;padding:8px}
-                table{width:100%;border-collapse:collapse}
+                body{font-family:Arial;padding:20px; background:white;}
+                .header{text-align:center; margin-bottom:20px; border-bottom:2px solid #2563eb; padding-bottom:10px;}
+                .header h2{margin:0; color:#1e293b;}
+                .header p{color:#64748b; font-size:12px; margin:2px 0;}
+                th{background:#2563eb; color:white; padding:10px; font-weight:600; border:1px solid #2563eb;}
+                td{border:1px solid #ddd; padding:8px;}
+                table{width:100%; border-collapse:collapse; margin-top:15px;}
+                .footer{margin-top:20px; text-align:center; font-size:10px; color:#94a3b8; border-top:1px solid #ddd; padding-top:10px;}
+                @media print { body { margin:0; padding:10px; } }
             </style>
         </head>
         <body>
-            <h2 style="text-align:center">${school}</h2>
-            <h3 style="text-align:center">EMPLOYEES REPORT</h3>
-            <p>Total: ${window.employees.length} | Generated: ${new Date().toLocaleDateString()}</p>
+            <div class="header">
+                <h2>${school}</h2>
+                <p>EMPLOYEES REPORT</p>
+                <p>Total: ${window.employees.length} | Generated: ${new Date().toLocaleString()}</p>
+            </div>
             <table>
                 <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Designation</th><th>Mobile</th><th>Salary</th><th>Status</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
+            <div class="footer"><p>© ${new Date().getFullYear()} ${school} - Computer Generated Report</p></div>
         </body>
         </html>
     `;
     let temp = document.createElement('div');
-    temp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:800px;background:white';
+    temp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:800px;background:white;padding:20px;';
     temp.innerHTML = html;
     document.body.appendChild(temp);
     try {
-        let canvas = await html2canvas(temp, {scale:2});
+        let canvas = await html2canvas(temp, {scale:2, backgroundColor:'#ffffff', logging:false});
         let img = canvas.toDataURL('image/png');
         let {jsPDF} = window.jspdf;
         let pdf = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
@@ -21199,6 +21642,7 @@ async function exportEmployeesPDF() {
         pdf.save(`Employees_Report_${new Date().toISOString().split('T')[0]}.pdf`);
         showNotificationSafe('PDF downloaded!', 'success');
     } catch(e) {
+        console.error('PDF Error:', e);
         showNotificationSafe('Error generating PDF', 'error');
     }
     document.body.removeChild(temp);
@@ -21398,8 +21842,8 @@ function printEmployeeIDCard(id) {
     `;
     
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 380px; background: var(--bg-surface); border-radius: 24px; padding: 0; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3); overflow: visible;">
-            <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 12px 16px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-content" style="max-width: 400px; width: 100%; background: var(--bg-surface); border-radius: 24px; padding: 0; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3); overflow: visible;">
+            <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 12px 16px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:8px;">
                 <h2 style="font-size: 16px; color: white; margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fas fa-id-card"></i> ID Card - ${e.name}</h2>
                 <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px;">&times;</button>
             </div>
@@ -21561,6 +22005,9 @@ console.log('   ✅ Online/Offline Flow');
 console.log('   ✅ PVC Standard ID Card');
 console.log('   ✅ Export CSV/PDF');
 console.log('   ✅ Complete CRUD Operations');
+console.log('   ✅ Fully Responsive - Web + Android APK');
+
+// ======================= PART 10 ENDS HERE =======================
 // ======================= PART 10 ENDS HERE =======================
 // ======================= PART 11: HOMEWORK MODULE WITH SUPABASE SYNC (TABLE STRUCTURE FIXED) =======================
 let homeworkFilterText = '';
