@@ -15761,7 +15761,7 @@ async function exportFeesPDF() {
 }
 
 // ======================= ✅ FIXED: VIEW RECEIPT (ANDROID MOBILE VIEW) =======================
-// ======================= ✅ FINAL FIX: VIEW RECEIPT (FULLY RESPONSIVE + NO CUT OFF) =======================
+// ======================= ✅ FINAL FIX: VIEW RECEIPT (FULL PDF + NO CUT OFF) =======================
 function viewReceipt(id) {
     let f = window.fees.find(f => f && f.id === id);
     if (!f) {
@@ -16152,7 +16152,10 @@ function viewReceipt(id) {
         showNotification('Generating PNG...', 'info');
         try {
             let element = document.getElementById('receiptForPrint');
-            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // ✅ Wait for rendering
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
             let canvas = await html2canvas(element, { 
                 scale: 2.5, 
                 backgroundColor: '#ffffff', 
@@ -16161,6 +16164,8 @@ function viewReceipt(id) {
                 logging: false,
                 width: element.scrollWidth,
                 height: element.scrollHeight,
+                windowWidth: element.scrollWidth,
+                windowHeight: element.scrollHeight,
                 onclone: function(doc) {
                     let elements = doc.querySelectorAll('*');
                     elements.forEach(el => {
@@ -16182,21 +16187,31 @@ function viewReceipt(id) {
         hideLoader();
     };
     
-    // ===== PDF DOWNLOAD =====
+    // ===== PDF DOWNLOAD - FIXED =====
     document.getElementById('downloadPdfBtn').onclick = async function() {
         showLoader();
         showNotification('Generating PDF...', 'info');
         try {
             let element = document.getElementById('receiptForPrint');
-            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // ✅ Wait for rendering
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // ✅ Get full dimensions
+            let rect = element.getBoundingClientRect();
+            let width = element.scrollWidth;
+            let height = element.scrollHeight;
+            
             let canvas = await html2canvas(element, { 
-                scale: 2.5, 
+                scale: 3,
                 backgroundColor: '#ffffff', 
                 useCORS: true, 
                 allowTaint: true,
                 logging: false,
-                width: element.scrollWidth,
-                height: element.scrollHeight,
+                width: width,
+                height: height,
+                windowWidth: width,
+                windowHeight: height,
                 onclone: function(doc) {
                     let elements = doc.querySelectorAll('*');
                     elements.forEach(el => {
@@ -16206,23 +16221,45 @@ function viewReceipt(id) {
                     });
                 }
             });
+            
             let imgData = canvas.toDataURL('image/png');
             let { jsPDF } = window.jspdf;
+            
+            // ✅ A5 size in mm
+            let pdfWidth = 148; // A5 width in mm
+            let pdfHeight = 210; // A5 height in mm
+            
+            // ✅ Calculate image dimensions to fit within A5 with margins
+            let marginX = 5;
+            let marginY = 8;
+            let maxWidth = pdfWidth - (marginX * 2);
+            let maxHeight = pdfHeight - (marginY * 2);
+            
+            let imgWidth = maxWidth;
+            let imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            // ✅ If image height exceeds max height, scale down
+            if (imgHeight > maxHeight) {
+                imgHeight = maxHeight;
+                imgWidth = (canvas.width * imgHeight) / canvas.height;
+            }
+            
             let pdf = new jsPDF({ 
                 unit: 'mm', 
                 format: 'a5', 
-                orientation: 'portrait' 
+                orientation: 'portrait'
             });
-            let imgWidth = 140;
-            let imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let marginX = 5;
-            let marginY = 8;
-            pdf.addImage(imgData, 'PNG', marginX, marginY, imgWidth, imgHeight);
+            
+            // ✅ Center the image
+            let xOffset = (pdfWidth - imgWidth) / 2;
+            let yOffset = (pdfHeight - imgHeight) / 2;
+            
+            pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
             pdf.save(`Receipt_${f.receipt_no || 'N/A'}.pdf`);
             showNotification('✅ PDF downloaded successfully!', 'success');
         } catch(err) {
             console.error('PDF Error:', err);
-            showNotification('❌ Error generating PDF', 'error');
+            showNotification('❌ Error generating PDF: ' + err.message, 'error');
         }
         hideLoader();
     };
