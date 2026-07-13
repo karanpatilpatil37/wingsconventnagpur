@@ -1053,7 +1053,6 @@ let attendance = [];
 let events = [];
 let expenses = [];
 let ledger = [];
-let homework = [];
 let leaves = [];
 let classes = [];
 let class_subjects = [];
@@ -5113,6 +5112,8 @@ async function uploadFileToBucket(bucketName, filePath, fileData, contentType = 
 
 //=========================================START PART 03-I- =====================================================================
 // ===================== PART 3I: BUTTON 1 - UPLOAD ALL TABLES ==================================================================
+//=========================================START PART 03-I- =====================================================================
+// ===================== PART 3I: BUTTON 1 - UPLOAD ALL TABLES ==================================================================
 
 window.forceUploadToSupabase = async function() {
     console.log('🚀 UPLOADING ALL TABLES TO SUPABASE...');
@@ -5135,6 +5136,7 @@ window.forceUploadToSupabase = async function() {
                 <li>🔔 <strong>5 Notifications</strong> (Welcome, PTM, Fee Reminder, Exam, Holiday)</li>
                 <li>🗣️ <strong>11 Feedbacks</strong> (Bug Reports, Suggestions, Complaints, etc.)</li>
                 <li>💰 <strong>4 Fee Structures</strong> (Playgroup, Nursery, KG1, KG2) with proper components</li>
+                <li>📚 <strong>10 Homework</strong> (For all 8 Classes - Playgroup A to KG2 B)</li>
             </ul>
             <p style="color: #10b981; margin-top: 10px;">
                 <i class="fas fa-check-circle"></i> All data will be in Supabase Database
@@ -5938,6 +5940,196 @@ window.forceUploadToSupabase = async function() {
     
     console.log(`🗣️ Total Feedbacks: ${allFeedbacks.length}`);
     
+    // ===================== 🔥 UPDATED: HOMEWORK DATA FOR ALL 8 CLASSES =====================
+    const allHomework = [
+        // ===== Playgroup A - Priya Sharma =====
+        {
+            id: 'HW001',
+            title: 'Math Practice - Count 1 to 10',
+            subject: 'Mathematics',
+            class: 'Playgroup A',
+            due_date: '2026-06-15',
+            description: 'Write numbers 1 to 10 in your notebook. Practice counting with objects.',
+            status: 'Pending',
+            created_by: 'Priya Sharma',
+            created_at: new Date('2026-06-10T10:30:00').toISOString()
+        },
+        {
+            id: 'HW002',
+            title: 'English Reading - ABC Song',
+            subject: 'English',
+            class: 'Playgroup A',
+            due_date: '2026-06-16',
+            description: 'Practice ABC song. Write capital letters A to Z in your notebook.',
+            status: 'Pending',
+            created_by: 'Priya Sharma',
+            created_at: new Date('2026-06-11T09:00:00').toISOString()
+        },
+        // ===== Playgroup B - Neha Gupta =====
+        {
+            id: 'HW003',
+            title: 'Drawing - Fruits',
+            subject: 'Drawing',
+            class: 'Playgroup B',
+            due_date: '2026-06-15',
+            description: 'Draw any 5 fruits in your drawing book. Color them beautifully.',
+            status: 'Pending',
+            created_by: 'Neha Gupta',
+            created_at: new Date('2026-06-10T11:00:00').toISOString()
+        },
+        {
+            id: 'HW004',
+            title: 'Hindi - Swar Practice',
+            subject: 'Hindi',
+            class: 'Playgroup B',
+            due_date: '2026-06-17',
+            description: 'Write Hindi Swar (अ, आ, इ, ई) 5 times each in your notebook.',
+            status: 'Pending',
+            created_by: 'Neha Gupta',
+            created_at: new Date('2026-06-12T08:30:00').toISOString()
+        },
+        // ===== Nursery A - Rajesh Singh =====
+        {
+            id: 'HW005',
+            title: 'Science - Plants and Trees',
+            subject: 'Science',
+            class: 'Nursery A',
+            due_date: '2026-06-18',
+            description: 'Draw a plant and label its parts (Root, Stem, Leaves, Flower).',
+            status: 'Pending',
+            created_by: 'Rajesh Singh',
+            created_at: new Date('2026-06-13T09:30:00').toISOString()
+        },
+        {
+            id: 'HW006',
+            title: 'English - My Family',
+            subject: 'English',
+            class: 'Nursery A',
+            due_date: '2026-06-19',
+            description: 'Write 5 sentences about your family. Mention your parents and siblings.',
+            status: 'Pending',
+            created_by: 'Rajesh Singh',
+            created_at: new Date('2026-06-14T10:00:00').toISOString()
+        },
+        // ===== Nursery B - Sneha Sharma =====
+        {
+            id: 'HW007',
+            title: 'Social Studies - My School',
+            subject: 'Social Studies',
+            class: 'Nursery B',
+            due_date: '2026-06-19',
+            description: 'Draw your school and write the name of your school. Mention your class teacher.',
+            status: 'Pending',
+            created_by: 'Sneha Sharma',
+            created_at: new Date('2026-06-14T11:30:00').toISOString()
+        },
+        {
+            id: 'HW008',
+            title: 'Hindi - Varnamala Practice',
+            subject: 'Hindi',
+            class: 'Nursery B',
+            due_date: '2026-06-20',
+            description: 'Write Hindi Varnamala (क to ज्ञ) in your notebook. Practice pronunciation.',
+            status: 'Pending',
+            created_by: 'Sneha Sharma',
+            created_at: new Date('2026-06-15T08:00:00').toISOString()
+        },
+        // ===== KG1 A - Anjali Kapoor =====
+        {
+            id: 'HW009',
+            title: 'English - Sentence Making',
+            subject: 'English',
+            class: 'KG1 A',
+            due_date: '2026-06-20',
+            description: 'Write 10 sentences using "This is" and "These are". Example: This is a book.',
+            status: 'Pending',
+            created_by: 'Anjali Kapoor',
+            created_at: new Date('2026-06-15T09:30:00').toISOString()
+        },
+        {
+            id: 'HW010',
+            title: 'Mathematics - Addition Practice',
+            subject: 'Mathematics',
+            class: 'KG1 A',
+            due_date: '2026-06-21',
+            description: 'Solve 15 addition sums (numbers 1 to 20). Write in your notebook.',
+            status: 'Pending',
+            created_by: 'Anjali Kapoor',
+            created_at: new Date('2026-06-16T10:00:00').toISOString()
+        },
+        // ===== KG1 B - Vikram Joshi =====
+        {
+            id: 'HW011',
+            title: 'Science - Animals',
+            subject: 'Science',
+            class: 'KG1 B',
+            due_date: '2026-06-21',
+            description: 'Draw any 5 animals and write their names. Mention their habitats.',
+            status: 'Pending',
+            created_by: 'Vikram Joshi',
+            created_at: new Date('2026-06-16T11:00:00').toISOString()
+        },
+        {
+            id: 'HW012',
+            title: 'English - Opposite Words',
+            subject: 'English',
+            class: 'KG1 B',
+            due_date: '2026-06-22',
+            description: 'Write 10 opposite words. Example: Hot - Cold, Big - Small, etc.',
+            status: 'Pending',
+            created_by: 'Vikram Joshi',
+            created_at: new Date('2026-06-17T08:30:00').toISOString()
+        },
+        // ===== KG2 A - Meera Nair =====
+        {
+            id: 'HW013',
+            title: 'Hindi - Poem "Chanda Mama"',
+            subject: 'Hindi',
+            class: 'KG2 A',
+            due_date: '2026-06-22',
+            description: 'Learn the poem "Chanda Mama" and write it in your notebook.',
+            status: 'Pending',
+            created_by: 'Meera Nair',
+            created_at: new Date('2026-06-17T09:30:00').toISOString()
+        },
+        {
+            id: 'HW014',
+            title: 'Mathematics - Multiplication',
+            subject: 'Mathematics',
+            class: 'KG2 A',
+            due_date: '2026-06-23',
+            description: 'Learn tables from 2 to 5. Write each table 2 times in your notebook.',
+            status: 'Pending',
+            created_by: 'Meera Nair',
+            created_at: new Date('2026-06-18T10:00:00').toISOString()
+        },
+        // ===== KG2 B - Rahul Mehta =====
+        {
+            id: 'HW015',
+            title: 'Computer - Paint Activity',
+            subject: 'Computer',
+            class: 'KG2 B',
+            due_date: '2026-06-23',
+            description: 'Draw a beautiful house in MS Paint. Save it with your name.',
+            status: 'Pending',
+            created_by: 'Rahul Mehta',
+            created_at: new Date('2026-06-18T11:00:00').toISOString()
+        },
+        {
+            id: 'HW016',
+            title: 'Social Studies - My Country India',
+            subject: 'Social Studies',
+            class: 'KG2 B',
+            due_date: '2026-06-24',
+            description: 'Write 5 facts about India. Draw the Indian flag.',
+            status: 'Pending',
+            created_by: 'Rahul Mehta',
+            created_at: new Date('2026-06-19T08:00:00').toISOString()
+        }
+    ];
+    
+    console.log(`📚 Total Homework: ${allHomework.length} (For all 8 Classes)`);
+    
     // ===================== ALL TABLES =====================
     const allTables = {
         fee_structures: FEE_STRUCTURES_DATA,
@@ -5960,6 +6152,7 @@ window.forceUploadToSupabase = async function() {
         employees: allEmployees,
         notifications: allNotifications,
         feedbacks: allFeedbacks,
+        homework: allHomework,  // ✅ UPDATED: All 8 Classes homework
         attendance: [
             { id: 'ATT001', date: '2026-06-10', student_name: 'Aarav Sharma', status: 'Present', class: 'Playgroup A', marked_by: 'Priya Sharma', created_at: new Date().toISOString() },
             { id: 'ATT002', date: '2026-06-10', student_name: 'Advik Verma', status: 'Present', class: 'Playgroup A', marked_by: 'Priya Sharma', created_at: new Date().toISOString() },
@@ -5979,10 +6172,6 @@ window.forceUploadToSupabase = async function() {
             { id: 'LGR001', date: '2026-04-01', description: 'Opening Balance', debit: 0, credit: 500000, balance: 500000, created_at: new Date().toISOString() },
             { id: 'LGR002', date: '2026-04-10', description: 'Fee Collection - Aarav Sharma', debit: 0, credit: 25000, balance: 525000, created_at: new Date().toISOString() },
             { id: 'LGR003', date: '2026-04-05', description: 'Stationery Purchase', debit: 5000, credit: 0, balance: 520000, created_at: new Date().toISOString() }
-        ],
-        homework: [
-            { id: 'HW001', title: 'Math Practice', subject: 'Mathematics', class: 'Playgroup A', due_date: '2026-06-15', description: 'Solve pages 10-15', status: 'Pending', created_by: 'Priya Sharma', created_at: new Date().toISOString() },
-            { id: 'HW002', title: 'English Reading', subject: 'English', class: 'Playgroup B', due_date: '2026-06-16', description: 'Read chapter 1-3', status: 'Pending', created_by: 'Neha Gupta', created_at: new Date().toISOString() }
         ],
         leaves: [
             { id: 'LEV001', emp_name: 'Priya Sharma', type: 'Sick Leave', from_date: '2026-04-10', to_date: '2026-04-12', days: 3, status: 'Approved', reason: 'Fever', applied_on: '2026-04-05', document_url: docs.medical || null, created_at: new Date().toISOString() },
@@ -6176,6 +6365,7 @@ window.forceUploadToSupabase = async function() {
                 <p>🏛️ Fee Structures: ${FEE_STRUCTURES_DATA.length} records</p>
                 <p>🔔 Notifications: ${allNotifications.length} records</p>
                 <p>🗣️ Feedbacks: ${allFeedbacks.length} records</p>
+                <p>📚 Homework: ${allHomework.length} records (All 8 Classes)</p>
                 <p>📚 Total Records: ${totalRecords}</p>
                 <p style="color: #10b981; font-size: 11px; margin-top: 5px;">
                     <i class="fas fa-check-circle"></i> ✅ All 40 Students have COMPLETELY UNIQUE names!
@@ -6188,6 +6378,9 @@ window.forceUploadToSupabase = async function() {
                 </p>
                 <p style="color: #10b981; font-size: 11px; margin-top: 5px;">
                     <i class="fas fa-check-circle"></i> ✅ <strong>total_paid_fee</strong> column added to students table!
+                </p>
+                <p style="color: #10b981; font-size: 11px; margin-top: 5px;">
+                    <i class="fas fa-check-circle"></i> ✅ <strong>16 Homework</strong> uploaded for all 8 Classes!
                 </p>
                 <div style="background: #dbeafe; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 11px;">
                     <strong>💰 Fee Structures Uploaded:</strong><br>
@@ -6217,6 +6410,17 @@ window.forceUploadToSupabase = async function() {
                     📌 FB010 - Sports Equipment Request (Suggestion, Medium)<br>
                     📌 FDB001 - Library Books (Suggestion, Medium)
                 </div>
+                <div style="background: #d1fae5; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 11px;">
+                    <strong>📚 Homework Uploaded (All 8 Classes):</strong><br>
+                    📌 Playgroup A: HW001 (Math), HW002 (English)<br>
+                    📌 Playgroup B: HW003 (Drawing), HW004 (Hindi)<br>
+                    📌 Nursery A: HW005 (Science), HW006 (English)<br>
+                    📌 Nursery B: HW007 (Social Studies), HW008 (Hindi)<br>
+                    📌 KG1 A: HW009 (English), HW010 (Math)<br>
+                    📌 KG1 B: HW011 (Science), HW012 (English)<br>
+                    📌 KG2 A: HW013 (Hindi), HW014 (Math)<br>
+                    📌 KG2 B: HW015 (Computer), HW016 (Social Studies)
+                </div>
             </div>
             ${errorMessages.length > 0 ? `<div style="background: #fef2f2; padding: 10px; border-radius: 8px; margin-top: 10px; color: #991b1b;">
                 <strong>⚠️ Errors:</strong><br>${errorMessages.join('<br>')}
@@ -6240,9 +6444,11 @@ console.log('💰 Fees: 40 records with dynamic fee calculation');
 console.log('🏛️ Fee Structures: 4 classes (Playgroup, Nursery, KG1, KG2)');
 console.log('🔔 Notifications: 5 records');
 console.log('🗣️ Feedbacks: 11 records');
+console.log('📚 Homework: 16 records (All 8 Classes - Playgroup A to KG2 B)');
 console.log('✅ Fee is calculated dynamically based on class and transport preference!');
 console.log('✅ total_paid_fee column added to students table!');
 console.log('✅ All data matches the SQL queries provided!');
+// ===================== PART 03-I- ENDS HERE ====================================================================
 // ===================== PART 03-I- ENDS HERE ====================================================================
 //=========================================START PART 03-J- ==================================================================
 // ======================= PART 3J: BUTTON 2 - UPLOAD SAMPLE IMAGES & DOCUMENTS =======================
@@ -22009,7 +22215,18 @@ console.log('   ✅ Fully Responsive - Web + Android APK');
 
 // ======================= PART 10 ENDS HERE =======================
 // ======================= PART 10 ENDS HERE =======================
-// ======================= PART 11: HOMEWORK MODULE WITH SUPABASE SYNC (TABLE STRUCTURE FIXED) =======================
+// ======================= PART 11: HOMEWORK MODULE (STUDENT VIEW - UPDATED) =======================
+// ✅ FEATURES:
+// 1. ✅ Admin - Full CRUD (Add, Edit, Delete)
+// 2. ✅ Teacher - Full CRUD (Add, Edit, Delete) for their class
+// 3. ✅ Student - View Only (No Submit, Only Download + Share)
+// 4. ✅ Camera + Gallery + PDF Upload (Admin/Teacher)
+// 5. ✅ Crop Image - फोटो को क्रॉप करें
+// 6. ✅ Responsive - Mobile, Tablet, Desktop
+// 7. ✅ Android WebView Compatible
+// ============================================================
+
+// ======================= GLOBAL VARIABLES =======================
 let homeworkFilterText = '';
 let homeworkCurrentPage = 1;
 let homeworkTotalPages = 1;
@@ -22017,7 +22234,24 @@ let homeworkItemsPerPage = 10;
 let hwStatusChart = null;
 let hwDueChart = null;
 
+// Make sure homework array exists globally
+if (typeof window.homework === 'undefined') {
+    window.homework = [];
+    console.log('✅ Initialized homework array');
+}
+var homework = window.homework;
+
 // ======================= HELPER FUNCTIONS =======================
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
 function dataURLtoBlob(dataURL) {
     const arr = dataURL.split(',');
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -22060,9 +22294,343 @@ async function compressImage(dataUrl, maxWidth, maxHeight, quality) {
     });
 }
 
+function downloadFile(dataUrl, filename) {
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function showLoader() { 
+    const loader = document.getElementById('loader'); 
+    if(loader) loader.style.display = 'flex'; 
+}
+
+function hideLoader() { 
+    const loader = document.getElementById('loader'); 
+    if(loader) loader.style.display = 'none'; 
+}
+
+function showNotification(msg, type) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({ toast: true, position: 'top-end', icon: type, title: msg, showConfirmButton: false, timer: 3000 });
+    } else {
+        console.log(`[${type}] ${msg}`);
+        alert(msg);
+    }
+}
+
+function saveAllData() {
+    try {
+        if (typeof window.homework !== 'undefined') {
+            localStorage.setItem('cache_homework', JSON.stringify(window.homework));
+        }
+    } catch(e) {
+        console.error('Save data error:', e);
+    }
+}
+
+// ======================= GET SUPABASE CLIENT =======================
+function getSupabaseClientHomework() {
+    if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) return window.supabaseClient;
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) return supabaseClient;
+    if (typeof supabase !== 'undefined' && supabase.createClient) {
+        try {
+            const url = "https://hghwbysjvkqcxdoqwkim.supabase.co";
+            const key = "sb_publishable_6T05auZDBn2okYevOxMjUg_TIF9nZ1w";
+            window.supabaseClient = supabase.createClient(url, key);
+            console.log('✅ Supabase client initialized for Homework');
+            return window.supabaseClient;
+        } catch(e) {
+            console.error('Supabase init error:', e);
+        }
+    }
+    return null;
+}
+
+// ======================= ✅ CAMERA + GALLERY + PDF UPLOAD FUNCTION =======================
+function openHomeworkAttachmentUpload(callback) {
+    console.log('📎 openHomeworkAttachmentUpload called...');
+    
+    const sourceModal = document.createElement('div');
+    sourceModal.className = 'modal-overlay';
+    sourceModal.style.zIndex = '100001';
+    sourceModal.style.cssText = `
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        right: 0; 
+        bottom: 0; 
+        background: rgba(0,0,0,0.6); 
+        backdrop-filter: blur(4px); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        z-index: 100001; 
+        padding: 16px;
+        animation: modalFadeIn 0.25s ease;
+    `;
+    
+    sourceModal.innerHTML = `
+        <div style="
+            background: var(--bg-surface, #ffffff); 
+            border-radius: 28px; 
+            width: 90%; 
+            max-width: 350px; 
+            padding: 24px; 
+            text-align: center; 
+            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);
+        ">
+            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto;">
+                <i class="fas fa-upload" style="font-size: 28px; color: white;"></i>
+            </div>
+            <h3 style="margin-bottom: 6px; color: #1e293b; font-size: 18px;">Choose Upload Source</h3>
+            <p style="color: #64748b; font-size: 13px; margin-bottom: 18px;">Upload attachment for homework</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="cameraOptBtn" class="btn btn-primary" style="
+                    width: 100%; 
+                    padding: 14px; 
+                    border-radius: 30px; 
+                    font-size: 14px; 
+                    font-weight: 600;
+                    border: none;
+                    cursor: pointer;
+                    background: linear-gradient(135deg, #2563eb, #1e40af);
+                    color: white;
+                    transition: all 0.2s;
+                ">
+                    <i class="fas fa-camera"></i> 📸 Take Photo
+                </button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="
+                    width: 100%; 
+                    padding: 14px; 
+                    border-radius: 30px; 
+                    font-size: 14px; 
+                    font-weight: 600;
+                    border: none;
+                    cursor: pointer;
+                    background: #64748b;
+                    color: white;
+                    transition: all 0.2s;
+                ">
+                    <i class="fas fa-images"></i> 🖼️ Choose from Gallery
+                </button>
+                <button id="pdfOptBtn" class="btn btn-info" style="
+                    width: 100%; 
+                    padding: 14px; 
+                    border-radius: 30px; 
+                    font-size: 14px; 
+                    font-weight: 600;
+                    border: none;
+                    cursor: pointer;
+                    background: #8b5cf6;
+                    color: white;
+                    transition: all 0.2s;
+                ">
+                    <i class="fas fa-file-pdf"></i> 📄 Upload PDF
+                </button>
+            </div>
+            
+            <button id="closeSourceModal" style="
+                margin-top: 16px; 
+                background: none; 
+                border: none; 
+                color: #64748b; 
+                cursor: pointer; 
+                padding: 10px; 
+                font-size: 14px;
+                transition: all 0.2s;
+            ">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    `;
+    document.body.appendChild(sourceModal);
+    
+    const closeSourceModal = () => {
+        if (sourceModal.parentNode) {
+            sourceModal.style.opacity = '0';
+            sourceModal.style.transition = 'opacity 0.2s ease';
+            setTimeout(() => {
+                if (sourceModal.parentNode) sourceModal.remove();
+            }, 200);
+        }
+    };
+    
+    const openFileInput = (useCamera, acceptType) => {
+        closeSourceModal();
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = acceptType;
+        if (useCamera && acceptType.startsWith('image/')) {
+            input.setAttribute('capture', 'environment');
+        }
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const cropModal = document.createElement('div');
+                    cropModal.className = 'modal-overlay';
+                    cropModal.style.zIndex = '100002';
+                    cropModal.style.cssText = `
+                        position: fixed; 
+                        top: 0; 
+                        left: 0; 
+                        right: 0; 
+                        bottom: 0; 
+                        background: rgba(0,0,0,0.7); 
+                        backdrop-filter: blur(4px); 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        z-index: 100002; 
+                        padding: 16px;
+                        animation: modalFadeIn 0.25s ease;
+                    `;
+                    
+                    cropModal.innerHTML = `
+                        <div style="
+                            background: var(--bg-surface, #ffffff); 
+                            border-radius: 24px; 
+                            max-width: 500px; 
+                            width: 95%; 
+                            text-align: center; 
+                            padding: 0; 
+                            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);
+                            overflow: hidden;
+                        ">
+                            <div style="
+                                background: linear-gradient(135deg, #2563eb, #1e40af); 
+                                padding: 15px 20px; 
+                                display: flex; 
+                                justify-content: space-between; 
+                                align-items: center;
+                            ">
+                                <h2 style="color: white; margin: 0; font-size: 18px;">
+                                    <i class="fas fa-crop-alt"></i> Crop Image
+                                </h2>
+                                <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="
+                                    background: rgba(255,255,255,0.2); 
+                                    color: white; 
+                                    border: none; 
+                                    width: 32px; 
+                                    height: 32px; 
+                                    border-radius: 50%; 
+                                    cursor: pointer; 
+                                    font-size: 18px;
+                                    transition: all 0.2s;
+                                ">&times;</button>
+                            </div>
+                            <div style="padding: 20px;">
+                                <img id="cropHomeworkImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                    <button id="cropSaveBtn" class="btn btn-primary" style="
+                                        padding: 10px 24px; 
+                                        border-radius: 30px; 
+                                        font-size: 14px; 
+                                        font-weight: 600;
+                                        border: none;
+                                        cursor: pointer;
+                                        background: linear-gradient(135deg, #10b981, #059669);
+                                        color: white;
+                                        transition: all 0.2s;
+                                    ">
+                                        <i class="fas fa-check"></i> ✂️ Crop & Save
+                                    </button>
+                                    <button id="cancelBtn" class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="
+                                        padding: 10px 24px; 
+                                        border-radius: 30px; 
+                                        font-size: 14px; 
+                                        font-weight: 600;
+                                        border: none;
+                                        cursor: pointer;
+                                        background: #ef4444;
+                                        color: white;
+                                        transition: all 0.2s;
+                                    ">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(cropModal);
+                    
+                    const img = document.getElementById('cropHomeworkImg');
+                    let cropper = new Cropper(img, { 
+                        aspectRatio: null, 
+                        viewMode: 1,
+                        autoCropArea: 1,
+                        movable: true,
+                        zoomable: true,
+                        rotatable: false,
+                        scalable: false
+                    });
+                    
+                    document.getElementById('cropSaveBtn').onclick = function() {
+                        try {
+                            const canvas = cropper.getCroppedCanvas();
+                            const croppedData = canvas.toDataURL('image/jpeg', 0.9);
+                            cropper.destroy();
+                            cropModal.remove();
+                            callback(croppedData, file.name, file.type);
+                        } catch(err) {
+                            console.error('Crop error:', err);
+                            showNotification('Error cropping image. Please try again.', 'error');
+                            cropModal.remove();
+                        }
+                    };
+                    
+                    document.getElementById('cancelBtn').onclick = function() {
+                        if (cropper) cropper.destroy();
+                        cropModal.remove();
+                    };
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // PDF or other non-image files
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    callback(ev.target.result, file.name, file.type);
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+    
+    document.getElementById('cameraOptBtn').onclick = function() {
+        openFileInput(true, 'image/jpeg,image/jpg,image/png');
+    };
+    
+    document.getElementById('galleryOptBtn').onclick = function() {
+        openFileInput(false, 'image/jpeg,image/jpg,image/png');
+    };
+    
+    document.getElementById('pdfOptBtn').onclick = function() {
+        openFileInput(false, 'application/pdf');
+    };
+    
+    document.getElementById('closeSourceModal').onclick = closeSourceModal;
+    
+    // Close modal on outside click
+    sourceModal.addEventListener('click', function(e) {
+        if (e.target === sourceModal) {
+            closeSourceModal();
+        }
+    });
+}
+
 // ======================= UPLOAD TO SUPABASE STORAGE =======================
 async function uploadToSupabaseStorage(fileData, fileName, fileType, homeworkId, className) {
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClientHomework();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Attachment saved locally');
         return null;
     }
@@ -22083,13 +22651,19 @@ async function uploadToSupabaseStorage(fileData, fileName, fileType, homeworkId,
         
         console.log('📤 Uploading to storage:', fullPath);
         
-        const { error } = await supabaseClient.storage
+        const { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets.some(b => b.name === 'homework_attachments')) {
+            await supabase.storage.createBucket('homework_attachments', { public: true });
+            console.log('✅ Created homework_attachments bucket');
+        }
+        
+        const { error } = await supabase.storage
             .from('homework_attachments')
             .upload(fullPath, blob, { upsert: true, contentType: fileType });
         
         if (error) throw error;
         
-        const { data: urlData } = supabaseClient.storage
+        const { data: urlData } = supabase.storage
             .from('homework_attachments')
             .getPublicUrl(fullPath);
         
@@ -22102,22 +22676,19 @@ async function uploadToSupabaseStorage(fileData, fileName, fileType, homeworkId,
     }
 }
 
-// ======================= SAVE TO SUPABASE TABLE (NO updated_at COLUMN) =======================
+// ======================= SAVE TO SUPABASE TABLE =======================
 async function saveHomeworkToSupabaseTable(homeworkData) {
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClientHomework();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Will sync when online');
+        addToPendingQueue('homework', 'upsert', homeworkData);
         return false;
     }
     
     try {
-        console.log('📤 Saving to Supabase Table:', {
-            id: homeworkData.id,
-            title: homeworkData.title,
-            attachment_url: homeworkData.attachmentUrl
-        });
+        console.log('📤 Saving to Supabase Table:', homeworkData.title);
         
-        // Only use columns that exist in your table
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabase
             .from('homework')
             .upsert({
                 id: homeworkData.id,
@@ -22130,7 +22701,6 @@ async function saveHomeworkToSupabaseTable(homeworkData) {
                 attachment_url: homeworkData.attachmentUrl || null,
                 created_by: currentUser?.name || 'admin',
                 created_at: homeworkData.createdAt || new Date().toISOString()
-                // Removed updated_at column - not in your table
             });
         
         if (error) {
@@ -22144,17 +22714,37 @@ async function saveHomeworkToSupabaseTable(homeworkData) {
         
     } catch(e) {
         console.error('Table save error:', e);
-        showNotification('❌ Failed to save to database: ' + e.message, 'error');
+        addToPendingQueue('homework', 'upsert', homeworkData);
+        showNotification('❌ Failed to save to database. Added to pending queue.', 'error');
         return false;
     }
 }
 
 // ======================= LOAD FROM SUPABASE TABLE =======================
 async function loadHomeworkFromSupabaseTable() {
-    if (!supabaseClient) return;
+    const supabase = getSupabaseClientHomework();
+    if (!supabase) return false;
+    
+    if (!navigator.onLine) {
+        console.log('📴 Offline - Loading from cache');
+        const cached = localStorage.getItem('cache_homework');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                window.homework.length = 0;
+                for (let item of parsed) {
+                    window.homework.push(item);
+                }
+                console.log(`📦 Loaded ${window.homework.length} homework from cache`);
+                return true;
+            } catch(e) {}
+        }
+        return false;
+    }
     
     try {
-        const { data, error } = await supabaseClient
+        console.log('🔄 Loading from Supabase homework table...');
+        const { data, error } = await supabase
             .from('homework')
             .select('*')
             .order('created_at', { ascending: false });
@@ -22165,7 +22755,7 @@ async function loadHomeworkFromSupabaseTable() {
             console.log('📥 Loaded from Supabase Table:', data.length, 'records');
             
             for (let item of data) {
-                const existingIndex = homework.findIndex(ex => ex.id === item.id);
+                const existingIndex = window.homework.findIndex(ex => ex.id === item.id);
                 const homeworkObj = {
                     id: item.id,
                     title: item.title,
@@ -22176,29 +22766,168 @@ async function loadHomeworkFromSupabaseTable() {
                     status: item.status,
                     attachmentUrl: item.attachment_url || null,
                     createdAt: item.created_at,
-                    submission: null
+                    submission: null,
+                    createdBy: item.created_by || 'admin'
                 };
                 
                 if (existingIndex === -1) {
-                    homework.push(homeworkObj);
+                    window.homework.push(homeworkObj);
                 } else {
-                    homework[existingIndex] = { ...homework[existingIndex], ...homeworkObj };
+                    window.homework[existingIndex] = { ...window.homework[existingIndex], ...homeworkObj };
                 }
             }
-            saveAllData();
-            console.log('✅ Homework loaded from Supabase Table');
+            localStorage.setItem('cache_homework', JSON.stringify(window.homework));
+            console.log(`✅ Loaded ${window.homework.length} homework from Supabase Table`);
+            return true;
+        } else {
+            console.log('📭 No homework found in Supabase, loading sample data...');
+            loadSampleHomeworkData();
+            return true;
         }
     } catch(e) {
         console.error('Error loading from Supabase:', e);
+        loadSampleHomeworkData();
+        return false;
     }
+}
+
+// ======================= SAMPLE HOMEWORK DATA =======================
+function loadSampleHomeworkData() {
+    console.log('📚 Loading sample homework data...');
+    
+    if (window.homework && window.homework.length > 0) {
+        console.log('📚 Homework data already exists, skipping sample data');
+        return;
+    }
+    
+    const sampleHomework = [
+        {
+            id: 'HW_SAMPLE_001',
+            title: 'Math Practice - Chapter 1',
+            subject: 'Mathematics',
+            class: 'Playgroup A',
+            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: 'Solve all questions from Chapter 1 (Numbers 1-20). Practice writing numbers in words.',
+            status: 'Pending',
+            createdAt: new Date().toISOString(),
+            createdBy: 'Priya Sharma',
+            attachmentUrl: null,
+            attachment: null
+        },
+        {
+            id: 'HW_SAMPLE_002',
+            title: 'English Reading - My Family',
+            subject: 'English',
+            class: 'Playgroup A',
+            dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: 'Read the story "My Family" and answer the questions given at the end.',
+            status: 'Pending',
+            createdAt: new Date().toISOString(),
+            createdBy: 'Priya Sharma',
+            attachmentUrl: null,
+            attachment: null
+        },
+        {
+            id: 'HW_SAMPLE_003',
+            title: 'Science Project - Plants',
+            subject: 'Science',
+            class: 'Playgroup B',
+            dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: 'Draw 5 different plants and write their names. Paste real leaves if possible.',
+            status: 'Pending',
+            createdAt: new Date().toISOString(),
+            createdBy: 'Neha Gupta',
+            attachmentUrl: null,
+            attachment: null
+        },
+        {
+            id: 'HW_SAMPLE_004',
+            title: 'Hindi Writing - Swar',
+            subject: 'Hindi',
+            class: 'Nursery A',
+            dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: 'Practice writing all Hindi swar (अ, आ, इ, ई, उ, ऊ, ऋ, ए, ऐ, ओ, औ). Write 5 times each.',
+            status: 'Pending',
+            createdAt: new Date().toISOString(),
+            createdBy: 'Rajesh Singh',
+            attachmentUrl: null,
+            attachment: null
+        },
+        {
+            id: 'HW_SAMPLE_005',
+            title: 'Computer - MS Paint',
+            subject: 'Computer',
+            class: 'KG1 A',
+            dueDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: 'Draw a beautiful scenery using MS Paint. Use at least 5 different tools.',
+            status: 'Completed',
+            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            createdBy: 'Anjali Kapoor',
+            attachmentUrl: null,
+            attachment: null
+        },
+        {
+            id: 'HW_SAMPLE_006',
+            title: 'Social Studies - Our Helpers',
+            subject: 'Social Studies',
+            class: 'KG2 A',
+            dueDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: 'List 10 community helpers and write one sentence about each.',
+            status: 'Pending',
+            createdAt: new Date().toISOString(),
+            createdBy: 'Meera Nair',
+            attachmentUrl: null,
+            attachment: null
+        },
+        {
+            id: 'HW_SAMPLE_007',
+            title: 'Drawing - Animal Sketch',
+            subject: 'Drawing',
+            class: 'Playgroup A',
+            dueDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: 'Draw any 5 animals of your choice. Color them beautifully.',
+            status: 'Pending',
+            createdAt: new Date().toISOString(),
+            createdBy: 'Priya Sharma',
+            attachmentUrl: null,
+            attachment: null
+        },
+        {
+            id: 'HW_SAMPLE_008',
+            title: 'Math - Addition Practice',
+            subject: 'Mathematics',
+            class: 'Playgroup A',
+            dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            description: 'Solve all addition sums from page 15-20 of your math book.',
+            status: 'Pending',
+            createdAt: new Date().toISOString(),
+            createdBy: 'Priya Sharma',
+            attachmentUrl: null,
+            attachment: null
+        }
+    ];
+    
+    for (let item of sampleHomework) {
+        const exists = window.homework.some(h => h.id === item.id);
+        if (!exists) {
+            window.homework.push(item);
+        }
+    }
+    
+    localStorage.setItem('cache_homework', JSON.stringify(window.homework));
+    console.log(`✅ Loaded ${sampleHomework.length} sample homework records`);
 }
 
 // ======================= DELETE FROM SUPABASE TABLE =======================
 async function deleteHomeworkFromSupabaseTable(homeworkId) {
-    if (!supabaseClient || !navigator.onLine) return false;
+    const supabase = getSupabaseClientHomework();
+    if (!supabase || !navigator.onLine) {
+        addToPendingQueue('homework', 'delete', { id: homeworkId });
+        return false;
+    }
     
     try {
-        const { error } = await supabaseClient
+        const { error } = await supabase
             .from('homework')
             .delete()
             .eq('id', homeworkId);
@@ -22208,27 +22937,192 @@ async function deleteHomeworkFromSupabaseTable(homeworkId) {
         return true;
     } catch(e) {
         console.error('Delete error:', e);
+        addToPendingQueue('homework', 'delete', { id: homeworkId });
         return false;
     }
 }
 
-// ======================= LOAD HOMEWORK MANAGEMENT =======================
-function loadHomeworkManagement() {
-    if (!currentUser) return;
+// ======================= PROCESS PENDING QUEUE =======================
+async function processPendingHomeworkQueue() {
+    if (!navigator.onLine) return;
     
-    document.getElementById('moduleContent').innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Loading homework...</div>';
+    const supabase = getSupabaseClientHomework();
+    if (!supabase) return;
     
-    // First load from Supabase if online
-    if (supabaseClient && navigator.onLine) {
-        loadHomeworkFromSupabaseTable().then(() => {
-            renderHomeworkView();
-        });
-    } else {
-        renderHomeworkView();
+    let allPending = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
+    let pendingItems = allPending.filter(item => item.table === 'homework');
+    
+    if (pendingItems.length === 0) return;
+    
+    console.log(`🔄 Processing ${pendingItems.length} pending homework operations...`);
+    let completedIds = [];
+    let successCount = 0;
+    
+    for (const item of pendingItems) {
+        try {
+            if (item.operation === 'upsert') {
+                const { error } = await supabase
+                    .from('homework')
+                    .upsert({
+                        id: item.data.id,
+                        title: item.data.title,
+                        subject: item.data.subject,
+                        class: item.data.class || '',
+                        due_date: item.data.dueDate,
+                        description: item.data.description || '',
+                        status: item.data.status || 'Pending',
+                        attachment_url: item.data.attachmentUrl || null,
+                        created_by: currentUser?.name || 'admin',
+                        created_at: item.data.createdAt || new Date().toISOString()
+                    });
+                
+                if (!error) {
+                    completedIds.push(item.id);
+                    successCount++;
+                    console.log(`✅ Synced: ${item.data.title}`);
+                }
+            }
+            else if (item.operation === 'delete') {
+                const { error } = await supabase.from('homework').delete().eq('id', item.data.id);
+                if (!error) {
+                    completedIds.push(item.id);
+                    successCount++;
+                    console.log(`✅ Deleted: ${item.data.id}`);
+                }
+            }
+        } catch(err) {
+            console.error('Pending error:', err);
+        }
+        await new Promise(r => setTimeout(r, 100));
+    }
+    
+    allPending = allPending.filter(item => !completedIds.includes(item.id));
+    localStorage.setItem('pendingSyncQueue', JSON.stringify(allPending));
+    
+    if (successCount > 0) {
+        showNotification(`✅ ${successCount} homework records synced to cloud!`, 'success');
     }
 }
 
+// ======================= FORCE LOAD STUDENTS =======================
+async function forceLoadStudents() {
+    console.log('🔄 forceLoadStudents called...');
+    
+    if (typeof loadStudentsFromSupabase === 'function') {
+        await loadStudentsFromSupabase();
+    }
+    
+    if (!window.students || window.students.length === 0) {
+        const cached = localStorage.getItem('cache_students');
+        if (cached) {
+            try {
+                window.students = JSON.parse(cached);
+                console.log(`📦 Loaded ${window.students.length} students from cache`);
+            } catch(e) {}
+        }
+    }
+    
+    return window.students || [];
+}
+
+// ======================= FORCE LOAD EMPLOYEES =======================
+async function forceLoadEmployees() {
+    console.log('🔄 forceLoadEmployees called...');
+    
+    if (typeof loadEmployeesFromSupabase === 'function') {
+        await loadEmployeesFromSupabase();
+    }
+    
+    if (!window.employees || window.employees.length === 0) {
+        const cached = localStorage.getItem('cache_employees');
+        if (cached) {
+            try {
+                window.employees = JSON.parse(cached);
+                console.log(`📦 Loaded ${window.employees.length} employees from cache`);
+            } catch(e) {}
+        }
+    }
+    
+    return window.employees || [];
+}
+
+// ======================= LOAD HOMEWORK MANAGEMENT =======================
+async function loadHomeworkManagement() {
+    console.log('📋 loadHomeworkManagement called');
+    
+    if (!currentUser) {
+        document.getElementById('moduleContent').innerHTML = `
+            <div class="profile-card" style="text-align:center; padding:40px;">
+                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
+                <h3>Please Login First</h3>
+                <button class="btn btn-primary btn-sm" onclick="showDashboard()">Back to Dashboard</button>
+            </div>
+        `;
+        return;
+    }
+    
+    if (currentUser.role !== 'admin' && currentUser.role !== 'teacher' && currentUser.role !== 'student') {
+        document.getElementById('moduleContent').innerHTML = `
+            <div class="profile-card" style="text-align:center; padding:40px;">
+                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
+                <h3>⛔ Access Denied</h3>
+                <p>Only administrators, teachers, and students can access this module.</p>
+                <button class="btn btn-primary btn-sm" onclick="showDashboard()">Back to Dashboard</button>
+            </div>
+        `;
+        return;
+    }
+    
+    showLoader();
+    
+    await forceLoadStudents();
+    await forceLoadEmployees();
+    
+    document.getElementById('moduleContent').innerHTML = `
+        <div style="text-align:center; padding:40px;">
+            <i class="fas fa-spinner fa-spin" style="font-size:32px; color:var(--primary);"></i>
+            <h3 style="margin-top:16px;">Loading Homework...</h3>
+            <p style="color:var(--text-secondary);">Please wait...</p>
+        </div>
+    `;
+    
+    try {
+        if (navigator.onLine && supabaseClient) {
+            await loadHomeworkFromSupabaseTable();
+            await processPendingHomeworkQueue();
+        } else {
+            const cached = localStorage.getItem('cache_homework');
+            if (cached) {
+                try {
+                    window.homework = JSON.parse(cached);
+                    console.log(`📦 Loaded ${window.homework.length} homework from cache (offline)`);
+                } catch(e) {
+                    window.homework = [];
+                }
+            }
+            if (window.homework.length === 0) {
+                loadSampleHomeworkData();
+            }
+        }
+        
+        renderHomeworkView();
+        hideLoader();
+        console.log(`✅ Homework loaded: ${window.homework.length} records`);
+        
+    } catch (error) {
+        console.error('❌ Error loading homework:', error);
+        if (window.homework.length === 0) {
+            loadSampleHomeworkData();
+            renderHomeworkView();
+        }
+        hideLoader();
+    }
+}
+
+// ======================= RENDER HOMEWORK VIEW =======================
 function renderHomeworkView() {
+    console.log('🎨 renderHomeworkView called - homework count:', window.homework?.length || 0);
+    
     let filteredHomework = [];
     
     if (currentUser.role === 'admin') {
@@ -22240,8 +23134,17 @@ function renderHomeworkView() {
         }
     } 
     else if (currentUser.role === 'teacher') {
-        let teacher = employees.find(e => e.name === currentUser.name);
-        let myClass = teacher?.classTeacher || '';
+        let myClass = '';
+        if (currentUser.class_teacher) {
+            myClass = currentUser.class_teacher;
+        } else if (window.employees) {
+            let teacher = window.employees.find(e => e.name === currentUser.name);
+            if (teacher && teacher.class_teacher) {
+                myClass = teacher.class_teacher;
+                currentUser.class_teacher = myClass;
+            }
+        }
+        
         for (let i = 0; i < homework.length; i++) {
             let h = homework[i];
             let matchesSearch = homeworkFilterText === '' || h.title.toLowerCase().includes(homeworkFilterText.toLowerCase()) || h.subject.toLowerCase().includes(homeworkFilterText.toLowerCase());
@@ -22252,8 +23155,14 @@ function renderHomeworkView() {
         }
     }
     else if (currentUser.role === 'student') {
-        let student = students.find(s => s.name === currentUser.name);
-        let myClass = student ? `${student.cls} ${student.sec}` : '';
+        let myClass = '';
+        if (window.students) {
+            let student = window.students.find(s => s.name === currentUser.name);
+            if (student) {
+                myClass = `${student.cls || ''} ${student.sec || ''}`.trim();
+            }
+        }
+        
         for (let i = 0; i < homework.length; i++) {
             let h = homework[i];
             let matchesSearch = homeworkFilterText === '' || h.title.toLowerCase().includes(homeworkFilterText.toLowerCase()) || h.subject.toLowerCase().includes(homeworkFilterText.toLowerCase());
@@ -22275,7 +23184,6 @@ function renderHomeworkView() {
     let total = filteredHomework.length;
     let pending = filteredHomework.filter(h => h.status === 'Pending').length;
     let completed = filteredHomework.filter(h => h.status === 'Completed').length;
-    let totalSubmissions = filteredHomework.filter(h => h.submission).length;
     let completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
     
     let dueData = [0,0,0,0,0,0,0];
@@ -22288,199 +23196,156 @@ function renderHomeworkView() {
         }
     }
     
+    let teacherClass = '';
+    if (currentUser.role === 'teacher') {
+        teacherClass = currentUser.class_teacher || '';
+        if (!teacherClass && window.employees) {
+            let teacher = window.employees.find(e => e.name === currentUser.name);
+            if (teacher) teacherClass = teacher.class_teacher || '';
+        }
+    }
+    
+    let studentClass = '';
+    if (currentUser.role === 'student') {
+        if (window.students) {
+            let student = window.students.find(s => s.name === currentUser.name);
+            if (student) studentClass = `${student.cls || ''} ${student.sec || ''}`.trim();
+        }
+    }
+    
+    // ✅ FIXED: Check if current user can add/edit/delete
+    let canAddEditDelete = (currentUser.role === 'admin' || currentUser.role === 'teacher');
+    
     let content = `
         <style>
             .hw-summary-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                gap: 12px;
-                margin-bottom: 20px;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 10px;
+                margin-bottom: 16px;
             }
             .hw-summary-card {
                 background: linear-gradient(135deg, var(--primary), var(--secondary));
-                border-radius: 20px;
-                padding: 16px;
+                border-radius: 16px;
+                padding: 14px;
                 text-align: center;
                 color: white;
             }
-            .hw-summary-number {
-                font-size: 28px;
-                font-weight: bold;
+            .hw-summary-number { font-size: 24px; font-weight: bold; }
+            .hw-summary-label { font-size: 11px; opacity: 0.9; }
+            .hw-progress-container { background: #e2e8f0; border-radius: 8px; height: 6px; overflow: hidden; margin: 8px 0; }
+            .hw-progress-bar { height: 6px; background: linear-gradient(90deg, #10b981, #059669); width: ${completionRate}%; border-radius: 8px; }
+            .chart-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 14px 0; }
+            .chart-card { background: var(--bg-surface); border-radius: 16px; padding: 14px; border: 1px solid var(--border-light); }
+            .chart-card h3 { font-size: 13px; margin-bottom: 10px; color: var(--text-primary); }
+            .chart-card canvas { max-height: 180px; }
+            .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; display: inline-flex; align-items: center; gap: 5px; }
+            .offline-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; display: inline-flex; align-items: center; gap: 5px; }
+            .role-badge { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; }
+            .download-btn { background: #10b981 !important; color: white !important; }
+            
+            /* ✅ STUDENT VIEW - Disable action buttons */
+            .student-view .action-chip.edit-btn { display: none !important; }
+            .student-view .action-chip.delete-btn { display: none !important; }
+            .student-view .action-chip.submit-btn { display: none !important; }
+            
+            @media (max-width: 768px) {
+                .action-buttons { flex-direction: column !important; gap: 8px !important; }
+                .action-buttons .search-box { width: 100% !important; padding: 12px 16px 12px 40px !important; font-size: 14px !important; }
+                .action-buttons .btn-sm { width: 100% !important; padding: 12px !important; font-size: 13px !important; text-align: center !important; justify-content: center !important; }
+                .hw-summary-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+                .hw-summary-card { padding: 12px !important; }
+                .hw-summary-number { font-size: 20px !important; }
+                .chart-container { grid-template-columns: 1fr !important; gap: 12px !important; }
+                .chart-card { padding: 12px !important; }
+                .chart-card h3 { font-size: 12px !important; }
+                .chart-card canvas { max-height: 160px !important; }
+                .data-card .card-header { flex-direction: column !important; text-align: center !important; }
+                .data-card .card-photo { margin: 0 auto !important; }
+                .data-card .card-actions { justify-content: center !important; flex-wrap: wrap !important; }
+                .data-card .card-actions .action-chip { font-size: 10px !important; padding: 5px 10px !important; }
+                .data-card .info-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+                .online-badge, .offline-badge { font-size: 9px !important; padding: 3px 10px !important; }
+                .custom-modal { max-width: 95% !important; border-radius: 20px !important; }
+                .custom-modal-header { padding: 14px 16px !important; }
+                .custom-modal-header h2 { font-size: 16px !important; }
+                .custom-modal-body { padding: 16px !important; }
+                .custom-form-row { grid-template-columns: 1fr !important; gap: 10px !important; }
+                .custom-modal-footer { flex-direction: column !important; gap: 8px !important; }
+                .custom-modal-footer button { width: 100% !important; padding: 12px !important; }
+                .swal2-popup { width: 95% !important; padding: 12px !important; border-radius: 16px !important; }
+                .swal2-popup .btn { font-size: 12px !important; padding: 10px !important; }
             }
-            .hw-summary-label {
-                font-size: 12px;
-                opacity: 0.9;
+            
+            @media (max-width: 480px) {
+                .hw-summary-grid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+                .hw-summary-card { padding: 10px !important; }
+                .hw-summary-number { font-size: 18px !important; }
+                .data-card .card-header h3 { font-size: 14px !important; }
+                .data-card .card-header p { font-size: 10px !important; }
+                .data-card .info-grid { grid-template-columns: 1fr !important; gap: 6px !important; }
+                .data-card .info-grid div { padding: 4px 0 !important; }
+                .data-card .info-grid .info-label { font-size: 8px !important; }
+                .data-card .info-grid .info-value { font-size: 11px !important; }
+                .custom-modal { max-width: 98% !important; border-radius: 16px !important; }
+                .custom-modal-header { padding: 12px 14px !important; }
+                .custom-modal-header h2 { font-size: 14px !important; }
+                .custom-modal-body { padding: 12px !important; }
             }
-            .hw-progress-container {
-                background: #e2e8f0;
-                border-radius: 10px;
-                height: 8px;
-                overflow: hidden;
-                margin: 10px 0;
-            }
-            .hw-progress-bar {
-                height: 8px;
-                background: linear-gradient(90deg, #10b981, #059669);
-                width: ${completionRate}%;
-                border-radius: 10px;
-            }
-            .chart-container {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 16px;
-                margin: 16px 0;
-            }
-            .chart-card {
-                background: var(--bg-surface);
-                border-radius: 20px;
-                padding: 16px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            }
-            .chart-card h3 {
-                font-size: 14px;
-                margin-bottom: 12px;
-                color: var(--text-primary);
-            }
+            
             .custom-modal-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.7);
-                backdrop-filter: blur(4px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 100000;
-                padding: 16px;
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+                display: flex; align-items: center; justify-content: center;
+                z-index: 100000; padding: 16px;
+                animation: modalFadeIn 0.25s ease;
             }
             .custom-modal {
-                background: var(--bg-surface);
-                border-radius: 28px;
-                max-width: 550px;
-                width: 100%;
-                max-height: 90vh;
-                overflow-y: auto;
-                box-shadow: 0 20px 35px rgba(0,0,0,0.2);
-                animation: modalFadeIn 0.3s ease;
+                background: var(--bg-surface); border-radius: 28px;
+                max-width: 550px; width: 100%; max-height: 90vh;
+                overflow-y: auto; box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+                animation: modalSlideUp 0.3s ease;
             }
-            @keyframes modalFadeIn {
-                from { opacity: 0; transform: scale(0.95); }
-                to { opacity: 1; transform: scale(1); }
-            }
+            @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes modalSlideUp { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
             .custom-modal-header {
                 background: linear-gradient(135deg, #2563eb, #1e40af);
-                padding: 18px 20px;
-                border-radius: 28px 28px 0 0;
-                position: sticky;
-                top: 0;
-                z-index: 10;
+                padding: 18px 20px; border-radius: 28px 28px 0 0;
+                position: sticky; top: 0; z-index: 10;
+                display: flex; justify-content: space-between; align-items: center;
             }
-            .custom-modal-header h2 {
-                margin: 0;
-                font-size: 18px;
-                color: white;
-            }
-            .custom-modal-header p {
-                margin: 8px 0 0 0;
-                font-size: 12px;
-                color: rgba(255,255,255,0.85);
-            }
+            .custom-modal-header h2 { margin: 0; font-size: 18px; color: white; }
+            .custom-modal-header p { margin: 4px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.85); }
             .custom-modal-close {
-                background: rgba(255,255,255,0.2);
-                border: none;
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                cursor: pointer;
-                font-size: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                transition: all 0.2s;
+                background: rgba(255,255,255,0.2); border: none;
+                width: 36px; height: 36px; border-radius: 50%;
+                cursor: pointer; font-size: 20px;
+                display: flex; align-items: center; justify-content: center;
+                color: white; transition: all 0.2s;
             }
-            .custom-modal-close:hover {
-                background: rgba(255,255,255,0.3);
-                transform: rotate(90deg);
-            }
-            .custom-modal-body {
-                padding: 20px;
-            }
-            .custom-form-group {
-                margin-bottom: 16px;
-            }
-            .custom-form-group label {
-                display: block;
-                margin-bottom: 6px;
-                font-weight: 600;
-                font-size: 13px;
-                color: var(--text-primary);
-            }
-            .custom-form-group input,
-            .custom-form-group select,
-            .custom-form-group textarea {
-                width: 100%;
-                padding: 12px;
-                border: 1px solid var(--border-light);
-                border-radius: 12px;
-                background: var(--bg-body);
-                color: var(--text-primary);
+            .custom-modal-close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
+            .custom-modal-body { padding: 20px; }
+            .custom-form-group { margin-bottom: 14px; }
+            .custom-form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: var(--text-primary); }
+            .custom-form-group input, .custom-form-group select, .custom-form-group textarea {
+                width: 100%; padding: 10px 12px; border: 1px solid var(--border-light);
+                border-radius: 10px; background: var(--bg-body); color: var(--text-primary);
                 font-size: 14px;
             }
-            .custom-form-group input:focus,
-            .custom-form-group select:focus,
-            .custom-form-group textarea:focus {
-                outline: none;
-                border-color: #2563eb;
-                box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+            .custom-form-group input:focus, .custom-form-group select:focus, .custom-form-group textarea:focus {
+                outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
             }
-            .custom-form-row {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-            }
+            .custom-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
             .custom-modal-footer {
-                display: flex;
-                gap: 12px;
-                justify-content: flex-end;
-                margin-top: 20px;
-                padding-top: 16px;
-                border-top: 1px solid var(--border-light);
+                display: flex; gap: 12px; justify-content: flex-end;
+                margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-light);
             }
-            .online-badge {
-                background: #10b981;
-                color: white;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 10px;
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
+            .custom-modal-footer button {
+                padding: 10px 20px; border-radius: 30px; font-weight: 600; font-size: 13px;
+                cursor: pointer; border: none; transition: all 0.2s ease;
             }
-            .offline-badge {
-                background: #f59e0b;
-                color: white;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 10px;
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
-            }
-            .download-btn {
-                background: #10b981 !important;
-                color: white !important;
-            }
-            @media (max-width: 640px) {
-                .custom-form-row {
-                    grid-template-columns: 1fr;
-                }
-                .custom-modal {
-                    max-width: 95%;
-                }
-            }
+            .custom-modal-footer .btn-danger { background: #ef4444; color: white; }
+            .custom-modal-footer .btn-primary { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; }
         </style>
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
@@ -22488,7 +23353,16 @@ function renderHomeworkView() {
                 <span class="${navigator.onLine ? 'online-badge' : 'offline-badge'}">
                     <i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i>
                     ${navigator.onLine ? 'Online Mode - Connected to Supabase' : 'Offline Mode'}
+                    <span style="margin-left:8px; background:#e2e8f0; padding:2px 10px; border-radius:20px; font-size:9px;">
+                        👤 ${currentUser.role.toUpperCase()}
+                    </span>
+                    ${currentUser.role === 'teacher' && teacherClass ? `<span style="margin-left:8px; background:#dbeafe; padding:2px 10px; border-radius:20px; font-size:9px;">📚 ${teacherClass}</span>` : ''}
+                    ${currentUser.role === 'student' && studentClass ? `<span style="margin-left:8px; background:#dbeafe; padding:2px 10px; border-radius:20px; font-size:9px;">📚 ${studentClass}</span>` : ''}
                 </span>
+            </div>
+            <div>
+                <span style="font-size:11px; color:var(--text-secondary);">${window.homework.length} Total</span>
+                <span style="margin-left:8px; font-size:11px; color:var(--text-secondary);">📊 ${filteredHomework.length} Visible</span>
             </div>
         </div>
         
@@ -22499,9 +23373,9 @@ function renderHomeworkView() {
             </div>
             <button class="btn btn-primary btn-sm" onclick="filterHomework()"><i class="fas fa-search"></i> Search</button>
             <button class="btn btn-info btn-sm" onclick="clearHomeworkFilter()"><i class="fas fa-eraser"></i> Clear</button>
-            <button class="btn btn-danger btn-sm" onclick="exportHomeworkPDF()" style="background: #dc2626;"><i class="fas fa-file-pdf"></i> Export PDF</button>
+            <button class="btn btn-warning btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
             <button class="btn btn-success btn-sm" onclick="refreshHomeworkData()"><i class="fas fa-sync-alt"></i> Refresh</button>
-            ${(currentUser.role === 'admin' || currentUser.role === 'teacher') ? `<button class="btn btn-primary btn-sm" onclick="showAddHomeworkForm()"><i class="fas fa-plus"></i> Add Homework</button>` : ''}
+            ${canAddEditDelete ? `<button class="btn btn-primary btn-sm" onclick="showAddHomeworkForm()"><i class="fas fa-plus"></i> Add Homework</button>` : ''}
         </div>
         
         <div class="hw-summary-grid">
@@ -22545,162 +23419,363 @@ function renderHomeworkView() {
     renderHomeworkList(paginatedHomework);
     
     setTimeout(() => {
-        let statusCtx = document.getElementById('hwStatusChartCanvas')?.getContext('2d');
-        if (statusCtx) {
-            if (hwStatusChart) hwStatusChart.destroy();
-            hwStatusChart = new Chart(statusCtx, {
-                type: 'doughnut',
-                data: { labels: ['Pending', 'Completed'], datasets: [{ data: [pending, completed], backgroundColor: ['#f59e0b', '#10b981'] }] }
-            });
+        try {
+            let statusCtx = document.getElementById('hwStatusChartCanvas')?.getContext('2d');
+            if (statusCtx && (pending > 0 || completed > 0)) {
+                if (hwStatusChart) hwStatusChart.destroy();
+                hwStatusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: { labels: ['Pending', 'Completed'], datasets: [{ data: [pending, completed], backgroundColor: ['#f59e0b', '#10b981'] }] },
+                    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+            
+            let dueCtx = document.getElementById('hwDueChartCanvas')?.getContext('2d');
+            if (dueCtx && dueData.some(v => v > 0)) {
+                if (hwDueChart) hwDueChart.destroy();
+                hwDueChart = new Chart(dueCtx, {
+                    type: 'bar',
+                    data: { labels: days, datasets: [{ label: 'Homework', data: dueData, backgroundColor: '#2563eb', borderRadius: 6 }] },
+                    options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            }
+        } catch(e) {
+            console.error('Chart error:', e);
         }
-        let dueCtx = document.getElementById('hwDueChartCanvas')?.getContext('2d');
-        if (dueCtx) {
-            if (hwDueChart) hwDueChart.destroy();
-            hwDueChart = new Chart(dueCtx, {
-                type: 'bar',
-                data: { labels: days, datasets: [{ label: 'Homework', data: dueData, backgroundColor: '#2563eb' }] }
-            });
-        }
-    }, 100);
+    }, 200);
 }
 
-function previousHomeworkPage() { if (homeworkCurrentPage > 1) { homeworkCurrentPage--; loadHomeworkManagement(); } }
-function nextHomeworkPage() { if (homeworkCurrentPage < homeworkTotalPages) { homeworkCurrentPage++; loadHomeworkManagement(); } }
-async function refreshHomeworkData() { if (supabaseClient && navigator.onLine) await loadHomeworkFromSupabaseTable(); saveAllData(); loadHomeworkManagement(); showNotification('Refreshed!', 'success'); }
+// ======================= PAGINATION FUNCTIONS =======================
+function previousHomeworkPage() { 
+    if (homeworkCurrentPage > 1) { 
+        homeworkCurrentPage--; 
+        loadHomeworkManagement(); 
+    } 
+}
 
+function nextHomeworkPage() { 
+    if (homeworkCurrentPage < homeworkTotalPages) { 
+        homeworkCurrentPage++; 
+        loadHomeworkManagement(); 
+    } 
+}
+
+async function refreshHomeworkData() { 
+    showLoader();
+    showNotification('🔄 Syncing homework from cloud...', 'info');
+    if (supabaseClient && navigator.onLine) {
+        await loadHomeworkFromSupabaseTable();
+        await processPendingHomeworkQueue();
+    }
+    saveAllData(); 
+    loadHomeworkManagement(); 
+    hideLoader();
+    showNotification(`✅ ${window.homework.length} homework records loaded!`, 'success'); 
+}
+
+// ======================= ✅ RENDER HOMEWORK LIST (UPDATED - STUDENT VIEW) =======================
 function renderHomeworkList(homeworkToRender) { 
     let html = '';
+    
+    if (!homeworkToRender || homeworkToRender.length === 0) {
+        html = `
+            <div class="profile-card" style="text-align:center; padding:40px; background:var(--bg-surface); border-radius:20px;">
+                <i class="fas fa-book-open" style="font-size:48px; color:#94a3b8;"></i>
+                <p style="margin-top:10px; color:var(--text-secondary);">No homework found.</p>
+                ${(currentUser.role === 'admin' || currentUser.role === 'teacher') ? `<button class="btn btn-primary btn-sm" onclick="showAddHomeworkForm()">+ Add Homework</button>` : ''}
+            </div>
+        `;
+        document.getElementById('homeworkList').innerHTML = html;
+        return;
+    }
+    
+    // ✅ FIXED: Student view - No Submit button, Download button only
+    let isStudent = (currentUser.role === 'student');
+    
     for (let h of homeworkToRender) {
         let isOverdue = h.dueDate && new Date(h.dueDate) < new Date() && h.status !== 'Completed';
         let canEdit = (currentUser.role === 'admin') || (currentUser.role === 'teacher');
         let canDelete = (currentUser.role === 'admin') || (currentUser.role === 'teacher');
-        let canSubmit = (currentUser.role === 'student') && h.status === 'Pending';
         const hasAttachment = !!(h.attachmentUrl || h.attachment);
         
-        html += `<div class="data-card" style="margin-bottom: 12px;">
+        html += `<div class="data-card" style="margin-bottom: 12px; border-radius: 20px;">
             <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 12px; padding: 12px;">
                 <div class="card-photo" style="width: 50px; height: 50px; border-radius: 25px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); display: flex; align-items: center; justify-content: center;">
                     <i class="fas fa-book-open" style="font-size: 24px; color: white;"></i>
                 </div>
                 <div class="card-title" style="flex: 1;">
-                    <h3>${escapeHtml(h.title)}</h3>
-                    <p>${escapeHtml(h.subject)} | Due: ${h.dueDate || 'Not set'} ${isOverdue ? '<span class="badge-danger">⚠️ Overdue</span>' : ''}</p>
-                    ${h.attachmentUrl ? '<p style="font-size: 10px; color: #10b981;"><i class="fas fa-cloud-upload-alt"></i> In Cloud</p>' : (h.attachment ? '<p style="font-size: 10px; color: #f59e0b;"><i class="fas fa-database"></i> Local</p>' : '')}
+                    <h3 style="font-size:15px; margin-bottom:4px;">${escapeHtml(h.title)}</h3>
+                    <p style="font-size:11px; margin:0;">${escapeHtml(h.subject)} | Due: ${h.dueDate || 'Not set'} ${isOverdue ? '<span class="badge badge-danger" style="margin-left:8px;">⚠️ Overdue</span>' : ''}</p>
+                    ${h.attachmentUrl ? '<p style="font-size: 10px; color: #10b981; margin-top:4px;"><i class="fas fa-cloud-upload-alt"></i> Attachment in Cloud</p>' : (h.attachment ? '<p style="font-size: 10px; color: #f59e0b; margin-top:4px;"><i class="fas fa-database"></i> Attachment saved locally</p>' : '')}
                 </div>
-                <span class="badge ${h.status === 'Pending' ? 'badge-warning' : 'badge-success'}">${h.status}</span>
+                <span class="badge ${h.status === 'Pending' ? 'badge-warning' : 'badge-success'}" style="font-size:11px; padding:5px 12px;">${h.status}</span>
             </div>
-            <div class="info-grid" style="padding: 12px; background: var(--bg-body);">
-                <div><span class="info-label">Class:</span> ${h.class || 'All Classes'}</div>
-                <div><span class="info-label">Description:</span> ${(h.description || '-').substring(0, 100)}</div>
+            <div class="info-grid" style="padding: 12px; background: var(--bg-body); display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div><span class="info-label" style="font-size:10px; color:var(--text-secondary);">Class</span><span class="info-value" style="font-size:13px; font-weight:600;">${h.class || 'All Classes'}</span></div>
+                <div><span class="info-label" style="font-size:10px; color:var(--text-secondary);">Description</span><span class="info-value" style="font-size:13px; font-weight:600;">${(h.description || '-').substring(0, 80)}${(h.description || '').length > 80 ? '...' : ''}</span></div>
             </div>`;
         
         if (hasAttachment) {
-            html += `<div style="background:#f0fdf4; padding: 8px 12px; margin: 4px 8px; border-radius: 12px;">
-                <button class="action-chip download-btn" onclick="downloadHomeworkAttachment('${h.id}')"><i class="fas fa-download"></i> Download Attachment</button>
+            html += `<div style="background:#f0fdf4; padding: 8px 12px; margin: 0 12px 8px 12px; border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                    <span><i class="fas fa-paperclip" style="color:#10b981;"></i> Attachment:</span>
+                    <button class="action-chip download-btn" onclick="downloadHomeworkAttachment('${h.id}')" style="background: #10b981; color: white; padding:4px 12px; border-radius:20px; border:none; cursor:pointer; font-size:11px;">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                </div>
             </div>`;
         }
         
-        html += `<div class="card-actions" style="padding: 12px;">
-            <button class="action-chip" onclick="viewHomeworkDetails('${h.id}')"><i class="fas fa-eye"></i> View</button>
-            ${hasAttachment ? `<button class="action-chip download-btn" onclick="downloadHomeworkAttachment('${h.id}')"><i class="fas fa-download"></i> Download</button>` : ''}
-            ${canEdit ? `<button class="action-chip" onclick="showAddHomeworkForm('${h.id}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
-            ${canDelete ? `<button class="action-chip" onclick="deleteHomework('${h.id}')"><i class="fas fa-trash"></i> Delete</button>` : ''}
-            ${canSubmit ? `<button class="action-chip" onclick="submitHomework('${h.id}')"><i class="fas fa-upload"></i> Submit</button>` : ''}
-            <button class="action-chip" onclick="shareHomework('${h.id}')"><i class="fab fa-whatsapp"></i> Share</button>
+        // ✅ FIXED: Student view - No Submit button
+        html += `<div class="card-actions" style="padding: 10px; gap: 6px; flex-wrap: wrap; border-top:1px solid var(--border-light);">
+            <button class="action-chip" onclick="viewHomeworkDetails('${h.id}')" style="padding:6px 12px; border-radius:20px; border:none; background:var(--bg-body); color:var(--text-primary); cursor:pointer; font-size:11px;">
+                <i class="fas fa-eye"></i> View
+            </button>
+            ${hasAttachment ? `<button class="action-chip download-btn" onclick="downloadHomeworkAttachment('${h.id}')" style="padding:6px 12px; border-radius:20px; border:none; background:#10b981; color:white; cursor:pointer; font-size:11px;">
+                <i class="fas fa-download"></i> Download
+            </button>` : ''}
+            ${canEdit ? `<button class="action-chip" onclick="showAddHomeworkForm('${h.id}')" style="padding:6px 12px; border-radius:20px; border:none; background:var(--bg-body); color:var(--text-primary); cursor:pointer; font-size:11px;">
+                <i class="fas fa-edit"></i> Edit
+            </button>` : ''}
+            ${canDelete ? `<button class="action-chip" onclick="deleteHomework('${h.id}')" style="padding:6px 12px; border-radius:20px; border:none; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:11px;">
+                <i class="fas fa-trash"></i> Delete
+            </button>` : ''}
+            <!-- ✅ STUDENT VIEW: Submit button removed -->
+            <button class="action-chip" onclick="shareHomework('${h.id}')" style="padding:6px 12px; border-radius:20px; border:none; background:#25D366; color:white; cursor:pointer; font-size:11px;">
+                <i class="fab fa-whatsapp"></i> Share
+            </button>
         </div>
     </div>`;
     }
-    if (homeworkToRender.length === 0) html = '<div class="profile-card"><p>No homework found.</p></div>';
+    
     document.getElementById('homeworkList').innerHTML = html;
 }
 
+// ======================= DOWNLOAD HOMEWORK ATTACHMENT =======================
 function downloadHomeworkAttachment(id) {
     let h = homework.find(hw => hw.id === id);
-    if (!h) { showNotification('Not found!', 'error'); return; }
+    if (!h) { 
+        showNotification('Homework not found!', 'error'); 
+        return; 
+    }
     
     if (h.attachmentUrl) {
         window.open(h.attachmentUrl, '_blank');
-        showNotification('Opening attachment...', 'info');
+        showNotification('Opening attachment from cloud...', 'info');
     } else if (h.attachment) {
-        downloadFile(h.attachment, `attachment_${h.title}.jpg`);
-        showNotification('Downloaded!', 'success');
+        let filename = `attachment_${h.title.replace(/\s/g, '_')}.jpg`;
+        downloadFile(h.attachment, filename);
+        showNotification('Download started!', 'success');
     } else {
-        showNotification('No attachment!', 'warning');
+        showNotification('No attachment found!', 'warning');
     }
 }
 
+// ======================= SHARE HOMEWORK =======================
 function shareHomework(id) {
     let h = homework.find(hw => hw.id === id);
     if (!h) return;
-    let msg = `📚 Homework: ${h.title}\nSubject: ${h.subject}\nDue: ${h.dueDate}\n${schoolName || ''}`;
+    
+    let msg = `📚 *Homework: ${h.title}*\n\n📖 Subject: ${h.subject}\n📅 Due Date: ${h.dueDate || 'Not set'}\n📋 Class: ${h.class || 'All Classes'}\n📝 Status: ${h.status}\n\n🏫 ${schoolName || 'Wings Convent School'}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
+// ======================= VIEW HOMEWORK DETAILS =======================
 function viewHomeworkDetails(id) {
     let h = homework.find(hw => hw.id === id);
     if (!h) return;
-    Swal.fire({ title: h.title, html: `<p>Subject: ${h.subject}</p><p>Class: ${h.class || 'All'}</p><p>Due: ${h.dueDate}</p><p>Status: ${h.status}</p><p>${h.description || ''}</p>`, confirmButtonText: 'Close' });
+    
+    let statusColor = h.status === 'Pending' ? '#f59e0b' : '#10b981';
+    let isOverdue = h.dueDate && new Date(h.dueDate) < new Date() && h.status !== 'Completed';
+    
+    Swal.fire({
+        title: `<div style="font-size:16px;">📚 ${escapeHtml(h.title)}</div>`,
+        html: `
+            <div style="text-align: left;">
+                <div style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 20px; display: inline-block; font-size: 11px; margin-bottom: 10px;">${h.status}</div>
+                ${isOverdue ? '<span style="background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-left: 8px;">⚠️ Overdue</span>' : ''}
+                <p><strong>📖 Subject:</strong> ${escapeHtml(h.subject)}</p>
+                <p><strong>📋 Class:</strong> ${escapeHtml(h.class || 'All Classes')}</p>
+                <p><strong>📅 Due Date:</strong> ${h.dueDate || 'Not set'}</p>
+                <p><strong>📝 Description:</strong></p>
+                <div style="background: var(--bg-body); padding: 12px; border-radius: 12px; margin-top: 5px;">${escapeHtml(h.description || 'No description provided')}</div>
+                ${h.attachmentUrl ? `<p style="margin-top:10px;"><strong>📎 Attachment:</strong> <a href="${h.attachmentUrl}" target="_blank" style="color:#2563eb;">View in Cloud</a></p>` : ''}
+                <p style="margin-top:10px; font-size:10px; color:#94a3b8;">Created: ${h.createdAt ? new Date(h.createdAt).toLocaleDateString() : 'N/A'}</p>
+            </div>
+        `,
+        confirmButtonText: 'Close',
+        width: window.innerWidth <= 480 ? '95%' : '450px',
+        showCloseButton: true
+    });
 }
 
+// ======================= DELETE HOMEWORK =======================
 async function deleteHomework(id) {
-    let result = await Swal.fire({ title: 'Delete?', text: 'Cannot undo!', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' });
+    let h = homework.find(hw => hw.id === id);
+    if (!h) return;
+    
+    let result = await Swal.fire({ 
+        title: 'Delete Homework?', 
+        text: `Delete "${h.title}"? This cannot be undone!`, 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonText: 'Delete',
+        confirmButtonColor: '#ef4444',
+        cancelButtonText: 'Cancel',
+        width: window.innerWidth <= 480 ? '95%' : '450px'
+    });
+    
     if (result.isConfirmed) {
-        homework = homework.filter(h => h.id !== id);
+        showLoader();
+        window.homework = window.homework.filter(hw => hw.id !== id);
+        localStorage.setItem('cache_homework', JSON.stringify(window.homework));
         await deleteHomeworkFromSupabaseTable(id);
         saveAllData();
         loadHomeworkManagement();
-        showNotification('Deleted!', 'success');
+        hideLoader();
+        showNotification(`✅ "${h.title}" deleted successfully!`, 'success');
     }
 }
 
-// ======================= ADD HOMEWORK FORM =======================
+// ======================= ✅ ADD HOMEWORK FORM (WITH CAMERA + GALLERY) =======================
 function showAddHomeworkForm(editId = null) {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
+        showNotification('Only administrators and teachers can add/edit homework!', 'error');
+        return;
+    }
+    
     let isEdit = editId !== null;
     let hwData = isEdit ? homework.find(h => h.id === editId) : null;
     let tempAttachmentData = null;
     let tempAttachmentFile = null;
     
+    // Generate class options
     let classOptions = ['<option value="">All Classes</option>'];
-    if (currentUser.role === 'admin') {
-        let classSet = {};
-        for (let s of students) {
-            let className = `${s.cls} ${s.sec}`;
-            if (!classSet[className]) {
-                classSet[className] = true;
-                classOptions.push(`<option value="${className}" ${isEdit && hwData?.class === className ? 'selected' : ''}>${className}</option>`);
+    let uniqueClasses = new Set();
+    if (window.students && window.students.length > 0) {
+        for (let s of window.students) {
+            if (s.cls && s.sec) {
+                let className = `${s.cls} ${s.sec}`;
+                uniqueClasses.add(className);
+            } else if (s.cls) {
+                uniqueClasses.add(s.cls);
             }
         }
-    } else if (currentUser.role === 'teacher') {
-        let teacher = employees.find(e => e.name === currentUser.name);
-        let myClass = teacher?.classTeacher || '';
-        if (myClass) classOptions.push(`<option value="${myClass}" ${isEdit && hwData?.class === myClass ? 'selected' : ''}>${myClass}</option>`);
-        classOptions.push('<option value="">All Classes</option>');
+    }
+    if (uniqueClasses.size === 0) {
+        const defaultClasses = ['Playgroup A', 'Playgroup B', 'Nursery A', 'Nursery B', 'KG1 A', 'KG1 B', 'KG2 A', 'KG2 B'];
+        for (let c of defaultClasses) {
+            uniqueClasses.add(c);
+        }
+    }
+    let sortedClasses = Array.from(uniqueClasses).sort();
+    for (let cls of sortedClasses) {
+        let selected = isEdit && hwData?.class === cls ? 'selected' : '';
+        classOptions.push(`<option value="${cls}" ${selected}>${cls}</option>`);
+    }
+    
+    if (currentUser.role === 'teacher') {
+        let teacherClass = currentUser.class_teacher || '';
+        if (!teacherClass && window.employees) {
+            let teacher = window.employees.find(e => e.name === currentUser.name);
+            if (teacher) teacherClass = teacher.class_teacher || '';
+        }
+        if (teacherClass) {
+            classOptions = [`<option value="${teacherClass}" selected>${teacherClass}</option>`, '<option value="">All Classes</option>'];
+        }
     }
     
     const modalOverlay = document.createElement('div');
     modalOverlay.className = 'custom-modal-overlay';
     modalOverlay.innerHTML = `
         <div class="custom-modal">
-            <div class="custom-modal-header" style="display: flex; justify-content: space-between;">
-                <div><h2><i class="fas ${isEdit ? 'fa-edit' : 'fa-plus-circle'}"></i> ${isEdit ? 'Edit' : 'Add'} Homework</h2>
-                <p>${isEdit ? 'Update homework details' : 'Fill the details below to assign homework'}</p></div>
+            <div class="custom-modal-header">
+                <div>
+                    <h2><i class="fas ${isEdit ? 'fa-edit' : 'fa-plus-circle'}"></i> ${isEdit ? 'Edit' : 'Add'} Homework</h2>
+                    <p>${isEdit ? 'Update homework details' : 'Fill the details below to assign homework'}</p>
+                </div>
                 <button class="custom-modal-close" onclick="this.closest('.custom-modal-overlay').remove()">&times;</button>
             </div>
             <div class="custom-modal-body">
-                <div class="custom-form-group"><label>Title *</label><input type="text" id="hwTitle" placeholder="Enter homework title" value="${isEdit ? escapeHtml(hwData?.title || '') : ''}"></div>
-                <div class="custom-form-row">
-                    <div class="custom-form-group"><label>Subject *</label><input type="text" id="hwSubject" placeholder="e.g., Mathematics" value="${isEdit ? escapeHtml(hwData?.subject || '') : ''}"></div>
-                    <div class="custom-form-group"><label>Class</label><select id="hwClass">${classOptions.join('')}</select></div>
+                <div class="custom-form-group">
+                    <label>📌 Title *</label>
+                    <input type="text" id="hwTitle" placeholder="Enter homework title" value="${isEdit ? escapeHtml(hwData?.title || '') : ''}">
                 </div>
                 <div class="custom-form-row">
-                    <div class="custom-form-group"><label>Due Date</label><input type="date" id="hwDueDate" value="${isEdit ? (hwData?.dueDate || '') : ''}"></div>
-                    <div class="custom-form-group"><label>Status</label><select id="hwStatus"><option value="Pending" ${isEdit && hwData?.status === 'Pending' ? 'selected' : ''}>Pending</option><option value="Completed" ${isEdit && hwData?.status === 'Completed' ? 'selected' : ''}>Completed</option></select></div>
+                    <div class="custom-form-group">
+                        <label>📖 Subject *</label>
+                        <input type="text" id="hwSubject" placeholder="e.g., Mathematics" value="${isEdit ? escapeHtml(hwData?.subject || '') : ''}">
+                    </div>
+                    <div class="custom-form-group">
+                        <label>📋 Class</label>
+                        <select id="hwClass">${classOptions.join('')}</select>
+                    </div>
                 </div>
-                <div class="custom-form-group"><label>Description</label><textarea id="hwDesc" rows="4" placeholder="Write detailed instructions...">${isEdit ? (hwData?.description || '') : ''}</textarea></div>
-                <div class="custom-form-group"><label>Attachment (PDF/Image)</label><input type="file" id="hwAttachment" accept="image/*,application/pdf"></div>
-                <div id="attachmentPreview"></div>
+                <div class="custom-form-row">
+                    <div class="custom-form-group">
+                        <label>📅 Due Date</label>
+                        <input type="date" id="hwDueDate" value="${isEdit ? (hwData?.dueDate || '') : ''}">
+                    </div>
+                    <div class="custom-form-group">
+                        <label>📊 Status</label>
+                        <select id="hwStatus">
+                            <option value="Pending" ${isEdit && hwData?.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="Completed" ${isEdit && hwData?.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="custom-form-group">
+                    <label>📝 Description</label>
+                    <textarea id="hwDesc" rows="4" placeholder="Write detailed instructions...">${isEdit ? (hwData?.description || '') : ''}</textarea>
+                </div>
+                
+                <!-- ✅ CAMERA + GALLERY + PDF UPLOAD -->
+                <div style="background: var(--bg-body); border-radius: 16px; padding: 16px; margin: 16px 0;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--primary);">
+                        <i class="fas fa-cloud-upload-alt"></i> 📎 Attachment (Optional)
+                    </h4>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
+                        <i class="fas fa-info-circle"></i> Upload PDF, Image (Camera, Gallery, or PDF)
+                    </p>
+                    <div id="hwAttachmentUploadBtn" class="upload-area" style="
+                        border: 2px dashed var(--border-light); 
+                        border-radius: 16px; 
+                        padding: 16px; 
+                        text-align: center; 
+                        cursor: pointer; 
+                        background: var(--bg-body); 
+                        transition: all 0.2s;
+                    ">
+                        <i class="fas fa-camera" style="font-size: 28px; color: var(--primary);"></i>
+                        <p style="margin: 8px 0 0; font-size: 14px; font-weight: 500;">Click to upload Attachment</p>
+                        <p style="margin: 4px 0 0; font-size: 11px; color: var(--text-secondary);">
+                            📸 Camera | 🖼️ Gallery | 📄 PDF
+                        </p>
+                        <p style="margin: 2px 0 0; font-size: 9px; color: #10b981;">
+                            ☁️ Uploads to: homework_attachments bucket
+                        </p>
+                    </div>
+                    <div id="attachmentPreview" style="margin-top: 10px;">
+                        ${isEdit && hwData?.attachmentUrl ? `
+                            <div style="background:#d1fae5; padding:10px; border-radius:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <i class="fas fa-cloud-upload-alt" style="color:#10b981;"></i>
+                                <span style="font-size:13px;">☁️ Attachment in Cloud</span>
+                                <a href="${hwData.attachmentUrl}" target="_blank" class="action-chip" style="background:#10b981; color:white; padding:4px 12px; border-radius:20px; text-decoration:none; font-size:11px;">View</a>
+                            </div>
+                        ` : (isEdit && hwData?.attachment ? `
+                            <div style="background:#fef3c7; padding:10px; border-radius:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <i class="fas fa-file" style="color:#f59e0b;"></i>
+                                <span style="font-size:13px;">📁 Attachment saved locally</span>
+                            </div>
+                        ` : '')}
+                    </div>
+                </div>
+                
                 <div class="custom-form-group" style="margin-top: 12px;">
-                    <p style="font-size: 11px;"><i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i> ${navigator.onLine ? 'Online - Will save to Supabase' : 'Offline - Will save locally'}</p>
+                    <p style="font-size: 11px; color: var(--text-secondary);">
+                        <i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i> 
+                        ${navigator.onLine ? '☁️ Online - Will save to Supabase' : '📴 Offline - Will save locally'}
+                    </p>
                 </div>
             </div>
             <div class="custom-modal-footer">
@@ -22711,55 +23786,85 @@ function showAddHomeworkForm(editId = null) {
     `;
     document.body.appendChild(modalOverlay);
     
-    document.getElementById('hwAttachment').onchange = function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            tempAttachmentFile = file;
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                tempAttachmentData = ev.target.result;
-                document.getElementById('attachmentPreview').innerHTML = `<div style="background:#d1fae5; padding:8px; border-radius:8px;">✓ ${file.name}</div>`;
-            };
-            reader.readAsDataURL(file);
-        }
+    // ========== ATTACHMENT UPLOAD HANDLER (CAMERA + GALLERY + PDF) ==========
+    document.getElementById('hwAttachmentUploadBtn').onclick = function() {
+        openHomeworkAttachmentUpload(function(fileData, fileName, fileType) {
+            tempAttachmentData = fileData;
+            tempAttachmentFile = { name: fileName, type: fileType };
+            
+            let previewHtml = '';
+            if (fileType.startsWith('image/')) {
+                previewHtml = `
+                    <div style="background:#d1fae5; padding:10px; border-radius:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <img src="${fileData}" style="width:50px; height:50px; border-radius:8px; object-fit:cover;">
+                        <span style="font-size:13px;">✅ ${fileName}</span>
+                        <button onclick="document.getElementById('attachmentPreview').innerHTML=''; tempAttachmentData=null; tempAttachmentFile=null;" style="background:#ef4444; color:white; border:none; border-radius:20px; padding:2px 10px; cursor:pointer; font-size:11px;">✖</button>
+                    </div>
+                `;
+            } else {
+                previewHtml = `
+                    <div style="background:#d1fae5; padding:10px; border-radius:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <i class="fas fa-file-pdf" style="font-size:24px; color:#ef4444;"></i>
+                        <span style="font-size:13px;">✅ ${fileName}</span>
+                        <button onclick="document.getElementById('attachmentPreview').innerHTML=''; tempAttachmentData=null; tempAttachmentFile=null;" style="background:#ef4444; color:white; border:none; border-radius:20px; padding:2px 10px; cursor:pointer; font-size:11px;">✖</button>
+                    </div>
+                `;
+            }
+            document.getElementById('attachmentPreview').innerHTML = previewHtml;
+            showNotification('✅ Attachment uploaded successfully!', 'success');
+        });
     };
     
-    document.getElementById('saveHwBtn').onclick = async () => {
+    // ========== SAVE BUTTON ==========
+    document.getElementById('saveHwBtn').onclick = async function() {
         let title = document.getElementById('hwTitle').value.trim();
-        if (!title) { showNotification('Title required!', 'error'); return; }
+        let subject = document.getElementById('hwSubject').value.trim();
+        
+        if (!title) { 
+            showNotification('⚠️ Title is required!', 'error'); 
+            return; 
+        }
+        if (!subject) { 
+            showNotification('⚠️ Subject is required!', 'error'); 
+            return; 
+        }
         
         const homeworkId = editId || 'HW' + Date.now();
         const className = document.getElementById('hwClass').value || 'all';
-        
         let attachmentUrl = isEdit ? hwData?.attachmentUrl : null;
+        
+        showLoader();
         
         // Upload to Supabase Storage if online and file selected
         if (tempAttachmentFile && navigator.onLine && supabaseClient) {
-            showLoader();
             attachmentUrl = await uploadToSupabaseStorage(tempAttachmentData, tempAttachmentFile.name, tempAttachmentFile.type, homeworkId, className);
-            hideLoader();
             if (attachmentUrl) {
                 showNotification('✅ Attachment uploaded to cloud!', 'success');
+            } else {
+                showNotification('⚠️ Attachment saved locally. Will sync when online.', 'warning');
             }
         }
         
         let hwObj = {
             id: homeworkId,
             title: title,
-            subject: document.getElementById('hwSubject').value.trim() || 'General',
+            subject: subject,
             class: className,
-            dueDate: document.getElementById('hwDueDate').value,
-            description: document.getElementById('hwDesc').value,
-            status: document.getElementById('hwStatus').value,
+            dueDate: document.getElementById('hwDueDate').value || null,
+            description: document.getElementById('hwDesc').value || '',
+            status: document.getElementById('hwStatus').value || 'Pending',
             createdAt: isEdit ? hwData?.createdAt : new Date().toISOString(),
             attachmentUrl: attachmentUrl || (isEdit ? hwData?.attachmentUrl : null),
-            attachment: !attachmentUrl && tempAttachmentData ? tempAttachmentData : null
+            attachment: !attachmentUrl && tempAttachmentData ? tempAttachmentData : null,
+            createdBy: currentUser.name
         };
         
-        // Save to localStorage
+        // Update local cache
         if (isEdit) {
             let index = homework.findIndex(h => h.id === editId);
-            if (index !== -1) homework[index] = { ...homework[index], ...hwObj };
+            if (index !== -1) {
+                homework[index] = { ...homework[index], ...hwObj };
+            }
             showNotification('✅ Homework updated!', 'success');
         } else {
             homework.push(hwObj);
@@ -22775,25 +23880,30 @@ function showAddHomeworkForm(editId = null) {
             }
         }
         
-        // Save to Supabase Table
+        localStorage.setItem('cache_homework', JSON.stringify(homework));
+        
+        // Save to Supabase Table (background)
         await saveHomeworkToSupabaseTable(hwObj);
         
         saveAllData();
         modalOverlay.remove();
+        hideLoader();
         loadHomeworkManagement();
     };
 }
 
-function submitHomework(id) {
-    showNotification('Submit feature - Upload your work', 'info');
-}
-
+// ======================= EXPORT FUNCTIONS =======================
 function exportHomeworkCSV() {
+    if (homework.length === 0) {
+        showNotification('No homework to export!', 'warning');
+        return;
+    }
+    
     let csv = "ID,Title,Subject,Class,Due Date,Status,Description,Attachment URL\n";
     for (let h of homework) {
-        csv += `"${h.id}","${h.title}","${h.subject}","${h.class || 'All'}","${h.dueDate || ''}","${h.status}","${(h.description || '').replace(/"/g, '""')}","${h.attachmentUrl || ''}"\n`;
+        csv += `"${h.id}","${h.title.replace(/,/g, ' ')}","${h.subject.replace(/,/g, ' ')}","${h.class || 'All'}","${h.dueDate || ''}","${h.status}","${(h.description || '').replace(/"/g, '""')}","${h.attachmentUrl || ''}"\n`;
     }
-    let blob = new Blob([csv], { type: 'text/csv' });
+    let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
     let link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `homework_${new Date().toISOString().split('T')[0]}.csv`;
@@ -22802,7 +23912,13 @@ function exportHomeworkCSV() {
 }
 
 async function exportHomeworkPDF() {
-    if (typeof showLoader === 'function') showLoader();
+    if (typeof html2canvas === 'undefined') {
+        showNotification('html2canvas library not loaded! Please refresh.', 'error');
+        return;
+    }
+    
+    showLoader();
+    showNotification('Generating PDF, please wait...', 'info');
     
     try {
         let filteredHomework = [...homework];
@@ -22823,52 +23939,65 @@ async function exportHomeworkPDF() {
             schoolLogoHtml = `<div style="width: 50px; height: 50px; background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px auto;"><span style="font-size: 28px; color: white;">🏫</span></div>`;
         }
         
-        let reportHtml = `<!DOCTYPE html>
+        let tableRows = '';
+        for (let h of filteredHomework) {
+            let statusColor = h.status === 'Pending' ? '#f59e0b' : '#10b981';
+            tableRows += `
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 6px 8px; font-size: 8px;">${escapeHtml(h.title)}</td>
+                    <td style="padding: 6px 8px; font-size: 8px;">${escapeHtml(h.subject)}</td>
+                    <td style="padding: 6px 8px; font-size: 8px;">${h.class || 'All'}</td>
+                    <td style="padding: 6px 8px; font-size: 8px;">${h.dueDate || '-'}</td>
+                    <td style="padding: 6px 8px; font-size: 8px; text-align:center;"><span style="background:${statusColor}; color:white; padding:2px 8px; border-radius:20px;">${h.status}</span></td>
+                </tr>
+            `;
+        }
+        
+        const pdfHtml = `<!DOCTYPE html>
         <html>
         <head><meta charset="UTF-8"><title>Homework Report</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            @page { size: A4 landscape; margin: 0.6cm; }
-            body { font-family: 'Segoe UI', Arial, sans-serif; background: white; }
-            .header { text-align: center; margin-bottom: 15px; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
-            .school-name { font-size: 20px; font-weight: bold; color: #1e293b; margin: 5px 0; }
-            .school-address { font-size: 9px; color: #64748b; margin: 2px 0; }
-            .school-contact { font-size: 8px; color: #64748b; margin: 2px 0; }
-            .report-title { font-size: 14px; color: #2563eb; margin: 8px 0 3px 0; font-weight: bold; }
-            .summary-grid { display: flex; justify-content: space-around; margin: 15px 0; flex-wrap: wrap; gap: 8px; }
-            .summary-card { background: #f8fafc; padding: 8px 15px; border-radius: 10px; text-align: center; }
-            .summary-number { font-size: 20px; font-weight: bold; }
+            @page { size: A4 landscape; margin: 0.5cm; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; background: white; padding: 10px; }
+            .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+            .school-name { font-size: 16px; font-weight: bold; color: #1e293b; }
+            .school-address { font-size: 8px; color: #64748b; }
+            .school-contact { font-size: 7px; color: #64748b; }
+            .report-title { font-size: 13px; color: #2563eb; margin: 8px 0; font-weight: bold; }
+            .summary-grid { display: flex; justify-content: space-around; margin: 12px 0; flex-wrap: wrap; gap: 8px; }
+            .summary-card { background: #f8fafc; padding: 6px 12px; border-radius: 8px; text-align: center; }
+            .summary-number { font-size: 18px; font-weight: bold; }
             .summary-label { font-size: 8px; color: #64748b; }
-            .progress-container { background: #e2e8f0; border-radius: 8px; height: 6px; overflow: hidden; margin: 10px 0; }
-            .progress-bar { height: 6px; background: linear-gradient(90deg, #10b981, #059669); width: ${completionRate}%; }
-            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-            th { background: #2563eb; color: white; padding: 8px; font-size: 9px; text-align: center; }
-            td { border: 1px solid #e2e8f0; padding: 6px; font-size: 8px; }
-            .footer { margin-top: 15px; text-align: center; font-size: 7px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+            .progress-container { background: #e2e8f0; border-radius: 6px; height: 5px; overflow: hidden; margin: 8px 0; }
+            .progress-bar { height: 5px; background: linear-gradient(90deg, #10b981, #059669); width: ${completionRate}%; }
+            table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+            th { background: #2563eb; color: white; padding: 6px; font-size: 8px; text-align: center; }
+            td { border: 1px solid #e2e8f0; padding: 5px; font-size: 8px; }
+            .footer { margin-top: 12px; text-align: center; font-size: 7px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
         </style>
         </head>
         <body>
-            <div class="container">
-                <div class="header">
-                    ${schoolLogoHtml}
-                    <div class="school-name">${escapeHtml(schoolName || 'Wings Convent School')}</div>
-                    <div class="school-address">${escapeHtml(schoolAddress || '')}</div>
-                    <div class="school-contact">📞 ${escapeHtml(schoolPhone || '')} | ✉️ ${escapeHtml(schoolEmail || '')}</div>
-                    <div class="report-title">📋 HOMEWORK REPORT</div>
-                </div>
-                <div class="summary-grid">
-                    <div class="summary-card"><div class="summary-number">${total}</div><div class="summary-label">Total</div></div>
-                    <div class="summary-card"><div class="summary-number">${pending}</div><div class="summary-label">Pending</div></div>
-                    <div class="summary-card"><div class="summary-number">${completed}</div><div class="summary-label">Completed</div></div>
-                    <div class="summary-card"><div class="summary-number">${completionRate}%</div><div class="summary-label">Rate</div></div>
-                </div>
-                <div class="progress-container"><div class="progress-bar"></div></div>
-                <table>
-                    <thead><tr><th>Title</th><th>Subject</th><th>Class</th><th>Due Date</th><th>Status</th></tr></thead>
-                    <tbody>${filteredHomework.map(h => `<tr><td>${escapeHtml(h.title)}</td><td>${escapeHtml(h.subject)}</td><td>${h.class || 'All'}</td><td>${h.dueDate || '-'}</td><td>${h.status}</td>`).join('')}</tbody>
-                </table>
-                <div class="footer"><p>${escapeHtml(schoolName || 'Wings Convent School')} - Empowering Education</p></div>
+            <div class="header">
+                ${schoolLogoHtml}
+                <div class="school-name">${escapeHtml(schoolName || 'Wings Convent School')}</div>
+                <div class="school-address">${escapeHtml(schoolAddress || '')}</div>
+                <div class="school-contact">📞 ${escapeHtml(schoolPhone || '')} | ✉️ ${escapeHtml(schoolEmail || '')}</div>
+                <div class="report-title">📋 HOMEWORK REPORT</div>
+                <p style="font-size:8px; color:#64748b;">Generated: ${new Date().toLocaleString()} | Total: ${total}</p>
             </div>
+            <div class="summary-grid">
+                <div class="summary-card"><div class="summary-number">${total}</div><div class="summary-label">Total</div></div>
+                <div class="summary-card"><div class="summary-number">${pending}</div><div class="summary-label">Pending</div></div>
+                <div class="summary-card"><div class="summary-number">${completed}</div><div class="summary-label">Completed</div></div>
+                <div class="summary-card"><div class="summary-number">${completionRate}%</div><div class="summary-label">Rate</div></div>
+            </div>
+            <div class="progress-container"><div class="progress-bar"></div></div>
+            <table>
+                <thead><tr><th>Title</th><th>Subject</th><th>Class</th><th>Due Date</th><th>Status</th></tr></thead>
+                <tbody>${tableRows || '<tr><td colspan="5" style="text-align:center; padding:20px;">No homework found</td></tr>'}</tbody>
+            </table>
+            <div class="footer"><p>${escapeHtml(schoolName || 'Wings Convent School')} - Empowering Education</p></div>
         </body>
         </html>`;
         
@@ -22876,30 +24005,126 @@ async function exportHomeworkPDF() {
         tempDiv.style.position = 'absolute';
         tempDiv.style.left = '-9999px';
         tempDiv.style.top = '-9999px';
-        tempDiv.style.width = '1100px';
-        tempDiv.innerHTML = reportHtml;
+        tempDiv.style.width = '1000px';
+        tempDiv.style.backgroundColor = 'white';
+        tempDiv.style.padding = '20px';
+        tempDiv.innerHTML = pdfHtml;
         document.body.appendChild(tempDiv);
         
-        let canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff' });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        let canvas = await html2canvas(tempDiv, { 
+            scale: 2.5, 
+            backgroundColor: '#ffffff', 
+            logging: false, 
+            useCORS: true,
+            width: 1000,
+            windowWidth: 1000
+        });
+        document.body.removeChild(tempDiv);
+        
         let imgData = canvas.toDataURL('image/png');
         let { jsPDF } = window.jspdf;
         let pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         let pdfWidth = pdf.internal.pageSize.getWidth();
         let imgWidth = pdfWidth;
         let imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
         pdf.save(`Homework_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-        showNotification('✅ PDF downloaded!', 'success');
-        document.body.removeChild(tempDiv);
+        showNotification('✅ PDF downloaded successfully!', 'success');
+        
     } catch (error) {
-        showNotification('❌ PDF error!', 'error');
+        console.error('PDF Error:', error);
+        showNotification('❌ Error generating PDF: ' + error.message, 'error');
+        const tempDivExists = document.querySelector('div[style*="left: -9999px"]');
+        if (tempDivExists) tempDivExists.remove();
     }
-    if (typeof hideLoader === 'function') hideLoader();
+    
+    hideLoader();
 }
 
-function filterHomework() { homeworkFilterText = document.getElementById('homeworkSearch')?.value || ''; homeworkCurrentPage = 1; loadHomeworkManagement(); }
-function clearHomeworkFilter() { homeworkFilterText = ''; if (document.getElementById('homeworkSearch')) document.getElementById('homeworkSearch').value = ''; loadHomeworkManagement(); }
+// ======================= FILTER FUNCTIONS =======================
+function filterHomework() { 
+    homeworkFilterText = document.getElementById('homeworkSearch')?.value || ''; 
+    homeworkCurrentPage = 1; 
+    loadHomeworkManagement(); 
+    showNotification('Filter applied', 'success');
+}
 
+function clearHomeworkFilter() { 
+    homeworkFilterText = ''; 
+    homeworkCurrentPage = 1; 
+    if (document.getElementById('homeworkSearch')) {
+        document.getElementById('homeworkSearch').value = ''; 
+    }
+    loadHomeworkManagement(); 
+    showNotification('Filter cleared', 'info'); 
+}
+
+// ======================= ONLINE/OFFLINE HANDLERS =======================
+window.addEventListener('online', async () => {
+    console.log('🟢 Back online! Syncing homework...');
+    showNotification('🟢 Back online! Syncing homework data...', 'success');
+    await processPendingHomeworkQueue();
+    await loadHomeworkFromSupabaseTable();
+    loadHomeworkManagement();
+});
+
+window.addEventListener('offline', () => {
+    console.log('🔴 Offline mode');
+    showNotification('🔴 Offline mode - Homework data saved locally', 'warning');
+});
+
+// ======================= AUTO-LOAD WHEN HOMEWORK MODULE OPENS =======================
+const origOpenModuleHomework = window.openModule;
+if (origOpenModuleHomework) {
+    window.openModule = function(id) {
+        origOpenModuleHomework(id);
+        if (id === 8) {
+            setTimeout(() => {
+                if (typeof loadHomeworkManagement === 'function') {
+                    loadHomeworkManagement();
+                }
+            }, 200);
+        }
+    };
+}
+
+setTimeout(() => {
+    const moduleTitle = document.getElementById('moduleTitle');
+    if (moduleTitle && moduleTitle.innerText && moduleTitle.innerText.toUpperCase().includes('HOMEWORK')) {
+        loadHomeworkManagement();
+    }
+}, 500);
+
+// ======================= EXPOSE FUNCTIONS =======================
+window.loadHomeworkManagement = loadHomeworkManagement;
+window.filterHomework = filterHomework;
+window.clearHomeworkFilter = clearHomeworkFilter;
+window.refreshHomeworkData = refreshHomeworkData;
+window.showAddHomeworkForm = showAddHomeworkForm;
+window.deleteHomework = deleteHomework;
+window.viewHomeworkDetails = viewHomeworkDetails;
+window.shareHomework = shareHomework;
+window.downloadHomeworkAttachment = downloadHomeworkAttachment;
+window.exportHomeworkCSV = exportHomeworkCSV;
+window.exportHomeworkPDF = exportHomeworkPDF;
+window.previousHomeworkPage = previousHomeworkPage;
+window.nextHomeworkPage = nextHomeworkPage;
+window.openHomeworkAttachmentUpload = openHomeworkAttachmentUpload;
+
+console.log('✅ PART 11 COMPLETE - Homework Module (Student View Updated)');
+console.log('📌 Student Features:');
+console.log('   ✅ View Homework Details');
+console.log('   ✅ Download Attachment (if available)');
+console.log('   ✅ Share via WhatsApp');
+console.log('   ❌ Submit Button Removed');
+console.log('📌 Admin/Teacher Features:');
+console.log('   ✅ Full CRUD (Add, Edit, Delete)');
+console.log('   ✅ Camera + Gallery + PDF Upload');
+console.log('   ✅ Crop Image');
+console.log('   ✅ All Student Features');
 // ======================= PART 11 ENDS HERE =======================
 // ======================= PART 12: EXAMS MODULE (PURE SUPABASE CRUD - NO SAMPLE DATA) =======================
 // ======================= Supabase Columns: id, class_name, exam_name, subjects (JSON), document_url, document_data, created_at, updated_at =======================
