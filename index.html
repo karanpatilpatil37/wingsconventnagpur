@@ -22214,7 +22214,6 @@ console.log('   ✅ Complete CRUD Operations');
 console.log('   ✅ Fully Responsive - Web + Android APK');
 
 // ======================= PART 10 ENDS HERE =======================
-// ======================= PART 10 ENDS HERE =======================
 // ======================= PART 11: HOMEWORK MODULE (STUDENT VIEW - UPDATED) =======================
 // ✅ FEATURES:
 // 1. ✅ Admin - Full CRUD (Add, Edit, Delete)
@@ -24127,6 +24126,7 @@ console.log('   ✅ Crop Image');
 console.log('   ✅ All Student Features');
 // ======================= PART 11 ENDS HERE =======================
 // ======================= PART 12: EXAMS MODULE (PURE SUPABASE CRUD - NO SAMPLE DATA) =======================
+// ======================= PART 12: EXAMS MODULE (PURE SUPABASE CRUD - FULLY WORKING) =======================
 // ======================= Supabase Columns: id, class_name, exam_name, subjects (JSON), document_url, document_data, created_at, updated_at =======================
 
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
@@ -24225,7 +24225,7 @@ function getSchoolLogoHTML() {
     let logoUrl = localStorage.getItem('schoolLogoUrl');
     let logoData = localStorage.getItem('schoolLogo');
     if (logoUrl && logoUrl.startsWith('http')) {
-        return `<img src="${logoUrl}" style="width: 45px; height: 45px; border-radius: 50%; margin-bottom: 5px; object-fit: cover;">`;
+        return `<img src="${logoUrl}" style="width: 45px; height: 45px; border-radius: 50%; margin-bottom: 5px; object-fit: cover;" onerror="this.style.display='none';">`;
     } else if (logoData && logoData.startsWith('data:image')) {
         return `<img src="${logoData}" style="width: 45px; height: 45px; border-radius: 50%; margin-bottom: 5px; object-fit: cover;">`;
     }
@@ -24250,13 +24250,103 @@ function getSupabaseClientExams() {
     return null;
 }
 
+// ======================= GET USER CLASS =======================
+function getUserClass() {
+    console.log('🔍 getUserClass called, currentUser:', currentUser);
+    
+    if (!currentUser) return '';
+    
+    if (currentUser.class_teacher) {
+        console.log('✅ Class from currentUser.class_teacher:', currentUser.class_teacher);
+        return currentUser.class_teacher;
+    }
+    
+    if (window.employees && window.employees.length > 0) {
+        for (let emp of window.employees) {
+            if (emp && emp.name === currentUser.name) {
+                if (emp.class_teacher) {
+                    console.log('✅ Class from employees table:', emp.class_teacher);
+                    localStorage.setItem('teacherClass', emp.class_teacher);
+                    return emp.class_teacher;
+                }
+            }
+        }
+    }
+    
+    let savedClass = localStorage.getItem('teacherClass');
+    if (savedClass) {
+        console.log('✅ Class from localStorage:', savedClass);
+        return savedClass;
+    }
+    
+    const teacherClassMap = {
+        'Priya Sharma': 'Playgroup A',
+        'Neha Gupta': 'Playgroup B',
+        'Rajesh Singh': 'Nursery A',
+        'Sneha Sharma': 'Nursery B',
+        'Anjali Kapoor': 'KG1 A',
+        'Vikram Joshi': 'KG1 B',
+        'Meera Nair': 'KG2 A',
+        'Rahul Mehta': 'KG2 B'
+    };
+    
+    if (currentUser.name && teacherClassMap[currentUser.name]) {
+        console.log('✅ Class from teacher map:', teacherClassMap[currentUser.name]);
+        localStorage.setItem('teacherClass', teacherClassMap[currentUser.name]);
+        return teacherClassMap[currentUser.name];
+    }
+    
+    console.log('⚠️ No class found for teacher:', currentUser.name);
+    return '';
+}
+
 // ======================= GET AVAILABLE CLASSES =======================
 function getAvailableClasses() {
+    console.log('📋 getAvailableClasses called, currentUser:', currentUser);
+    
     let classSet = new Set();
     
-    if (window.students) {
+    if (!currentUser) {
+        console.log('⚠️ No currentUser, returning default classes');
+        return ['Playgroup A', 'Playgroup B', 'Nursery A', 'Nursery B', 'KG1 A', 'KG1 B', 'KG2 A', 'KG2 B'];
+    }
+    
+    if (currentUser.role === 'teacher') {
+        let teacherClass = getUserClass();
+        console.log('👨‍🏫 Teacher Class found:', teacherClass);
+        
+        if (teacherClass) {
+            classSet.add(teacherClass);
+            if (!teacherClass.includes('A') && !teacherClass.includes('B')) {
+                const classNames = ['Playgroup', 'Nursery', 'KG1', 'KG2'];
+                if (classNames.includes(teacherClass)) {
+                    classSet.add(teacherClass + ' A');
+                    classSet.add(teacherClass + ' B');
+                }
+            }
+        } else {
+            console.log('⚠️ Teacher class not found, using default');
+            showNotification('⚠️ You have not been assigned to any class. Please contact admin.', 'warning');
+            classSet.add('Playgroup A');
+        }
+        
+        let result = Array.from(classSet).sort();
+        console.log('📋 Teacher Classes:', result);
+        return result;
+    }
+    
+    const yourClasses = [
+        'Playgroup A', 'Playgroup B',
+        'Nursery A', 'Nursery B',
+        'KG1 A', 'KG1 B',
+        'KG2 A', 'KG2 B'
+    ];
+    
+    if (window.students && window.students.length > 0) {
         for (let s of window.students) {
-            if (s.cls) classSet.add(s.cls);
+            if (s.cls && s.sec) {
+                classSet.add(`${s.cls} ${s.sec}`);
+            }
         }
     }
     
@@ -24266,19 +24356,24 @@ function getAvailableClasses() {
         }
     }
     
-    let defaultClasses = ['Playgroup', 'Nursery', 'KG1', 'KG2', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12'];
+    for (let c of yourClasses) {
+        classSet.add(c);
+    }
+    
+    let defaultClasses = ['Playgroup', 'Nursery', 'KG1', 'KG2'];
     for (let c of defaultClasses) classSet.add(c);
     
     let classArray = Array.from(classSet);
     
     const order = {
-        'Playgroup': 1, 'Nursery': 2, 'KG1': 3, 'KG2': 4,
-        'Class 1': 5, 'Class 2': 6, 'Class 3': 7, 'Class 4': 8, 'Class 5': 9,
-        'Class 6': 10, 'Class 7': 11, 'Class 8': 12, 'Class 9': 13, 'Class 10': 14,
-        'Class 11': 15, 'Class 12': 16
+        'Playgroup': 1, 'Playgroup A': 1, 'Playgroup B': 1.5,
+        'Nursery': 2, 'Nursery A': 2, 'Nursery B': 2.5,
+        'KG1': 3, 'KG1 A': 3, 'KG1 B': 3.5,
+        'KG2': 4, 'KG2 A': 4, 'KG2 B': 4.5
     };
     classArray.sort((a, b) => (order[a] || 99) - (order[b] || 99));
     
+    console.log('📋 Admin Classes:', classArray);
     return classArray;
 }
 
@@ -24296,24 +24391,12 @@ function getSubjectsForClass(className) {
     ];
 }
 
-function getUserClass() {
-    if (currentUser.role === 'teacher') {
-        let teacher = window.employees ? window.employees.find(e => e.name === currentUser.name) : null;
-        return teacher?.classTeacher?.split(' ')[0] || '';
-    } else if (currentUser.role === 'student') {
-        let student = window.students ? window.students.find(s => s.name === currentUser.name) : null;
-        return student?.cls || '';
-    }
-    return '';
-}
-
-// ======================= LOAD EXAMS FROM SUPABASE (PURE - NO SAMPLE DATA) =======================
+// ======================= LOAD EXAMS FROM SUPABASE =======================
 async function loadExamsFromSupabase() {
     console.log('📋 [EXAMS] loadExamsFromSupabase called...');
     
     const supabase = getSupabaseClientExams();
     
-    // OFFLINE: Load from cache only
     if (!supabase || !navigator.onLine) {
         console.log('📴 [EXAMS] Offline - Loading from cache');
         const cached = localStorage.getItem('cache_exams');
@@ -24336,7 +24419,6 @@ async function loadExamsFromSupabase() {
         return false;
     }
     
-    // ONLINE: Load from Supabase ONLY
     try {
         console.log('🔄 [EXAMS] Loading from Supabase exams table...');
         const { data, error } = await supabase
@@ -24351,7 +24433,6 @@ async function loadExamsFromSupabase() {
         
         console.log(`📊 [EXAMS] Supabase returned ${data ? data.length : 0} records`);
         
-        // Clear existing exams array
         window.exams.length = 0;
         
         if (data && data.length > 0) {
@@ -24378,11 +24459,9 @@ async function loadExamsFromSupabase() {
             }
             localStorage.setItem('cache_exams', JSON.stringify(window.exams));
             console.log(`✅ [EXAMS] Loaded ${window.exams.length} exams from Supabase`);
-            console.log('📋 [EXAMS] First exam data:', window.exams[0]);
             return true;
         } else {
             console.log('📭 [EXAMS] No exams found in Supabase');
-            // ⚠️ CRITICAL: NO SAMPLE DATA - Keep array empty
             window.exams = [];
             localStorage.removeItem('cache_exams');
             return false;
@@ -24408,7 +24487,6 @@ async function saveExamToSupabase(examData) {
     }
     
     try {
-        // Store subjects as JSON string
         let subjectsToStore = examData.subjects;
         if (typeof subjectsToStore === 'object') {
             subjectsToStore = JSON.stringify(subjectsToStore);
@@ -24439,7 +24517,6 @@ async function saveExamToSupabase(examData) {
         console.log(`✅ [EXAMS] Exam "${examData.examName}" saved to Supabase`);
         showNotification('✅ Exam saved to cloud!', 'success');
         
-        // Update cache
         let cached = JSON.parse(localStorage.getItem('cache_exams') || '[]');
         let index = cached.findIndex(e => e.id === examData.id);
         if (index !== -1) {
@@ -24620,16 +24697,26 @@ function openExamDocCapture(callback) {
     const sourceModal = document.createElement('div');
     sourceModal.className = 'modal-overlay';
     sourceModal.style.zIndex = '100001';
+    sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+    
     sourceModal.innerHTML = `
-        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center;">
+        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
             <i class="fas fa-upload" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-            <h3 style="margin-bottom: 15px;">Choose Upload Source</h3>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Choose Upload Source</h3>
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-camera"></i> Take Photo</button>
-                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-images"></i> Choose from Gallery</button>
-                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-file-pdf"></i> Upload PDF</button>
+                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;">
+                    <i class="fas fa-camera"></i> 📸 Take Photo
+                </button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;">
+                    <i class="fas fa-images"></i> 🖼️ Choose from Gallery
+                </button>
+                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;">
+                    <i class="fas fa-file-pdf"></i> 📄 Upload PDF
+                </button>
             </div>
-            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px;">Cancel</button>
+            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px; font-size: 14px; min-height: 44px;">
+                <i class="fas fa-times"></i> Cancel
+            </button>
         </div>
     `;
     document.body.appendChild(sourceModal);
@@ -24653,17 +24740,23 @@ function openExamDocCapture(callback) {
                         const cropModal = document.createElement('div');
                         cropModal.className = 'modal-overlay';
                         cropModal.style.zIndex = '100002';
+                        cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100002; padding:16px;';
+                        
                         cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width: 500px; text-align: center; border-radius: 24px;">
-                                <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 15px; border-radius: 24px 24px 0 0;">
-                                    <h2 style="color: white; margin: 0;"><i class="fas fa-crop-alt"></i> Crop Image</h2>
-                                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">&times;</button>
+                            <div class="modal-content" style="max-width: 500px; width: 95%; text-align: center; border-radius: 24px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
+                                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 15px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                    <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-crop-alt"></i> Crop Image</h2>
+                                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
                                 </div>
                                 <div style="padding: 20px;">
-                                    <img id="cropExamImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px;">
-                                    <div style="margin-top:15px; display: flex; gap: 10px; justify-content: center;">
-                                        <button class="btn btn-primary" id="cropSaveBtn" style="padding: 10px 20px; border-radius: 30px;">✂️ Crop & Save</button>
-                                        <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px;">Cancel</button>
+                                    <img id="cropExamImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                        <button id="cropSaveBtn" class="btn btn-primary" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; min-height: 44px;">
+                                            <i class="fas fa-check"></i> Crop & Save
+                                        </button>
+                                        <button id="cancelBtn" class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; min-height: 44px;">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -24773,17 +24866,21 @@ async function loadExamsModule() {
 function renderExamsUI() {
     console.log('🎨 [EXAMS] renderExamsUI called - exams count:', window.exams.length);
     
+    if (!window.exams) {
+        window.exams = [];
+    }
+    
     if (window.exams.length === 0) {
         let addButton = (currentUser.role === 'admin' || currentUser.role === 'teacher') 
-            ? `<button class="btn btn-primary btn-sm" onclick="showAddExamForm()" style="margin-top:10px;"><i class="fas fa-plus"></i> Add First Exam</button>` 
+            ? `<button class="btn btn-primary btn-sm" onclick="showAddExamForm()" style="margin-top:10px; padding:12px 24px; border-radius:30px; font-size:14px; min-height:48px;"><i class="fas fa-plus"></i> Add First Exam</button>` 
             : '';
         document.getElementById('moduleContent').innerHTML = `
-            <div style="text-align:center; padding:60px; background:var(--bg-surface); border-radius:20px;">
+            <div style="text-align:center; padding:60px; background:var(--bg-surface); border-radius:20px; border:1px solid var(--border-light);">
                 <i class="fas fa-calendar-times" style="font-size:48px; color:#94a3b8;"></i>
-                <h3 style="margin-top:16px;">No Exams Found</h3>
+                <h3 style="margin-top:16px; color:var(--text-primary);">No Exams Found</h3>
                 <p style="color:var(--text-secondary);">${navigator.onLine ? 'No exam data in Supabase. Please add exams.' : 'You are offline. Connect to internet to load data.'}</p>
                 ${addButton}
-                <button class="btn btn-success btn-sm" onclick="refreshExamsData()" style="margin-left:10px; margin-top:10px;"><i class="fas fa-sync-alt"></i> Sync from Cloud</button>
+                <button class="btn btn-success btn-sm" onclick="refreshExamsData()" style="margin-left:10px; margin-top:10px; padding:12px 20px; border-radius:30px; font-size:13px; min-height:44px;"><i class="fas fa-sync-alt"></i> Sync from Cloud</button>
             </div>
         `;
         return;
@@ -24807,10 +24904,18 @@ function renderExamsUI() {
     
     let actionButtons = '';
     if (currentUser.role === 'admin' || currentUser.role === 'teacher') {
-        actionButtons += `<button class="btn btn-primary btn-sm" onclick="showAddExamForm()"><i class="fas fa-plus"></i> Add Exam Schedule</button>`;
+        actionButtons += `<button class="btn btn-primary btn-sm" onclick="showAddExamForm()" style="padding:10px 16px; border-radius:30px; font-size:13px; min-height:44px;"><i class="fas fa-plus"></i> Add Exam Schedule</button>`;
     }
     if (currentUser.role === 'admin') {
-        actionButtons += `<button class="btn btn-info btn-sm" onclick="exportExamsCSV()"><i class="fas fa-file-csv"></i> Export CSV</button>`;
+        actionButtons += `<button class="btn btn-info btn-sm" onclick="exportExamsCSV()" style="padding:10px 16px; border-radius:30px; font-size:13px; min-height:44px;"><i class="fas fa-file-csv"></i> Export CSV</button>`;
+    }
+    
+    let availableClasses = [];
+    try {
+        availableClasses = getAvailableClasses();
+    } catch(e) {
+        console.error('Error getting available classes:', e);
+        availableClasses = ['Playgroup A', 'Playgroup B', 'Nursery A', 'Nursery B', 'KG1 A', 'KG1 B', 'KG2 A', 'KG2 B'];
     }
     
     let content = `
@@ -24846,9 +24951,11 @@ function renderExamsUI() {
             align-items: center;
             justify-content: center;
             font-size: 24px;
+            flex-shrink: 0;
         }
         .exam-card-title {
             flex: 1;
+            min-width: 140px;
         }
         .exam-card-title h3 {
             margin: 0;
@@ -24915,6 +25022,7 @@ function renderExamsUI() {
             cursor: pointer;
             font-size: 12px;
             transition: background 0.2s;
+            min-height: 36px;
         }
         .exam-doc-btn:hover {
             background: #059669;
@@ -24939,6 +25047,7 @@ function renderExamsUI() {
             gap: 6px;
             transition: all 0.2s;
             color: var(--text-primary);
+            min-height: 40px;
         }
         .exam-action-btn:hover {
             background: #2563eb;
@@ -24949,50 +25058,111 @@ function renderExamsUI() {
             background: #ef4444;
             border-color: #ef4444;
         }
+        .summary-cards { display: grid; gap: 12px; margin-bottom: 20px; }
+        .chart-container { margin: 16px 0; }
+        .online-badge, .offline-badge, .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+        }
+        .online-badge { background: #10b981; color: white; }
+        .offline-badge { background: #f59e0b; color: white; }
+        .role-badge { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; }
         
-        @media (max-width: 480px) {
-            .exam-card-header {
-                flex-direction: column;
-                text-align: center;
-                padding: 12px 16px;
-            }
-            .exam-card-icon { margin: 0 auto; }
-            .exam-subject-row {
-                grid-template-columns: 1fr;
-                gap: 6px;
-                text-align: center;
-            }
-            .exam-card-footer { justify-content: center; }
-            .summary-cards { grid-template-columns: repeat(2, 1fr) !important; }
-            .action-buttons { flex-direction: column; }
-            .action-buttons .search-box { width: 100%; }
-            .action-buttons .btn-sm { width: 100%; }
+        @media (min-width: 1025px) {
+            .summary-cards { grid-template-columns: repeat(4, 1fr); }
+            .chart-container { display: grid; grid-template-columns: 1fr; gap: 16px; }
+            #examCardsGrid { grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); }
         }
         
-        @media (min-width: 481px) and (max-width: 640px) {
-            .exam-card-header { flex-direction: column; text-align: center; }
-            .exam-subject-row { grid-template-columns: 1fr; gap: 8px; text-align: center; }
+        @media (min-width: 641px) and (max-width: 1024px) {
             .summary-cards { grid-template-columns: repeat(2, 1fr) !important; }
-            .action-buttons { flex-direction: column; }
-            .action-buttons .search-box { width: 100%; }
-            .action-buttons .btn-sm { width: 100%; }
-        }
-        
-        @media (min-width: 641px) and (max-width: 768px) {
+            .chart-container { grid-template-columns: 1fr !important; }
+            #examCardsGrid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
             .exam-subject-row {
                 grid-template-columns: 1.5fr 1fr 1fr 0.8fr 1.2fr;
                 gap: 8px;
                 font-size: 11px;
             }
-            .summary-cards { grid-template-columns: repeat(2, 1fr) !important; }
+            .action-buttons { flex-wrap: wrap !important; }
+            .action-buttons .search-box { min-width: 150px !important; }
+            .action-buttons .btn-sm { font-size: 12px !important; padding: 8px 14px !important; }
         }
         
-        .summary-cards {
-            display: grid;
-            gap: 12px;
-            margin-bottom: 20px;
+        @media (min-width: 481px) and (max-width: 640px) {
+            .summary-cards { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+            .chart-container { grid-template-columns: 1fr !important; }
+            #examCardsGrid { grid-template-columns: 1fr !important; }
+            .exam-card-header { flex-direction: column; text-align: center; padding: 14px 16px; }
+            .exam-card-icon { margin: 0 auto; }
+            .exam-subject-row { grid-template-columns: 1fr; gap: 6px; text-align: center; padding: 12px; }
+            .exam-subject-row > div { padding: 4px 0; }
+            .exam-card-footer { justify-content: center; }
+            .exam-action-btn { font-size: 12px !important; padding: 10px 16px !important; min-height: 44px; }
+            .action-buttons { flex-direction: column; gap: 8px; }
+            .action-buttons .search-box { width: 100%; min-width: auto; padding: 12px 16px 12px 40px; font-size: 14px; }
+            .action-buttons .btn-sm { width: 100%; text-align: center; justify-content: center; padding: 12px !important; font-size: 14px !important; min-height: 48px; }
+            .exam-document-section { flex-direction: column; text-align: center; gap: 8px; }
+            .swal2-popup { width: 95% !important; padding: 12px !important; border-radius: 16px !important; }
+            .swal2-popup .btn { font-size: 12px !important; padding: 10px !important; min-height: 44px; }
+            .modal-content { max-width: 95% !important; padding: 15px !important; }
+            .modal-content .form-row { grid-template-columns: 1fr !important; gap: 10px !important; }
+            .modal-content .subject-row { padding: 10px !important; }
+            .modal-content .subject-inputs { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+            .online-badge, .offline-badge, .role-badge { font-size: 9px !important; padding: 3px 10px !important; }
         }
-        .chart-container { margin: 16px 0; }
+        
+        @media (max-width: 480px) {
+            .summary-cards { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+            .summary-item { padding: 12px !important; }
+            .summary-value { font-size: 18px !important; }
+            .chart-container { grid-template-columns: 1fr !important; gap: 10px !important; }
+            .chart-card { padding: 12px !important; }
+            .chart-card h3 { font-size: 13px !important; }
+            .chart-card canvas { max-height: 160px !important; }
+            #examCardsGrid { grid-template-columns: 1fr !important; gap: 12px !important; }
+            .exam-card-header { flex-direction: column; text-align: center; padding: 12px 14px; gap: 10px; }
+            .exam-card-icon { width: 40px; height: 40px; font-size: 20px; margin: 0 auto; }
+            .exam-card-title h3 { font-size: 15px; }
+            .exam-card-title p { font-size: 10px; }
+            .exam-card-badge { font-size: 10px; padding: 4px 10px; }
+            .exam-card-body { padding: 10px 14px; }
+            .exam-subject-row { grid-template-columns: 1fr; gap: 4px; text-align: center; padding: 10px; font-size: 11px; }
+            .exam-subject-row > div { padding: 2px 0; }
+            .exam-document-section { flex-direction: column; text-align: center; gap: 6px; padding: 10px; font-size: 12px; }
+            .exam-doc-link { font-size: 11px; padding: 4px 10px; }
+            .exam-doc-btn { font-size: 11px; padding: 4px 10px; min-height: 32px; }
+            .exam-card-footer { justify-content: center; padding: 10px 14px; gap: 6px; }
+            .exam-action-btn { font-size: 11px !important; padding: 8px 12px !important; min-height: 40px; gap: 4px; }
+            .action-buttons { flex-direction: column; gap: 6px; }
+            .action-buttons .search-box { width: 100%; min-width: auto; padding: 10px 14px 10px 36px; font-size: 14px; min-height: 44px; }
+            .action-buttons .btn-sm { width: 100%; text-align: center; justify-content: center; padding: 10px !important; font-size: 13px !important; min-height: 44px; border-radius: 25px !important; }
+            .online-badge, .offline-badge, .role-badge { font-size: 8px !important; padding: 2px 8px !important; }
+            .swal2-popup { width: 95% !important; padding: 10px !important; border-radius: 14px !important; }
+            .swal2-popup .btn { font-size: 11px !important; padding: 8px !important; min-height: 40px; }
+            .modal-content { max-width: 98% !important; padding: 12px !important; border-radius: 16px !important; }
+            .modal-content .form-row { grid-template-columns: 1fr !important; gap: 8px !important; }
+            .modal-content .subject-row { padding: 8px !important; }
+            .modal-content .subject-row h4 { font-size: 13px !important; }
+            .modal-content .subject-row label { font-size: 11px !important; }
+            .modal-content .subject-inputs { grid-template-columns: 1fr !important; gap: 6px !important; }
+            .modal-content .subject-inputs input { padding: 8px !important; font-size: 13px !important; min-height: 40px; }
+            .modal-content .form-group label { font-size: 12px !important; }
+            .modal-content .form-group input, .modal-content .form-group select { padding: 8px 12px !important; font-size: 13px !important; min-height: 40px; }
+            .modal-content .btn { font-size: 13px !important; padding: 10px 16px !important; min-height: 44px; }
+        }
+        
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .custom-modal-body { padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; }
+        }
+        
+        @media print {
+            .action-buttons, .exam-card-footer, .exam-document-section,
+            .btn, .no-print, .fab, .bottom-nav, .app-header { display: none !important; }
+            .exam-card { break-inside: avoid; page-break-inside: avoid; }
+            .exam-card-header { background: #2563eb !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
     </style>
     
     <div style="text-align: right; margin-bottom: 10px;">
@@ -25009,34 +25179,49 @@ function renderExamsUI() {
     
     <div class="action-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
         <div style="position: relative; flex: 1; min-width: 180px;">
-            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
-            <input type="text" id="examSearchBox" class="search-box" placeholder="Search by exam name..." value="${examFilterText}" style="padding-left: 35px; width: 100%;">
+            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; z-index: 1;"></i>
+            <input type="text" id="examSearchBox" class="search-box" placeholder="Search by exam name..." value="${examFilterText}" style="padding-left: 35px; width: 100%; border-radius:30px; padding:10px 10px 10px 35px; border:2px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary);">
         </div>
-        ${currentUser.role === 'admin' ? `<select id="examClassFilter" class="form-control" style="width: auto;">${classFilterOptions}</select>` : ''}
-        <button class="btn btn-info btn-sm" onclick="filterExamsList()"><i class="fas fa-search"></i> Filter</button>
-        <button class="btn btn-warning btn-sm" onclick="clearExamFilter()"><i class="fas fa-eraser"></i> Clear</button>
-        <button class="btn btn-secondary btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-        <button class="btn btn-success btn-sm" onclick="refreshExamsData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        ${currentUser.role === 'admin' ? `<select id="examClassFilter" class="form-control" style="width: auto; min-width: 130px; padding:10px 14px; border-radius:30px; border:2px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary);">${classFilterOptions}</select>` : ''}
+        <button class="btn btn-info btn-sm" onclick="filterExamsList()" style="padding:10px 16px; border-radius:30px; font-size:13px; min-height:44px; border:none; background:var(--bg-body); color:var(--text-primary); cursor:pointer; font-weight:600;"><i class="fas fa-search"></i> Filter</button>
+        <button class="btn btn-warning btn-sm" onclick="clearExamFilter()" style="padding:10px 16px; border-radius:30px; font-size:13px; min-height:44px; border:none; background:#f59e0b; color:white; cursor:pointer; font-weight:600;"><i class="fas fa-eraser"></i> Clear</button>
+        <button class="btn btn-secondary btn-sm" onclick="window.print()" style="padding:10px 16px; border-radius:30px; font-size:13px; min-height:44px; border:none; background:#64748b; color:white; cursor:pointer; font-weight:600;"><i class="fas fa-print"></i> Print</button>
+        <button class="btn btn-success btn-sm" onclick="refreshExamsData()" style="padding:10px 16px; border-radius:30px; font-size:13px; min-height:44px; border:none; background:#10b981; color:white; cursor:pointer; font-weight:600;"><i class="fas fa-sync-alt"></i> Refresh</button>
         ${actionButtons}
     </div>
     
     <div class="summary-cards" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
-        <div class="summary-item" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);"><div class="summary-value">${stats.total}</div><div>📚 Total Schedules</div></div>
-        <div class="summary-item" style="background: linear-gradient(135deg, #10b981, #059669);"><div class="summary-value">${stats.upcoming}</div><div>📅 Upcoming</div></div>
-        <div class="summary-item" style="background: linear-gradient(135deg, #3b82f6, #2563eb);"><div class="summary-value">${stats.classes}</div><div>🏫 Classes</div></div>
-        <div class="summary-item" style="background: linear-gradient(135deg, #f59e0b, #d97706);"><div class="summary-value">${stats.totalMarks}</div><div>⭐ Total Marks</div></div>
+        <div class="summary-item" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius:16px; padding:16px; text-align:center; color:white;">
+            <div class="summary-value" style="font-size:24px; font-weight:800;">${stats.total}</div>
+            <div style="font-size:12px; opacity:0.9;">📚 Total Schedules</div>
+        </div>
+        <div class="summary-item" style="background: linear-gradient(135deg, #10b981, #059669); border-radius:16px; padding:16px; text-align:center; color:white;">
+            <div class="summary-value" style="font-size:24px; font-weight:800;">${stats.upcoming}</div>
+            <div style="font-size:12px; opacity:0.9;">📅 Upcoming</div>
+        </div>
+        <div class="summary-item" style="background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius:16px; padding:16px; text-align:center; color:white;">
+            <div class="summary-value" style="font-size:24px; font-weight:800;">${stats.classes}</div>
+            <div style="font-size:12px; opacity:0.9;">🏫 Classes</div>
+        </div>
+        <div class="summary-item" style="background: linear-gradient(135deg, #f59e0b, #d97706); border-radius:16px; padding:16px; text-align:center; color:white;">
+            <div class="summary-value" style="font-size:24px; font-weight:800;">${stats.totalMarks}</div>
+            <div style="font-size:12px; opacity:0.9;">⭐ Total Marks</div>
+        </div>
     </div>
     
     <div class="chart-container">
-        <div class="chart-card"><h3>📊 Exams by Class</h3><canvas id="examClassChart" style="max-height: 250px; width: 100%;"></canvas></div>
+        <div class="chart-card" style="background:var(--bg-surface); border-radius:20px; padding:16px; border:1px solid var(--border-light);">
+            <h3 style="color:var(--text-primary); font-size:14px; margin-bottom:12px;">📊 Exams by Class</h3>
+            <canvas id="examClassChart" style="max-height: 250px; width: 100%;"></canvas>
+        </div>
     </div>
     
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 15px 0; padding: 12px; background: var(--bg-surface); border-radius: 16px;">
-        <div>Showing ${start + 1} to ${Math.min(start + examsPerPage, filteredExams.length)} of ${filteredExams.length}</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 15px 0; padding: 12px 16px; background: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border-light);">
+        <div style="font-size:13px; color:var(--text-primary);">Showing ${start + 1} to ${Math.min(start + examsPerPage, filteredExams.length)} of ${filteredExams.length}</div>
         <div style="display: flex; gap: 8px;">
-            <button class="btn-sm btn-info" onclick="previousExamsPage()" ${examsCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i> Prev</button>
-            <span style="padding: 6px 14px; background: var(--primary); color: white; border-radius: 20px;">${examsCurrentPage} / ${examsTotalPages || 1}</span>
-            <button class="btn-sm btn-info" onclick="nextExamsPage()" ${examsCurrentPage === examsTotalPages || examsTotalPages === 0 ? 'disabled' : ''}>Next <i class="fas fa-chevron-right"></i></button>
+            <button class="btn-sm btn-info" onclick="previousExamsPage()" ${examsCurrentPage === 1 ? 'disabled' : ''} style="padding:8px 14px; border-radius:20px; font-size:12px; min-height:36px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);"><i class="fas fa-chevron-left"></i> Prev</button>
+            <span style="padding: 6px 14px; background: var(--primary); color: white; border-radius: 20px; font-size:13px; font-weight:600; min-width:40px; text-align:center;">${examsCurrentPage} / ${examsTotalPages || 1}</span>
+            <button class="btn-sm btn-info" onclick="nextExamsPage()" ${examsCurrentPage === examsTotalPages || examsTotalPages === 0 ? 'disabled' : ''} style="padding:8px 14px; border-radius:20px; font-size:12px; min-height:36px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">Next <i class="fas fa-chevron-right"></i></button>
         </div>
     </div>
     
@@ -25061,8 +25246,7 @@ function filterExamsByRole() {
             if (matchesSearch && matchesClass) filtered.push(e);
         }
     } else if (currentUser.role === 'teacher') {
-        let teacher = window.employees ? window.employees.find(emp => emp.name === currentUser.name) : null;
-        let myClass = teacher?.classTeacher?.split(' ')[0] || null;
+        let myClass = getUserClass();
         for (let e of window.exams) {
             if (e.className === myClass) {
                 let matchesSearch = examFilterText === '' || e.examName.toLowerCase().includes(examFilterText.toLowerCase());
@@ -25121,7 +25305,7 @@ function renderExamCards(examsToRender) {
     if (!grid) return;
     
     if (!examsToRender || examsToRender.length === 0) {
-        grid.innerHTML = '<div style="text-align:center; padding:40px; background: var(--bg-surface); border-radius: 20px;"><i class="fas fa-calendar-times" style="font-size: 48px; color: #94a3b8;"></i><p style="margin-top: 10px;">No exam schedules found.</p></div>';
+        grid.innerHTML = '<div style="text-align:center; padding:40px; background: var(--bg-surface); border-radius: 20px; border:1px solid var(--border-light);"><i class="fas fa-calendar-times" style="font-size: 48px; color: #94a3b8;"></i><p style="margin-top: 10px; color:var(--text-secondary);">No exam schedules found.</p></div>';
         return;
     }
     
@@ -25231,6 +25415,12 @@ function renderExamChart(examsList) {
                 maintainAspectRatio: true,
                 plugins: {
                     legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
                 }
             }
         });
@@ -25266,19 +25456,19 @@ function viewExamSchedule(id) {
         }
     }
     
-    let subjectsHtml = '<div style="overflow-x: auto;"><table style="width:100%; border-collapse:collapse; min-width: 450px;">';
-    subjectsHtml += '<thead><tr style="background:#2563eb; color:white;"><th style="padding:10px;">Subject</th><th style="padding:10px;">Date</th><th style="padding:10px;">Day</th><th style="padding:10px;">Time</th><th style="padding:10px;">Marks</th><th style="padding:10px;">Venue</th></tr></thead><tbody>';
+    let subjectsHtml = '<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;"><table style="width:100%; border-collapse:collapse; min-width: 450px; font-size:13px;">';
+    subjectsHtml += '<thead><tr style="background:#2563eb; color:white;"><th style="padding:10px 12px;">Subject</th><th style="padding:10px 12px;">Date</th><th style="padding:10px 12px;">Day</th><th style="padding:10px 12px;">Time</th><th style="padding:10px 12px;">Marks</th><th style="padding:10px 12px;">Venue</th></tr></thead><tbody>';
     
     if (subjectsArray && Array.isArray(subjectsArray) && subjectsArray.length > 0) {
         for (let s of subjectsArray) {
             let dateObj = new Date(s.date);
             let dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
             subjectsHtml += `<tr style="border-bottom:1px solid #e2e8f0;">
-                <td style="padding:10px;"><strong>${escapeHtml(s.name)}</strong></td>
-                <td style="padding:10px;">${s.date} (${dayName})</td>
-                <td style="padding:10px;">${s.startTime} - ${s.endTime}</td>
-                <td style="padding:10px; text-align:center;">${s.maxMarks}</td>
-                <td style="padding:10px;">${s.venue || '-'}</td>
+                <td style="padding:10px 12px;"><strong>${escapeHtml(s.name)}</strong></td>
+                <td style="padding:10px 12px;">${s.date} (${dayName})</td>
+                <td style="padding:10px 12px;">${s.startTime} - ${s.endTime}</td>
+                <td style="padding:10px 12px; text-align:center;">${s.maxMarks}</td>
+                <td style="padding:10px 12px;">${s.venue || '-'}</td>
             </tr>`;
         }
     } else {
@@ -25288,13 +25478,13 @@ function viewExamSchedule(id) {
     
     let docHtml = '';
     if (exam.documentUrl) {
-        docHtml = `<div style="margin-top:15px; padding:10px; background:#f0fdf4; border-radius:12px;">
-            <strong>📎 Question Paper:</strong> <a href="${exam.documentUrl}" target="_blank" class="action-chip">View in Cloud</a>
-            <button class="action-chip" onclick="downloadExamDoc('${exam.id}')">Download</button>
+        docHtml = `<div style="margin-top:15px; padding:10px 14px; background:#f0fdf4; border-radius:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <strong>📎 Question Paper:</strong> <a href="${exam.documentUrl}" target="_blank" class="action-chip" style="padding:6px 14px; border-radius:20px; background:#10b981; color:white; text-decoration:none; font-size:12px;">View in Cloud</a>
+            <button class="action-chip" onclick="downloadExamDoc('${exam.id}')" style="padding:6px 14px; border-radius:20px; background:#2563eb; color:white; border:none; cursor:pointer; font-size:12px;">Download</button>
         </div>`;
     } else if (exam.documentData) {
-        docHtml = `<div style="margin-top:15px; padding:10px; background:#fef3c7; border-radius:12px;">
-            <strong>📎 Question Paper:</strong> <button class="action-chip" onclick="downloadExamDoc('${exam.id}')">Download (Local)</button>
+        docHtml = `<div style="margin-top:15px; padding:10px 14px; background:#fef3c7; border-radius:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <strong>📎 Question Paper:</strong> <button class="action-chip" onclick="downloadExamDoc('${exam.id}')" style="padding:6px 14px; border-radius:20px; background:#f59e0b; color:white; border:none; cursor:pointer; font-size:12px;">Download (Local)</button>
         </div>`;
     }
     
@@ -25302,7 +25492,8 @@ function viewExamSchedule(id) {
         title: `${exam.examName} - ${exam.className}`,
         html: subjectsHtml + docHtml,
         width: window.innerWidth <= 480 ? '95%' : '800px',
-        confirmButtonText: 'Close'
+        confirmButtonText: 'Close',
+        confirmButtonColor: '#2563eb'
     });
 }
 
@@ -25364,7 +25555,8 @@ function deleteExamSchedule(id) {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Delete',
-        confirmButtonColor: '#ef4444'
+        confirmButtonColor: '#ef4444',
+        width: window.innerWidth <= 480 ? '95%' : '500px'
     }).then(async (result) => {
         if (result.isConfirmed) {
             showLoader();
@@ -25378,7 +25570,7 @@ function deleteExamSchedule(id) {
     });
 }
 
-// ======================= SHOW CLASS TIMETABLE =======================
+// ======================= ✅ FIXED: SHOW CLASS TIMETABLE =======================
 function showClassTimetable(className) {
     if (currentUser.role === 'student') {
         let student = window.students ? window.students.find(s => s.name === currentUser.name) : null;
@@ -25388,8 +25580,7 @@ function showClassTimetable(className) {
         }
     }
     if (currentUser.role === 'teacher') {
-        let teacher = window.employees ? window.employees.find(e => e.name === currentUser.name) : null;
-        let myClass = teacher?.classTeacher?.split(' ')[0] || '';
+        let myClass = getUserClass();
         if (myClass !== className) {
             showNotification('⛔ You can only view timetable of your assigned class', 'error');
             return;
@@ -25435,78 +25626,97 @@ function showClassTimetable(className) {
         let dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
         totalMarks += e.maxMarks;
         tableRows += `<tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 10px;">${formatDateDMY(e.date)}</td>
-            <td style="padding: 10px;">${dayName}</td>
-            <td style="padding: 10px;">${e.startTime} - ${e.endTime}</td>
-            <td style="padding: 10px;"><strong>${escapeHtml(e.subject)}</strong></td>
-            <td style="padding: 10px;">${escapeHtml(e.examName)}</td>
-            <td style="padding: 10px; text-align: center;">${e.maxMarks}</td>
-            <td style="padding: 10px;">${e.venue || '-'}</td>
+            <td style="padding: 8px 10px;">${formatDateDMY(e.date)}</td>
+            <td style="padding: 8px 10px;">${dayName}</td>
+            <td style="padding: 8px 10px;">${e.startTime} - ${e.endTime}</td>
+            <td style="padding: 8px 10px;"><strong>${escapeHtml(e.subject)}</strong></td>
+            <td style="padding: 8px 10px;">${escapeHtml(e.examName)}</td>
+            <td style="padding: 8px 10px; text-align: center;">${e.maxMarks}</td>
+            <td style="padding: 8px 10px;">${e.venue || '-'}</td>
         </tr>`;
     }
     
-    const timetableHtml = `
-        <div id="timetableForExport" style="padding: 20px; background: white; width: 100%; max-width: 100%;">
-            <div style="text-align:center; margin-bottom:20px;">
-                ${getSchoolLogoHTML()}
-                <h2 style="margin: 10px 0 5px; font-size: 16px;">${getSchoolNameSetting()}</h2>
-                <p style="font-size:11px; margin:0;">${getSchoolAddressSetting()} | 📞 ${getSchoolPhoneSetting()} | ✉️ ${getSchoolEmailSetting()}</p>
-                <h3 style="margin: 15px 0 5px; color: #2563eb; font-size: 14px;">📋 EXAMINATION TIMETABLE</h3>
-                <p style="font-size:12px;"><strong>Class: ${escapeHtml(className)}</strong> | Total Exams: ${allExams.length}</p>
-                <p style="font-size:10px;">Generated: ${new Date().toLocaleString()}</p>
+    let logoHtml = getSchoolLogoHTML();
+    
+    // ⭐ Store complete HTML in global variable
+    window.timetableHTML = `
+        <div id="timetableForExport" style="padding: 20px; background: white; width: 100%; max-width: 100%; border-radius: 8px;">
+            <div style="text-align:center; margin-bottom:15px; border-bottom:2px solid #2563eb; padding-bottom:10px;">
+                ${logoHtml}
+                <h2 style="margin: 8px 0 4px; font-size: 16px; color: #1e293b;">${getSchoolNameSetting()}</h2>
+                <p style="font-size:10px; margin:2px 0; color:#64748b;">${getSchoolAddressSetting()} | 📞 ${getSchoolPhoneSetting()} | ✉️ ${getSchoolEmailSetting()}</p>
+                <h3 style="margin: 10px 0 4px; color: #2563eb; font-size: 14px;">📋 EXAMINATION TIMETABLE</h3>
+                <p style="font-size:11px; color:#475569;"><strong>Class: ${escapeHtml(className)}</strong> | Total Exams: ${allExams.length}</p>
+                <p style="font-size:9px; color:#94a3b8;">Generated: ${new Date().toLocaleString()}</p>
             </div>
-            <div style="overflow-x: auto;">
-                <table style="width:100%; border-collapse:collapse; font-size:11px; min-width: 500px;">
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <table style="width:100%; border-collapse:collapse; font-size:10px; min-width: 500px;">
                     <thead>
                         <tr style="background:#2563eb; color:white;">
-                            <th style="padding:8px;">Date</th>
-                            <th style="padding:8px;">Day</th>
-                            <th style="padding:8px;">Time</th>
-                            <th style="padding:8px;">Subject</th>
-                            <th style="padding:8px;">Exam Name</th>
-                            <th style="padding:8px;">Marks</th>
-                            <th style="padding:8px;">Venue</th>
+                            <th style="padding:6px 8px; text-align:center;">Date</th>
+                            <th style="padding:6px 8px; text-align:center;">Day</th>
+                            <th style="padding:6px 8px; text-align:center;">Time</th>
+                            <th style="padding:6px 8px; text-align:center;">Subject</th>
+                            <th style="padding:6px 8px; text-align:center;">Exam Name</th>
+                            <th style="padding:6px 8px; text-align:center;">Marks</th>
+                            <th style="padding:6px 8px; text-align:center;">Venue</th>
                         </tr>
                     </thead>
                     <tbody>${tableRows}</tbody>
                     <tfoot>
-                        <tr style="background:#f1f5f9;">
-                            <td colspan="5" style="padding:8px; text-align:right;"><strong>Total Marks:</strong></td>
-                            <td style="padding:8px; text-align:center;"><strong>${totalMarks}</strong></td>
-                            <td style="padding:8px;"></td>
+                        <tr style="background:#f1f5f9; font-weight:bold;">
+                            <td colspan="5" style="padding:6px 8px; text-align:right;">Total Marks:</td>
+                            <td style="padding:6px 8px; text-align:center;">${totalMarks}</td>
+                            <td style="padding:6px 8px;"></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-            <div style="margin-top:15px; text-align:center; font-size:9px; color:#64748b;">
+            <div style="margin-top:12px; text-align:center; font-size:8px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:8px;">
                 <p>* Computer generated timetable | Valid with school stamp *</p>
                 <p>${getSchoolNameSetting()} - Empowering Education</p>
             </div>
         </div>
-        
-        <div style="display: flex; gap: 8px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
-            <button class="btn btn-primary btn-sm" onclick="printTimetableA5()" style="padding: 8px 16px; font-size: 12px;"><i class="fas fa-print"></i> Print (A5)</button>
-            <button class="btn btn-success btn-sm" onclick="downloadTimetablePNG()" style="padding: 8px 16px; font-size: 12px;"><i class="fas fa-image"></i> PNG</button>
-            <button class="btn btn-danger btn-sm" onclick="downloadTimetablePDF()" style="padding: 8px 16px; font-size: 12px;"><i class="fas fa-file-pdf"></i> PDF (A5)</button>
-            <button class="btn btn-info btn-sm" onclick="shareTimetableWhatsApp('${className}')" style="padding: 8px 16px; font-size: 12px; background: #25D366;"><i class="fab fa-whatsapp"></i> Share</button>
-            <button class="btn btn-secondary btn-sm" onclick="Swal.close()" style="padding: 8px 16px; font-size: 12px;"><i class="fas fa-times"></i> Close</button>
+    `;
+    
+    window.timetableClassName = className;
+    
+    const fullHtml = `
+        <div style="max-height: 70vh; overflow-y: auto; padding: 5px;">
+            ${window.timetableHTML}
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 15px;">
+                <button class="btn btn-primary btn-sm" onclick="printTimetableA5()" style="padding:10px 18px; border-radius:30px; font-size:12px; min-height:40px; border:none; cursor:pointer; background:#2563eb; color:white; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="fas fa-print"></i> Print 
+                </button>
+                <button class="btn btn-success btn-sm" onclick="downloadTimetablePNG()" style="padding:10px 18px; border-radius:30px; font-size:12px; min-height:40px; border:none; cursor:pointer; background:#10b981; color:white; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="fas fa-image"></i> PNG
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="downloadTimetablePDF()" style="padding:10px 18px; border-radius:30px; font-size:12px; min-height:40px; border:none; cursor:pointer; background:#ef4444; color:white; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="fas fa-file-pdf"></i> PDF 
+                </button>
+                <button class="btn btn-info btn-sm" onclick="shareTimetableWhatsApp()" style="padding:10px 18px; border-radius:30px; font-size:12px; min-height:40px; border:none; cursor:pointer; background:#25D366; color:white; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="fab fa-whatsapp"></i> Share
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="Swal.close()" style="padding:10px 18px; border-radius:30px; font-size:12px; min-height:40px; border:none; cursor:pointer; background:#64748b; color:white; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
         </div>
     `;
     
     Swal.fire({
         title: `📅 ${className} - Exam Timetable`,
-        html: `<div style="max-height: 60vh; overflow-y: auto; padding: 5px;">${timetableHtml}</div>`,
+        html: fullHtml,
         width: window.innerWidth <= 480 ? '95%' : '900px',
         showConfirmButton: false,
         showCloseButton: true
     });
 }
 
-// ======================= PRINT/EXPORT TIMETABLE FUNCTIONS =======================
+// ======================= ✅ FIXED: PRINT TIMETABLE A5 =======================
 function printTimetableA5() {
-    let printContent = document.getElementById('timetableForExport');
-    if (!printContent) {
-        showNotification('Content not found!', 'error');
+    if (!window.timetableHTML) {
+        showNotification('❌ Timetable not found! Please open timetable again.', 'error');
         return;
     }
     
@@ -25518,105 +25728,195 @@ function printTimetableA5() {
             <title>Exam Timetable</title>
             <meta charset="UTF-8">
             <style>
-                @page { size: A5 landscape; margin: 0.5cm; }
+                @page { size: A5 landscape; margin: 0.3cm; }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: 'Segoe UI', Arial, sans-serif; background: white; margin: 0; padding: 8px; }
+                body { font-family: 'Segoe UI', Arial, sans-serif; background: white; margin: 0; padding: 5px; }
                 .print-container { width: 100%; max-width: 100%; }
-                .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }
-                .header h2 { font-size: 14px; margin: 5px 0; }
-                .header p { font-size: 9px; color: #64748b; margin: 2px 0; }
-                .header h3 { font-size: 12px; color: #2563eb; margin: 8px 0; }
-                table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9px; }
-                th { background: #2563eb; color: white; padding: 6px; font-size: 9px; }
-                td { border: 1px solid #ddd; padding: 5px; font-size: 8px; }
-                .footer { margin-top: 10px; text-align: center; font-size: 7px; color: #94a3b8; border-top: 1px solid #ddd; padding-top: 6px; }
+                table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 8px; }
+                th { background: #2563eb; color: white; padding: 4px 6px; font-size: 8px; text-align: center; }
+                td { border: 1px solid #ddd; padding: 4px 6px; font-size: 7px; text-align: center; }
+                .footer { margin-top: 8px; text-align: center; font-size: 6px; color: #94a3b8; border-top: 1px solid #ddd; padding-top: 5px; }
                 @media print { body { margin: 0; padding: 0; } }
+                table { table-layout: fixed; }
             </style>
         </head>
         <body>
-            <div class="print-container">${printContent.innerHTML}</div>
-            <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 1000); };<\/script>
+            <div class="print-container">${window.timetableHTML}</div>
+            <script>
+                window.onload = function() { 
+                    setTimeout(function() { 
+                        window.print(); 
+                        setTimeout(function() { window.close(); }, 800);
+                    }, 300);
+                };
+            <\/script>
         </body>
         </html>
     `);
     printWindow.document.close();
 }
 
+// ======================= ✅ FIXED: DOWNLOAD TIMETABLE PNG =======================
 async function downloadTimetablePNG() {
-    showLoader();
-    let element = document.getElementById('timetableForExport');
-    if (!element) {
-        showNotification('Content not found!', 'error');
-        hideLoader();
+    if (!window.timetableHTML) {
+        showNotification('❌ Timetable not found! Please open timetable again.', 'error');
         return;
     }
     
+    showLoader();
+    showNotification('Generating PNG, please wait...', 'info');
+    
     try {
-        let cloneElement = element.cloneNode(true);
-        cloneElement.style.width = '800px';
-        cloneElement.style.padding = '20px';
-        cloneElement.style.backgroundColor = 'white';
-        cloneElement.style.position = 'absolute';
-        cloneElement.style.left = '-9999px';
-        cloneElement.style.top = '-9999px';
-        document.body.appendChild(cloneElement);
-        await new Promise(r => setTimeout(r, 100));
+        // Create a temporary container with the HTML
+        let tempContainer = document.createElement('div');
+        tempContainer.style.cssText = 'position:fixed; left:-9999px; top:0; width:1200px; background:white; padding:20px; z-index:999999;';
+        tempContainer.innerHTML = window.timetableHTML;
+        document.body.appendChild(tempContainer);
         
-        let canvas = await html2canvas(cloneElement, { scale: 2.5, backgroundColor: '#ffffff', logging: false, useCORS: true, width: 800 });
-        document.body.removeChild(cloneElement);
+        // Wait for rendering
+        await new Promise(r => setTimeout(r, 500));
+        
+        let canvas = await html2canvas(tempContainer, {
+            scale: 3,
+            backgroundColor: '#ffffff',
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            width: 1200,
+            height: tempContainer.scrollHeight + 50,
+            windowWidth: 1200,
+            windowHeight: tempContainer.scrollHeight + 50
+        });
+        
+        document.body.removeChild(tempContainer);
         
         let link = document.createElement('a');
         link.download = `Timetable_${new Date().toISOString().split('T')[0]}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-        showNotification('✅ PNG downloaded!', 'success');
+        
+        showNotification('✅ PNG downloaded successfully!', 'success');
+        
     } catch (error) {
         console.error('PNG Error:', error);
-        showNotification('❌ Error generating PNG!', 'error');
+        showNotification('❌ Error generating PNG: ' + error.message, 'error');
+        let tempDiv = document.querySelector('div[style*="left: -9999px"]');
+        if (tempDiv && tempDiv.parentNode) {
+            tempDiv.parentNode.removeChild(tempDiv);
+        }
     }
     hideLoader();
 }
 
+// ======================= ✅ FIXED: DOWNLOAD TIMETABLE PDF (A5 Landscape - Full Page) =======================
 async function downloadTimetablePDF() {
-    showLoader();
-    let element = document.getElementById('timetableForExport');
-    if (!element) {
-        showNotification('Content not found!', 'error');
-        hideLoader();
+    if (!window.timetableHTML) {
+        showNotification('❌ Timetable not found! Please open timetable again.', 'error');
         return;
     }
     
+    showLoader();
+    showNotification('Generating PDF, please wait...', 'info');
+    
     try {
-        let cloneElement = element.cloneNode(true);
-        cloneElement.style.width = '800px';
-        cloneElement.style.padding = '20px';
-        cloneElement.style.backgroundColor = 'white';
-        cloneElement.style.position = 'absolute';
-        cloneElement.style.left = '-9999px';
-        cloneElement.style.top = '-9999px';
-        document.body.appendChild(cloneElement);
-        await new Promise(r => setTimeout(r, 100));
+        // Create a temporary container with the HTML
+        let tempContainer = document.createElement('div');
+        tempContainer.style.cssText = 'position:fixed; left:-9999px; top:0; width:1200px; background:white; padding:20px; z-index:999999;';
+        tempContainer.innerHTML = window.timetableHTML;
+        document.body.appendChild(tempContainer);
         
-        let canvas = await html2canvas(cloneElement, { scale: 2.5, backgroundColor: '#ffffff', logging: false, useCORS: true, width: 800 });
-        document.body.removeChild(cloneElement);
+        // Wait for rendering
+        await new Promise(r => setTimeout(r, 500));
+        
+        let canvas = await html2canvas(tempContainer, {
+            scale: 3,
+            backgroundColor: '#ffffff',
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            width: 1200,
+            height: tempContainer.scrollHeight + 50,
+            windowWidth: 1200,
+            windowHeight: tempContainer.scrollHeight + 50
+        });
+        
+        document.body.removeChild(tempContainer);
         
         let imgData = canvas.toDataURL('image/png');
         let { jsPDF } = window.jspdf;
-        let pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5' });
-        let pdfWidth = pdf.internal.pageSize.getWidth();
-        let imgWidth = pdfWidth - 10;
+        
+        // A5 Landscape: 210mm x 148mm
+        let pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a5'
+        });
+        
+        let pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
+        let pdfHeight = pdf.internal.pageSize.getHeight(); // 148mm
+        
+        let margin = 3;
+        let imgWidth = pdfWidth - (margin * 2);
         let imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 5, 5, imgWidth, imgHeight);
+        
+        // Check if image height exceeds PDF height
+        if (imgHeight > pdfHeight - (margin * 2)) {
+            // Calculate how many pages needed
+            let totalPages = Math.ceil(imgHeight / (pdfHeight - (margin * 2)));
+            let pageHeight = (pdfHeight - (margin * 2));
+            let imgHeightPerPage = pageHeight;
+            let imgWidthPerPage = (imgHeightPerPage * canvas.width) / canvas.height;
+            
+            for (let i = 0; i < totalPages; i++) {
+                let yOffset = i * imgHeightPerPage;
+                let sourceY = (yOffset / imgHeight) * canvas.height;
+                let sourceHeight = (imgHeightPerPage / imgHeight) * canvas.height;
+                
+                // Create temporary canvas for this page
+                let tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = sourceHeight;
+                let ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+                
+                let pageImgData = tempCanvas.toDataURL('image/png');
+                
+                if (i > 0) {
+                    pdf.addPage();
+                }
+                
+                let pageImgWidth = pdfWidth - (margin * 2);
+                let pageImgHeight = (tempCanvas.height * pageImgWidth) / tempCanvas.width;
+                let yPos = (pdfHeight - pageImgHeight) / 2;
+                if (yPos < margin) yPos = margin;
+                
+                pdf.addImage(pageImgData, 'PNG', margin, yPos, pageImgWidth, pageImgHeight);
+            }
+        } else {
+            // Single page
+            let yPos = (pdfHeight - imgHeight) / 2;
+            if (yPos < margin) yPos = margin;
+            pdf.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+        }
+        
         pdf.save(`Timetable_${new Date().toISOString().split('T')[0]}.pdf`);
-        showNotification('✅ PDF downloaded! (A5 Landscape)', 'success');
+        
+        showNotification('✅ PDF downloaded successfully! (A5 Landscape)', 'success');
+        
     } catch (error) {
         console.error('PDF Error:', error);
-        showNotification('❌ Error generating PDF!', 'error');
+        showNotification('❌ Error generating PDF: ' + error.message, 'error');
+        let tempDiv = document.querySelector('div[style*="left: -9999px"]');
+        if (tempDiv && tempDiv.parentNode) {
+            tempDiv.parentNode.removeChild(tempDiv);
+        }
     }
     hideLoader();
 }
 
-function shareTimetableWhatsApp(className) {
+// ======================= ✅ FIXED: SHARE TIMETABLE WHATSAPP =======================
+function shareTimetableWhatsApp() {
+    let className = window.timetableClassName || '';
     let message = `📅 *Exam Timetable - ${className}*\n\n🏫 ${getSchoolNameSetting()}\n\n📋 Please check the complete timetable in the school portal.\n\n📅 Date: ${new Date().toLocaleDateString()}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
 }
@@ -25630,8 +25930,9 @@ function showAddExamForm(editId = null) {
     
     let examToEdit = editId ? window.exams.find(e => e.id === editId) : null;
     let classOptions = getAvailableClasses();
-    let teacherClass = getUserClass();
-    let selectedClass = examToEdit?.className || teacherClass || (classOptions[0] || '');
+    let myClass = getUserClass();
+    
+    let selectedClass = examToEdit?.className || myClass || (classOptions[0] || '');
     let availableSubjects = getSubjectsForClass(selectedClass);
     
     examDocumentData = examToEdit?.documentData || null;
@@ -25639,7 +25940,7 @@ function showAddExamForm(editId = null) {
     
     let modal = document.createElement('div');
     modal.className = 'modal-overlay';
-    modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10000;';
+    modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10000; overflow-y:auto;';
     
     let subjectRowsHtml = '';
     for (let s of availableSubjects) {
@@ -25652,16 +25953,16 @@ function showAddExamForm(editId = null) {
             <div class="subject-row" style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                     <h4 style="margin: 0; color: #2563eb; font-size: 14px;">📖 ${escapeHtml(s.name)}</h4>
-                    <label style="font-size: 12px;"><input type="checkbox" class="include-subj" data-subj="${s.name}" ${savedSubject ? 'checked' : 'checked'}> Include</label>
+                    <label style="font-size: 12px; display:flex; align-items:center; gap:4px;"><input type="checkbox" class="include-subj" data-subj="${s.name}" ${savedSubject ? 'checked' : 'checked'} style="width:16px; height:16px;"> Include</label>
                 </div>
                 <div class="subject-inputs" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
-                    <input type="date" class="form-control subj-date" data-subj="${s.name}" placeholder="Date" value="${savedSubject?.date || ''}" style="padding: 8px;">
-                    <input type="time" class="form-control subj-start" data-subj="${s.name}" value="${savedSubject?.startTime || '09:00'}" style="padding: 8px;">
-                    <input type="time" class="form-control subj-end" data-subj="${s.name}" value="${savedSubject?.endTime || '12:00'}" style="padding: 8px;">
-                    <input type="number" class="form-control subj-marks" data-subj="${s.name}" placeholder="Max Marks" value="${savedSubject?.maxMarks || s.maxMarks || 100}" style="padding: 8px;">
+                    <input type="date" class="form-control subj-date" data-subj="${s.name}" placeholder="Date" value="${savedSubject?.date || ''}" style="padding: 8px; border-radius:8px;">
+                    <input type="time" class="form-control subj-start" data-subj="${s.name}" value="${savedSubject?.startTime || '09:00'}" style="padding: 8px; border-radius:8px;">
+                    <input type="time" class="form-control subj-end" data-subj="${s.name}" value="${savedSubject?.endTime || '12:00'}" style="padding: 8px; border-radius:8px;">
+                    <input type="number" class="form-control subj-marks" data-subj="${s.name}" placeholder="Max Marks" value="${savedSubject?.maxMarks || s.maxMarks || 100}" style="padding: 8px; border-radius:8px;">
                 </div>
                 <div style="margin-top: 8px;">
-                    <input type="text" class="form-control subj-venue" data-subj="${s.name}" placeholder="Venue (Room No.)" value="${savedSubject?.venue || ''}" style="padding: 8px;">
+                    <input type="text" class="form-control subj-venue" data-subj="${s.name}" placeholder="Venue (Room No.)" value="${savedSubject?.venue || ''}" style="padding: 8px; border-radius:8px;">
                 </div>
             </div>
         `;
@@ -25671,7 +25972,7 @@ function showAddExamForm(editId = null) {
     if (examToEdit?.documentUrl) {
         docPreviewHtml = `<div style="background:#d1fae5; padding:12px; border-radius:12px; margin-top:10px;">
             <i class="fas fa-cloud-upload-alt" style="color:#10b981;"></i> Document in Cloud
-            <a href="${examToEdit.documentUrl}" target="_blank" class="action-chip" style="margin-left:10px;">View</a>
+            <a href="${examToEdit.documentUrl}" target="_blank" class="action-chip" style="margin-left:10px; padding:4px 12px; border-radius:20px; background:#10b981; color:white; text-decoration:none; font-size:11px;">View</a>
         </div>`;
     } else if (examToEdit?.documentData) {
         docPreviewHtml = `<div style="background:#fef3c7; padding:12px; border-radius:12px; margin-top:10px;">
@@ -25680,38 +25981,40 @@ function showAddExamForm(editId = null) {
     }
     
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 20px; background: var(--bg-surface);">
-            <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 15px 20px; border-radius: 20px 20px 0 0; position: sticky; top: 0;">
+        <div class="modal-content" style="max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 20px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
+            <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 15px 20px; border-radius: 20px 20px 0 0; position: sticky; top: 0; z-index: 10;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <h2 style="margin: 0; color: white; font-size: 18px;"><i class="fas fa-calendar-plus"></i> ${editId ? 'Edit' : 'Add'} Exam Schedule</h2>
-                    <button onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;">✕</button>
+                    <div>
+                        <h2 style="margin: 0; color: white; font-size: 18px;"><i class="fas fa-calendar-plus"></i> ${editId ? 'Edit' : 'Add'} Exam Schedule</h2>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.8);">One schedule with multiple subjects - each subject can have different date/time</p>
+                    </div>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 20px; display:flex; align-items:center; justify-content:center;">✕</button>
                 </div>
-                <p style="margin: 5px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.8);">One schedule with multiple subjects - each subject can have different date/time</p>
             </div>
             <div style="padding: 20px;">
-                <div class="form-group">
-                    <label style="font-size: 13px; font-weight: 600;">🏫 Select Class *</label>
-                    <select id="examClassSelect" class="form-control" onchange="updateSubjectsByClass()" style="width:100%; padding: 10px; border-radius: 10px;">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-size: 13px; font-weight: 600; display:block; margin-bottom:4px;">🏫 Select Class *</label>
+                    <select id="examClassSelect" class="form-control" onchange="updateSubjectsByClass()" style="width:100%; padding: 10px 14px; border-radius: 10px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary);">
                         ${classOptions.map(c => `<option value="${c}" ${selectedClass === c ? 'selected' : ''}>${c}</option>`).join('')}
                     </select>
                 </div>
                 
-                <div class="form-group">
-                    <label style="font-size: 13px; font-weight: 600;">📝 Exam Name *</label>
-                    <input type="text" id="examNameInput" class="form-control" placeholder="e.g., Unit Test, Half Yearly Exam" value="${escapeHtml(examToEdit?.examName || '')}" style="width:100%; padding: 10px; border-radius: 10px;">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-size: 13px; font-weight: 600; display:block; margin-bottom:4px;">📝 Exam Name *</label>
+                    <input type="text" id="examNameInput" class="form-control" placeholder="e.g., Unit Test, Half Yearly Exam" value="${escapeHtml(examToEdit?.examName || '')}" style="width:100%; padding: 10px 14px; border-radius: 10px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary);">
                 </div>
                 
-                <div class="form-group">
-                    <label style="font-size: 13px; font-weight: 600;">📚 Subjects Schedule</label>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-size: 13px; font-weight: 600; display:block; margin-bottom:4px;">📚 Subjects Schedule</label>
                     <div id="subjectsContainer">${subjectRowsHtml}</div>
-                    <small style="font-size: 11px;">✓ Check "Include" for subjects in this exam.</small>
+                    <small style="font-size: 11px; color:var(--text-secondary);">✓ Check "Include" for subjects in this exam.</small>
                 </div>
                 
-                <div style="background: var(--bg-body); border-radius: 16px; padding: 16px; margin: 16px 0;">
+                <div style="background: var(--bg-body); border-radius: 16px; padding: 16px; margin: 16px 0; border:1px solid var(--border-light);">
                     <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--primary);"><i class="fas fa-cloud-upload-alt"></i> Question Paper / Attachment (Optional)</h4>
-                    <div id="examDocUploadArea" style="border: 2px dashed var(--border-light); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
+                    <div id="examDocUploadArea" class="upload-area" style="border: 2px dashed var(--border-light); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; background:var(--bg-body);">
                         <i class="fas fa-camera" style="font-size: 28px; color: var(--primary); margin-bottom: 8px; display: block;"></i>
-                        <p style="margin: 0; font-size: 13px;">Click to upload Question Paper</p>
+                        <p style="margin: 0; font-size: 13px; color:var(--text-primary);">Click to upload Question Paper</p>
                         <p style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-secondary);">📁 PDF, JPG, PNG → exam_docs bucket</p>
                     </div>
                     <div id="examDocPreview" style="margin-top: 12px;">
@@ -25720,8 +26023,8 @@ function showAddExamForm(editId = null) {
                 </div>
                 
                 <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap;">
-                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 8px 16px; border-radius: 30px;">Cancel</button>
-                    <button class="btn btn-primary" onclick="saveExamScheduleData('${editId || ''}')" style="padding: 8px 20px; border-radius: 30px;"><i class="fas fa-save"></i> Save Schedule</button>
+                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size:14px; min-height:44px; border:none; cursor:pointer; background:#ef4444; color:white; font-weight:600;"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn btn-primary" onclick="saveExamScheduleData('${editId || ''}')" style="padding: 10px 24px; border-radius: 30px; font-size:14px; min-height:44px; border:none; cursor:pointer; background:linear-gradient(135deg,#2563eb,#1e40af); color:white; font-weight:600;"><i class="fas fa-save"></i> Save Schedule</button>
                 </div>
             </div>
         </div>
@@ -25771,16 +26074,16 @@ window.updateSubjectsByClass = function() {
             <div class="subject-row" style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                     <h4 style="margin: 0; color: #2563eb; font-size: 14px;">📖 ${escapeHtml(s.name)}</h4>
-                    <label style="font-size: 12px;"><input type="checkbox" class="include-subj" data-subj="${s.name}" checked> Include</label>
+                    <label style="font-size: 12px; display:flex; align-items:center; gap:4px;"><input type="checkbox" class="include-subj" data-subj="${s.name}" checked style="width:16px; height:16px;"> Include</label>
                 </div>
                 <div class="subject-inputs" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
-                    <input type="date" class="form-control subj-date" data-subj="${s.name}" placeholder="Date" style="padding: 8px;">
-                    <input type="time" class="form-control subj-start" data-subj="${s.name}" value="09:00" style="padding: 8px;">
-                    <input type="time" class="form-control subj-end" data-subj="${s.name}" value="12:00" style="padding: 8px;">
-                    <input type="number" class="form-control subj-marks" data-subj="${s.name}" placeholder="Max Marks" value="${s.maxMarks || 100}" style="padding: 8px;">
+                    <input type="date" class="form-control subj-date" data-subj="${s.name}" placeholder="Date" style="padding: 8px; border-radius:8px;">
+                    <input type="time" class="form-control subj-start" data-subj="${s.name}" value="09:00" style="padding: 8px; border-radius:8px;">
+                    <input type="time" class="form-control subj-end" data-subj="${s.name}" value="12:00" style="padding: 8px; border-radius:8px;">
+                    <input type="number" class="form-control subj-marks" data-subj="${s.name}" placeholder="Max Marks" value="${s.maxMarks || 100}" style="padding: 8px; border-radius:8px;">
                 </div>
                 <div style="margin-top: 8px;">
-                    <input type="text" class="form-control subj-venue" data-subj="${s.name}" placeholder="Venue (Room No.)" style="padding: 8px;">
+                    <input type="text" class="form-control subj-venue" data-subj="${s.name}" placeholder="Venue (Room No.)" style="padding: 8px; border-radius:8px;">
                 </div>
             </div>
         `;
@@ -25803,8 +26106,7 @@ window.saveExamScheduleData = async function(editId) {
     }
     
     if (currentUser.role === 'teacher') {
-        let teacher = window.employees ? window.employees.find(e => e.name === currentUser.name) : null;
-        let myClass = teacher?.classTeacher?.split(' ')[0] || '';
+        let myClass = getUserClass();
         if (className !== myClass) {
             showNotification('⛔ You can only add exams for your assigned class: ' + myClass, 'error');
             return;
@@ -25936,7 +26238,7 @@ function exportExamsCSV() {
             }
         }
     }
-    let blob = new Blob([csv], { type: 'text/csv' });
+    let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
     let link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `exams_${new Date().toISOString().split('T')[0]}.csv`;
@@ -26005,6 +26307,10 @@ window.clearExamFilter = clearExamFilter;
 window.exportExamsCSV = exportExamsCSV;
 window.refreshExamsData = refreshExamsData;
 window.showClassTimetable = showClassTimetable;
+window.printTimetableA5 = printTimetableA5;
+window.downloadTimetablePNG = downloadTimetablePNG;
+window.downloadTimetablePDF = downloadTimetablePDF;
+window.shareTimetableWhatsApp = shareTimetableWhatsApp;
 
 console.log('✅ PART 12 COMPLETE - Exams Module with Pure Supabase CRUD!');
 console.log('📌 NO SAMPLE DATA - Only shows data from Supabase exams table');
@@ -26012,8 +26318,12 @@ console.log('📌 Operations: Fetch, Create, Update, Delete (CRUD)');
 console.log('📌 Offline Support with Pending Queue');
 console.log('📌 subjects JSON parsing fixed in all functions');
 console.log('📌 Role-based Access: Admin/Teacher (Full), Student (View Only)');
+console.log('📌 FULLY RESPONSIVE - Desktop, Tablet, Mobile all supported');
+console.log('📌 Timetable PDF - FULLY FIXED with multi-page support for A5 Landscape');
+console.log('📌 Teacher Class Detection - Fixed');
 
 } // End of duplicate check
+// ======================= PART 12 ENDS HERE =======================
 // ======================= PART 12 ENDS HERE =======================
 // ======================= PART 13: RESULTS MODULE (COMPLETE FIXED - SUPABASE CONNECTED) =======================
 let resultFilterText = '', resultCurrentPage = 1, resultRowsPerPage = 10, resultTotalPages = 1;
