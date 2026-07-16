@@ -1060,7 +1060,6 @@ let exams = [];
 let fee_structures = [];
 let feedbacks = [];
 let notifications = [];
-let results = [];
 let sticky_notes = [];
 let timetable = [];
 let transportation = [];
@@ -4848,7 +4847,6 @@ function toggleTheme() {
     document.body.classList.toggle('dark-mode', darkMode);
     localStorage.setItem('darkMode', darkMode);
 }
-
 // ======================= PART 03-F- ENDS HERE ==========================================================================
 //=========================================START PART 03-G- ==================================================================
 // ======================= PART 3G: IMAGE COMPRESS, DATA URL, SAFE JSON, SUPABASE CLIENT =======================
@@ -5112,9 +5110,7 @@ async function uploadFileToBucket(bucketName, filePath, fileData, contentType = 
 
 //=========================================START PART 03-I- =====================================================================
 // ===================== PART 3I: BUTTON 1 - UPLOAD ALL TABLES ==================================================================
-//=========================================START PART 03-I- =====================================================================
 // ===================== PART 3I: BUTTON 1 - UPLOAD ALL TABLES ==================================================================
-
 window.forceUploadToSupabase = async function() {
     console.log('🚀 UPLOADING ALL TABLES TO SUPABASE...');
     
@@ -5131,12 +5127,13 @@ window.forceUploadToSupabase = async function() {
             <ul>
                 <li>📊 <strong>23 TABLES</strong> (Profile, Users, Students, Employees, Fees, Attendance, Feedback, etc.)</li>
                 <li>👨‍🎓 <strong>40 COMPLETELY UNIQUE Students</strong> (8 Classes × 5 Students)</li>
+                <li>📊 <strong>40 RESULTS</strong> (All 40 Students with marks, grade, rank, cls, roll)</li>
                 <li>👤 <strong>5 Employees</strong> (Teachers + Cashier + Accountant)</li>
                 <li>👥 <strong>5 Users</strong> (Admin, Teacher, Student, Cashier, Accountant)</li>
                 <li>🔔 <strong>5 Notifications</strong> (Welcome, PTM, Fee Reminder, Exam, Holiday)</li>
                 <li>🗣️ <strong>11 Feedbacks</strong> (Bug Reports, Suggestions, Complaints, etc.)</li>
                 <li>💰 <strong>4 Fee Structures</strong> (Playgroup, Nursery, KG1, KG2) with proper components</li>
-                <li>📚 <strong>10 Homework</strong> (For all 8 Classes - Playgroup A to KG2 B)</li>
+                <li>📚 <strong>16 Homework</strong> (For all 8 Classes - Playgroup A to KG2 B)</li>
             </ul>
             <p style="color: #10b981; margin-top: 10px;">
                 <i class="fas fa-check-circle"></i> All data will be in Supabase Database
@@ -5160,7 +5157,7 @@ window.forceUploadToSupabase = async function() {
     const photos = SAMPLE_PHOTOS;
     const docs = SAMPLE_DOCS;
     
-    // ===================== 🔥 EXACT FEE STRUCTURE FROM SQL =====================
+    // ===================== FEE STRUCTURES =====================
     const FEE_STRUCTURES_DATA = [
         {
             id: 'FEE_STRUCT_001',
@@ -5228,7 +5225,6 @@ window.forceUploadToSupabase = async function() {
         }
     ];
     
-    // ===================== 🔥 HELPER: Calculate Student Fee =====================
     function getFeeStructureForClass(cls) {
         return FEE_STRUCTURES_DATA.find(f => f.class_name === cls) || FEE_STRUCTURES_DATA[0];
     }
@@ -5239,54 +5235,22 @@ window.forceUploadToSupabase = async function() {
         return transportEnabled ? fee.grand_total : fee.base_fee_without_transport;
     }
     
-    // ===================== 🔥 40 COMPLETELY UNIQUE STUDENTS =====================
+    // ===================== 40 STUDENTS =====================
+    const firstNames = ['Aarav','Vihaan','Vivaan','Anaya','Diya','Advik','Ishaan','Aadhya','Sana','Kavya','Reyansh','Aanya','Shaurya','Ira','Dhruv','Kiara','Arjun','Myra','Kabir','Alisha','Rudra','Prisha','Ayaan','Anvi','Ved','Saisha','Ishan','Anika','Rohan','Siya','Krish','Naira','Yuvraj','Ishika','Aryan','Navya','Aarush','Ananya','Parth','Riya'];
+    const lastNames = ['Sharma','Verma','Gupta','Singh','Mehta','Patel','Kumar','Reddy','Joshi','Nair','Iyer','Rao','Desai','Menon','Bhatt','Kapoor','Malhotra','Sinha','Chatterjee','Bose','Agarwal','Khan','Pandey','Saxena','Tiwari','Mishra','Choudhary','Yadav','Jha','Das','Mukherjee','Banerjee','Ganguly','Sarkar','Dutta','Chopra','Mehra','Kohli','Sethi','Khanna'];
+    const malePhotos = [photos.studentMale1, photos.studentMale2, photos.studentMale3, photos.studentMale4, photos.studentMale5];
+    const femalePhotos = [photos.studentFemale1, photos.studentFemale2, photos.studentFemale3, photos.studentFemale4, photos.studentFemale5];
+    const bloodGroups = ['O+', 'A+', 'B+', 'AB+', 'O+'];
+    const religions = ['Hindu', 'Muslim', 'Sikh', 'Christian', 'Jain'];
+    const castCategories = ['General', 'OBC', 'SC', 'ST', 'General'];
+    const paidAmounts = [25000, 20000, 15000, 10000, 0];
+    
     function generateStudentsForClass(className, classSec, teacherName, startRoll, baseId) {
         const studentsList = [];
-        
-        // 🔥 40 COMPLETELY UNIQUE FIRST NAMES
-        const firstNames = [
-            'Aarav', 'Vihaan', 'Vivaan', 'Anaya', 'Diya',
-            'Advik', 'Ishaan', 'Aadhya', 'Sana', 'Kavya',
-            'Reyansh', 'Aanya', 'Shaurya', 'Ira', 'Dhruv',
-            'Kiara', 'Arjun', 'Myra', 'Kabir', 'Alisha',
-            'Rudra', 'Prisha', 'Ayaan', 'Anvi', 'Ved',
-            'Saisha', 'Ishan', 'Anika', 'Rohan', 'Siya',
-            'Krish', 'Naira', 'Yuvraj', 'Ishika', 'Aryan',
-            'Navya', 'Aarush', 'Ananya', 'Parth', 'Riya'
-        ];
-        
-        // 🔥 40 COMPLETELY UNIQUE LAST NAMES
-        const lastNames = [
-            'Sharma', 'Verma', 'Gupta', 'Singh', 'Mehta',
-            'Patel', 'Kumar', 'Reddy', 'Joshi', 'Nair',
-            'Iyer', 'Rao', 'Desai', 'Menon', 'Bhatt',
-            'Kapoor', 'Malhotra', 'Sinha', 'Chatterjee', 'Bose',
-            'Agarwal', 'Khan', 'Pandey', 'Saxena', 'Tiwari',
-            'Mishra', 'Choudhary', 'Yadav', 'Jha', 'Das',
-            'Mukherjee', 'Banerjee', 'Ganguly', 'Sarkar', 'Dutta',
-            'Chopra', 'Mehra', 'Kohli', 'Sethi', 'Khanna'
-        ];
-        
-        const malePhotos = [
-            photos.studentMale1, photos.studentMale2, photos.studentMale3,
-            photos.studentMale4, photos.studentMale5
-        ];
-        
-        const femalePhotos = [
-            photos.studentFemale1, photos.studentFemale2, photos.studentFemale3,
-            photos.studentFemale4, photos.studentFemale5
-        ];
-        
-        const bloodGroups = ['O+', 'A+', 'B+', 'AB+', 'O+'];
-        const religions = ['Hindu', 'Muslim', 'Sikh', 'Christian', 'Jain'];
-        const castCategories = ['General', 'OBC', 'SC', 'ST', 'General'];
-        
-        // 🔥 DIFFERENT PAID AMOUNTS FOR EACH STUDENT (matches fees table)
-        const paidAmounts = [20000, 15000, 0, 10000, 5000];
+        const globalStartIndex = (startRoll - 1);
         
         for (let i = 0; i < 5; i++) {
-            const globalIndex = (startRoll - 1) + i;
-            
+            const globalIndex = globalStartIndex + i;
             const firstName = firstNames[globalIndex % firstNames.length];
             const lastName = lastNames[globalIndex % lastNames.length];
             const fullName = `${firstName} ${lastName}`;
@@ -5294,28 +5258,20 @@ window.forceUploadToSupabase = async function() {
             const studentId = `${baseId}${String(rollNumber).padStart(2, '0')}`;
             const gender = i < 3 ? 'Male' : 'Female';
             const transportEnabled = (i % 2 === 0);
-            
-            // 🔥 Calculate fee based on structure
             const totalFee = calculateStudentTotalFee(className, transportEnabled);
-            
-            // 🔥 Get paid amount for this student
             const totalPaidFee = paidAmounts[i % paidAmounts.length];
-            
-            // 🔥 Calculate due fee
             const feeDue = Math.max(0, totalFee - totalPaidFee);
             
             let photoUrl;
-            if (i === 0) photoUrl = gender === 'Male' ? photos.studentMale1 : photos.studentFemale1;
-            else if (i === 1) photoUrl = gender === 'Male' ? photos.studentMale2 : photos.studentFemale2;
-            else if (i === 2) photoUrl = gender === 'Male' ? photos.studentMale3 : photos.studentFemale3;
-            else if (i === 3) photoUrl = gender === 'Male' ? photos.studentMale4 : photos.studentFemale4;
-            else if (i === 4) photoUrl = gender === 'Male' ? photos.studentMale5 : photos.studentFemale5;
+            if (i === 0) photoUrl = gender === 'Male' ? malePhotos[0] : femalePhotos[0];
+            else if (i === 1) photoUrl = gender === 'Male' ? malePhotos[1] : femalePhotos[1];
+            else if (i === 2) photoUrl = gender === 'Male' ? malePhotos[2] : femalePhotos[2];
+            else if (i === 3) photoUrl = gender === 'Male' ? malePhotos[3] : femalePhotos[3];
+            else photoUrl = gender === 'Male' ? malePhotos[4] : femalePhotos[4];
             
             const mobileNum = 7000000000 + Math.floor(Math.random() * 900000000);
             const fatherMobileNum = 7000000000 + Math.floor(Math.random() * 900000000);
-            const motherMobileNum = 7000000000 + Math.floor(Math.random() * 900000000);
             
-            // 🔥 Create student with proper fee structure and total_paid_fee
             studentsList.push({
                 id: studentId,
                 name: fullName,
@@ -5326,22 +5282,19 @@ window.forceUploadToSupabase = async function() {
                 religion: religions[i % religions.length],
                 cast_category: castCategories[i % castCategories.length],
                 cast_name: lastName,
-                father_name: `${firstName} ${lastName} Father`,
-                mother_name: `${firstName} ${lastName} Mother`,
+                father_name: firstName + ' ' + lastName,
+                mother_name: firstName + ' ' + lastName,
                 father_mobile: String(fatherMobileNum),
-                mother_mobile: String(motherMobileNum),
+                mother_mobile: String(fatherMobileNum + 1),
                 mobile: String(mobileNum),
                 email: `${fullName.toLowerCase().replace(/\s/g, '.')}@wings.edu`,
                 address: `House No. ${rollNumber}, Om Nagar, Koradi Road, Nagpur - 440030`,
-                
-                // 🔥 FEE FIELDS
                 total_fee: totalFee,
-                total_paid_fee: totalPaidFee,  // ✅ NEW: Total paid from fees table
+                total_paid_fee: totalPaidFee,
                 fee_due: feeDue,
-                
                 attendance: 85 + (rollNumber % 15),
                 status: 'Active',
-                dob: `2020-05-${String([15, 20, 25, 28, 30][i % 5]).padStart(2, '0')}`,
+                dob: `2020-05-${String([15,20,25,28,30][i % 5]).padStart(2, '0')}`,
                 blood_group: bloodGroups[rollNumber % bloodGroups.length],
                 admission_no: `ADM${1000 + rollNumber}`,
                 class_teacher: teacherName,
@@ -5366,7 +5319,6 @@ window.forceUploadToSupabase = async function() {
         return studentsList;
     }
     
-    // 🔥 Generate 40 students (8 Classes × 5 Students)
     const allStudents = [
         ...generateStudentsForClass('Playgroup', 'A', 'Priya Sharma', 1, 'PG'),
         ...generateStudentsForClass('Playgroup', 'B', 'Neha Gupta', 6, 'PG'),
@@ -5378,68 +5330,37 @@ window.forceUploadToSupabase = async function() {
         ...generateStudentsForClass('KG2', 'B', 'Rahul Mehta', 36, 'K2')
     ];
     
-    console.log(`👨‍🎓 Total Students Generated: ${allStudents.length}`);
+    console.log(`👨‍🎓 Students: ${allStudents.length}`);
     
-    // ===================== 🔥 FEES DATA =====================
-    function createFeeRecords(classNamesList, studentsList, startId) {
+    // ===================== FEES (40 Records) =====================
+    function createFeeRecords(classNamesList, studentsList) {
         const feeRecords = [];
-        let idCounter = startId;
-        
+        let idCounter = 1;
         const classStudentMap = {};
         for (let student of studentsList) {
             const key = `${student.cls} ${student.sec}`;
             if (!classStudentMap[key]) classStudentMap[key] = [];
             classStudentMap[key].push(student);
         }
-        
         const modes = ['Cash', 'UPI', 'Online', 'Cheque'];
-        const dates = [
-            '2026-04-05', '2026-04-10', '2026-04-15', '2026-04-20', '2026-04-25',
-            '2026-05-01', '2026-05-05', '2026-05-10', '2026-05-15', '2026-05-20'
-        ];
+        const dates = ['2026-04-05', '2026-04-10', '2026-04-15', '2026-04-20', '2026-04-25'];
         const collectedBy = ['Suresh Kumar', 'Priya Sharma', 'Admin'];
         
         for (let className of classNamesList) {
             const students = classStudentMap[className] || [];
-            
             for (let i = 0; i < students.length; i++) {
                 const student = students[i];
                 const totalFee = student.total_fee;
                 const totalPaidFee = student.total_paid_fee;
                 const dueAmount = student.fee_due;
-                
-                // 🔥 Calculate amount for this fee record
-                // First 4 students have Paid status, 5th has Pending
-                const status = i < 4 ? 'Paid' : 'Pending';
-                
-                // 🔥 If status is Paid, amount is from total_paid_fee
-                // If status is Pending, amount is from fee_due
-                let amount = 0;
-                let dueAmountForRecord = 0;
-                
-                if (status === 'Paid') {
-                    // Distribute total_paid_fee across paid records
-                    // For simplicity, we use the full total_paid_fee in first record
-                    // and 0 in others (or distribute as needed)
-                    if (i === 0) {
-                        amount = totalPaidFee;
-                        dueAmountForRecord = totalFee - totalPaidFee;
-                    } else if (i < 4) {
-                        amount = 0;
-                        dueAmountForRecord = totalFee - totalPaidFee;
-                    }
-                } else {
-                    amount = dueAmount;
-                    dueAmountForRecord = 0;
-                }
-                
+                const status = totalPaidFee > 0 ? 'Paid' : 'Pending';
+                const amount = totalPaidFee;
+                const dueAmountForRecord = dueAmount;
                 const mode = modes[i % modes.length];
                 const date = dates[i % dates.length];
                 const collector = collectedBy[i % collectedBy.length];
-                
                 const feeId = `FEE${String(idCounter).padStart(3, '0')}`;
                 const receiptNo = `RCPT-2026-${String(idCounter).padStart(3, '0')}`;
-                
                 feeRecords.push({
                     id: feeId,
                     receipt_no: receiptNo,
@@ -5463,21 +5384,80 @@ window.forceUploadToSupabase = async function() {
                 idCounter++;
             }
         }
-        
         return feeRecords;
     }
     
-    const classNamesList = [
-        'Playgroup A', 'Playgroup B',
-        'Nursery A', 'Nursery B',
-        'KG1 A', 'KG1 B',
-        'KG2 A', 'KG2 B'
-    ];
+    const classNamesList = ['Playgroup A', 'Playgroup B', 'Nursery A', 'Nursery B', 'KG1 A', 'KG1 B', 'KG2 A', 'KG2 B'];
+    const allFees = createFeeRecords(classNamesList, allStudents);
+    console.log(`💰 Fees: ${allFees.length}`);
     
-    const allFees = createFeeRecords(classNamesList, allStudents, 1);
-    console.log(`💰 Total Fees Generated: ${allFees.length}`);
+    // ===================== ✅ UPDATED: RESULTS (40 Records with cls and roll) =====================
+    function generateResults(studentsList, examName) {
+        const results = [];
+        const subjectNames = ['English', 'Mathematics', 'Hindi', 'Science', 'Social Studies', 'Computer', 'Drawing'];
+        let idCounter = 1;
+        
+        for (let i = 0; i < studentsList.length; i++) {
+            const student = studentsList[i];
+            const marksObj = {};
+            let totalMarks = 0, maxTotal = 0;
+            const numSubjects = 5 + (i % 3);
+            const selectedSubjects = subjectNames.slice(0, numSubjects);
+            
+            for (let j = 0; j < selectedSubjects.length; j++) {
+                const subject = selectedSubjects[j];
+                let maxMarks = 100;
+                if (subject === 'Computer' || subject === 'Drawing') maxMarks = 50;
+                const marks = Math.floor(Math.random() * 64) + 35; // 35-98 range
+                marksObj[subject] = marks;
+                totalMarks += marks;
+                maxTotal += maxMarks;
+            }
+            
+            const percentage = maxTotal > 0 ? Math.round((totalMarks / maxTotal) * 100) : 0;
+            const gradeInfo = getGrade(percentage);
+            
+            // ✅ NEW: Add cls and roll to results
+            results.push({
+                id: `RES${String(idCounter).padStart(3, '0')}`,
+                student_name: student.name,
+                exam_name: examName,
+                marks: JSON.stringify(marksObj),
+                total: totalMarks,
+                max_total: maxTotal,
+                percentage: percentage,
+                grade: gradeInfo.grade,
+                rank: 1,
+                cls: student.cls || 'N/A',      // ✅ New column
+                roll: student.roll || 0,        // ✅ New column
+                marksheet_url: null,
+                marksheet_data: null,
+                student_photo_url: student.photo_url || null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            });
+            idCounter++;
+        }
+        
+        // Sort by percentage and update rank
+        results.sort((a, b) => b.percentage - a.percentage);
+        for (let i = 0; i < results.length; i++) {
+            results[i].rank = i + 1;
+        }
+        
+        return results;
+    }
     
-    // ===================== EMPLOYEES DATA =====================
+    const allResults = generateResults(allStudents, 'Unit Test 1');
+    console.log(`📊 Results: ${allResults.length} records with cls & roll columns`);
+    
+    // Log first few results for verification
+    console.log('📊 Sample Results (first 3):');
+    for (let i = 0; i < Math.min(3, allResults.length); i++) {
+        console.log(`  ${allResults[i].student_name} | Class: ${allResults[i].cls} | Roll: ${allResults[i].roll} | Percentage: ${allResults[i].percentage}% | Rank: ${allResults[i].rank}`);
+    }
+    
+    // ===================== EMPLOYEES (5 Records) =====================
     const allEmployees = [
         { 
             id: 'EMP001', name: 'Priya Sharma', department: 'Teaching', designation: 'Class Teacher', 
@@ -5561,7 +5541,7 @@ window.forceUploadToSupabase = async function() {
         }
     ];
     
-    // ===================== USERS DATA =====================
+    // ===================== USERS (5 Records) =====================
     const allUsers = [
         { id: 'USER_ADMIN_1', email: 'admin@wings.edu', mobile: '9876543210', password: '1234', role: 'admin', 
           name: 'Administrator', role_display: 'Administrator', status: 'active', 
@@ -5580,7 +5560,7 @@ window.forceUploadToSupabase = async function() {
           photo_url: photos.employeeFemale2 || null, created_at: new Date().toISOString() }
     ];
     
-    // ===================== PROFILE DATA =====================
+    // ===================== PROFILE =====================
     const allProfile = [{ 
         id: 'PROF001', 
         school_name: 'Wings Convent School', 
@@ -5606,7 +5586,7 @@ window.forceUploadToSupabase = async function() {
         created_at: new Date().toISOString() 
     }];
     
-    // ===================== NOTIFICATIONS DATA =====================
+    // ===================== NOTIFICATIONS =====================
     const allNotifications = [
         {
             id: 'NTF001',
@@ -5657,7 +5637,7 @@ window.forceUploadToSupabase = async function() {
         {
             id: 'NTF003',
             title: 'Fee Payment Reminder',
-            message: 'Fee payment for Class 10 is due on 15th June. Late fee will be applied.',
+            message: 'Fee payment for all classes is due on 15th June. Late fee will be applied.',
             sender_role: 'cashier',
             sender_id: 'system',
             sender_name: 'Suresh Kumar',
@@ -5725,9 +5705,9 @@ window.forceUploadToSupabase = async function() {
         }
     ];
     
-    console.log(`🔔 Total Notifications: ${allNotifications.length}`);
+    console.log(`🔔 Notifications: ${allNotifications.length}`);
     
-    // ===================== FEEDBACKS DATA =====================
+    // ===================== FEEDBACKS =====================
     const allFeedbacks = [
         {
             id: 'FB001',
@@ -5938,197 +5918,188 @@ window.forceUploadToSupabase = async function() {
         }
     ];
     
-    console.log(`🗣️ Total Feedbacks: ${allFeedbacks.length}`);
+    console.log(`🗣️ Feedbacks: ${allFeedbacks.length}`);
     
-    // ===================== 🔥 UPDATED: HOMEWORK DATA FOR ALL 8 CLASSES =====================
+    // ===================== HOMEWORK (16 Records) =====================
     const allHomework = [
-        // ===== Playgroup A - Priya Sharma =====
-        {
-            id: 'HW001',
-            title: 'Math Practice - Count 1 to 10',
-            subject: 'Mathematics',
-            class: 'Playgroup A',
-            due_date: '2026-06-15',
-            description: 'Write numbers 1 to 10 in your notebook. Practice counting with objects.',
-            status: 'Pending',
-            created_by: 'Priya Sharma',
-            created_at: new Date('2026-06-10T10:30:00').toISOString()
+        { id: 'HW001', title: 'Math Practice - Count 1 to 10', subject: 'Mathematics', class: 'Playgroup A', due_date: '2026-06-15', description: 'Write numbers 1 to 10 in your notebook.', status: 'Pending', created_by: 'Priya Sharma', created_at: new Date('2026-06-10T10:30:00').toISOString() },
+        { id: 'HW002', title: 'English Reading - ABC Song', subject: 'English', class: 'Playgroup A', due_date: '2026-06-16', description: 'Practice ABC song. Write capital letters A to Z.', status: 'Pending', created_by: 'Priya Sharma', created_at: new Date('2026-06-11T09:00:00').toISOString() },
+        { id: 'HW003', title: 'Drawing - Fruits', subject: 'Drawing', class: 'Playgroup B', due_date: '2026-06-15', description: 'Draw any 5 fruits in your drawing book.', status: 'Pending', created_by: 'Neha Gupta', created_at: new Date('2026-06-10T11:00:00').toISOString() },
+        { id: 'HW004', title: 'Hindi - Swar Practice', subject: 'Hindi', class: 'Playgroup B', due_date: '2026-06-17', description: 'Write Hindi Swar (अ, आ, इ, ई) 5 times each.', status: 'Pending', created_by: 'Neha Gupta', created_at: new Date('2026-06-12T08:30:00').toISOString() },
+        { id: 'HW005', title: 'Science - Plants and Trees', subject: 'Science', class: 'Nursery A', due_date: '2026-06-18', description: 'Draw a plant and label its parts.', status: 'Pending', created_by: 'Rajesh Singh', created_at: new Date('2026-06-13T09:30:00').toISOString() },
+        { id: 'HW006', title: 'English - My Family', subject: 'English', class: 'Nursery A', due_date: '2026-06-19', description: 'Write 5 sentences about your family.', status: 'Pending', created_by: 'Rajesh Singh', created_at: new Date('2026-06-14T10:00:00').toISOString() },
+        { id: 'HW007', title: 'Social Studies - My School', subject: 'Social Studies', class: 'Nursery B', due_date: '2026-06-19', description: 'Draw your school and write the name of your school.', status: 'Pending', created_by: 'Sneha Sharma', created_at: new Date('2026-06-14T11:30:00').toISOString() },
+        { id: 'HW008', title: 'Hindi - Varnamala Practice', subject: 'Hindi', class: 'Nursery B', due_date: '2026-06-20', description: 'Write Hindi Varnamala (क to ज्ञ) in your notebook.', status: 'Pending', created_by: 'Sneha Sharma', created_at: new Date('2026-06-15T08:00:00').toISOString() },
+        { id: 'HW009', title: 'English - Sentence Making', subject: 'English', class: 'KG1 A', due_date: '2026-06-20', description: 'Write 10 sentences using "This is" and "These are".', status: 'Pending', created_by: 'Anjali Kapoor', created_at: new Date('2026-06-15T09:30:00').toISOString() },
+        { id: 'HW010', title: 'Mathematics - Addition Practice', subject: 'Mathematics', class: 'KG1 A', due_date: '2026-06-21', description: 'Solve 15 addition sums (numbers 1 to 20).', status: 'Pending', created_by: 'Anjali Kapoor', created_at: new Date('2026-06-16T10:00:00').toISOString() },
+        { id: 'HW011', title: 'Science - Animals', subject: 'Science', class: 'KG1 B', due_date: '2026-06-21', description: 'Draw any 5 animals and write their names.', status: 'Pending', created_by: 'Vikram Joshi', created_at: new Date('2026-06-16T11:00:00').toISOString() },
+        { id: 'HW012', title: 'English - Opposite Words', subject: 'English', class: 'KG1 B', due_date: '2026-06-22', description: 'Write 10 opposite words. Example: Hot - Cold.', status: 'Pending', created_by: 'Vikram Joshi', created_at: new Date('2026-06-17T08:30:00').toISOString() },
+        { id: 'HW013', title: 'Hindi - Poem "Chanda Mama"', subject: 'Hindi', class: 'KG2 A', due_date: '2026-06-22', description: 'Learn the poem "Chanda Mama" and write it.', status: 'Pending', created_by: 'Meera Nair', created_at: new Date('2026-06-17T09:30:00').toISOString() },
+        { id: 'HW014', title: 'Mathematics - Multiplication', subject: 'Mathematics', class: 'KG2 A', due_date: '2026-06-23', description: 'Learn tables from 2 to 5. Write each table 2 times.', status: 'Pending', created_by: 'Meera Nair', created_at: new Date('2026-06-18T10:00:00').toISOString() },
+        { id: 'HW015', title: 'Computer - Paint Activity', subject: 'Computer', class: 'KG2 B', due_date: '2026-06-23', description: 'Draw a beautiful house in MS Paint.', status: 'Pending', created_by: 'Rahul Mehta', created_at: new Date('2026-06-18T11:00:00').toISOString() },
+        { id: 'HW016', title: 'Social Studies - My Country India', subject: 'Social Studies', class: 'KG2 B', due_date: '2026-06-24', description: 'Write 5 facts about India. Draw the Indian flag.', status: 'Pending', created_by: 'Rahul Mehta', created_at: new Date('2026-06-19T08:00:00').toISOString() }
+    ];
+    
+    console.log(`📚 Homework: ${allHomework.length}`);
+    
+    // ===================== ATTENDANCE (3 Records - Keeping as per your original) =====================
+    const allAttendance = [
+        { id: 'ATT001', date: '2026-06-10', student_name: 'Aarav Sharma', status: 'Present', class: 'Playgroup A', marked_by: 'Priya Sharma', created_at: new Date().toISOString() },
+        { id: 'ATT002', date: '2026-06-10', student_name: 'Advik Verma', status: 'Present', class: 'Playgroup A', marked_by: 'Priya Sharma', created_at: new Date().toISOString() },
+        { id: 'ATT003', date: '2026-06-10', student_name: 'Diya Mehta', status: 'Absent', class: 'Playgroup B', marked_by: 'Neha Gupta', created_at: new Date().toISOString() }
+    ];
+    console.log(`📋 Attendance: ${allAttendance.length}`);
+    
+    // ===================== LEAVES (2 Records - Keeping as per your original) =====================
+    const allLeaves = [
+        { id: 'LEV001', emp_name: 'Priya Sharma', type: 'Sick Leave', from_date: '2026-04-10', to_date: '2026-04-12', days: 3, status: 'Approved', reason: 'Fever', applied_on: '2026-04-05', document_url: docs.medical || null, created_at: new Date().toISOString() },
+        { id: 'LEV002', emp_name: 'Neha Gupta', type: 'Casual Leave', from_date: '2026-04-15', to_date: '2026-04-15', days: 1, status: 'Pending', reason: 'Personal', applied_on: '2026-04-14', created_at: new Date().toISOString() }
+    ];
+    console.log(`📋 Leaves: ${allLeaves.length}`);
+    
+    // ===================== EMPLOYEE ATTENDANCE (3 Records - Keeping as per your original) =====================
+    const allEmpAttendance = [
+        { id: 'EA001', date: '2026-06-10', emp_name: 'Priya Sharma', status: 'Present', in_time: '09:00', out_time: '17:00', hours: 8, created_at: new Date().toISOString() },
+        { id: 'EA002', date: '2026-06-10', emp_name: 'Neha Gupta', status: 'Present', in_time: '09:15', out_time: '17:00', hours: 7.75, created_at: new Date().toISOString() },
+        { id: 'EA003', date: '2026-06-10', emp_name: 'Suresh Kumar', status: 'Present', in_time: '09:00', out_time: '17:00', hours: 8, created_at: new Date().toISOString() }
+    ];
+    console.log(`👤 Emp Attendance: ${allEmpAttendance.length}`);
+    
+    // ===================== TIMETABLE (2 Records - Keeping as per your original) =====================
+    const allTimetable = [
+        { id: 'TT001', day: 'Monday', periods: '["English - 9:00 AM","Mathematics - 10:00 AM","Drawing - 11:00 AM"]', class_name: 'Playgroup A', teacher_name: 'Priya Sharma', created_at: new Date().toISOString() },
+        { id: 'TT002', day: 'Tuesday', periods: '["Hindi - 9:00 AM","English - 10:00 AM","Drawing - 11:00 AM"]', class_name: 'Playgroup A', teacher_name: 'Priya Sharma', created_at: new Date().toISOString() }
+    ];
+    console.log(`📅 Timetable: ${allTimetable.length}`);
+    
+    // ===================== TRANSPORTATION (2 Records - Keeping as per your original) =====================
+    const allTransportation = [
+        { id: 'TRN001', route_name: 'Route 1 - Model Town', vehicle_no: 'DL 01 AB 1234', driver_name: 'Ramesh Singh', driver_phone: '9876543307', stops: 'Model Town, Civil Lines, Mall Road', students_count: 15, driver_photo_url: photos.employeeDriver || null, created_at: new Date().toISOString() },
+        { id: 'TRN002', route_name: 'Route 2 - Andheri East', vehicle_no: 'MH 02 CD 5678', driver_name: 'Suresh Yadav', driver_phone: '9876543308', stops: 'Andheri, Juhu, Vile Parle', students_count: 12, driver_photo_url: photos.employeeMale3 || null, created_at: new Date().toISOString() }
+    ];
+    console.log(`🚗 Transportation: ${allTransportation.length}`);
+    
+    // ===================== SUBJECTS =====================
+    const allSubjects = [
+        { id: 'SUB001', name: 'English', code: 'ENG101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
+        { id: 'SUB002', name: 'Mathematics', code: 'MAT101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
+        { id: 'SUB003', name: 'Science', code: 'SCI101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
+        { id: 'SUB004', name: 'Hindi', code: 'HIN101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
+        { id: 'SUB005', name: 'Social Studies', code: 'SST101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
+        { id: 'SUB006', name: 'Computer', code: 'COM101', max_marks: 50, passing_marks: 18, type: 'practical', created_at: new Date().toISOString() },
+        { id: 'SUB007', name: 'Drawing', code: 'DRAW101', max_marks: 50, passing_marks: 18, type: 'practical', created_at: new Date().toISOString() },
+        { id: 'SUB008', name: 'Physical Education', code: 'PE101', max_marks: 50, passing_marks: 18, type: 'practical', created_at: new Date().toISOString() },
+        { id: 'SUB009', name: 'Sanskrit', code: 'SAN101', max_marks: 100, passing_marks: 35, type: 'elective', created_at: new Date().toISOString() },
+        { id: 'SUB010', name: 'General Knowledge', code: 'GK101', max_marks: 50, passing_marks: 25, type: 'practical', created_at: new Date().toISOString() }
+    ];
+    
+    // ===================== CLASSES =====================
+    const allClasses = [
+        { id: 'CLS001', name: 'Playgroup A', teacher: 'Priya Sharma', room: '101', strength: 35, students_count: 5, created_at: new Date().toISOString() },
+        { id: 'CLS002', name: 'Playgroup B', teacher: 'Neha Gupta', room: '102', strength: 35, students_count: 5, created_at: new Date().toISOString() },
+        { id: 'CLS003', name: 'Nursery A', teacher: 'Rajesh Singh', room: '103', strength: 35, students_count: 5, created_at: new Date().toISOString() },
+        { id: 'CLS004', name: 'Nursery B', teacher: 'Sneha Sharma', room: '104', strength: 35, students_count: 5, created_at: new Date().toISOString() },
+        { id: 'CLS005', name: 'KG1 A', teacher: 'Anjali Kapoor', room: '105', strength: 35, students_count: 5, created_at: new Date().toISOString() },
+        { id: 'CLS006', name: 'KG1 B', teacher: 'Vikram Joshi', room: '106', strength: 35, students_count: 5, created_at: new Date().toISOString() },
+        { id: 'CLS007', name: 'KG2 A', teacher: 'Meera Nair', room: '107', strength: 35, students_count: 5, created_at: new Date().toISOString() },
+        { id: 'CLS008', name: 'KG2 B', teacher: 'Rahul Mehta', room: '108', strength: 35, students_count: 5, created_at: new Date().toISOString() }
+    ];
+    
+    // ===================== CLASS SUBJECTS =====================
+    const allClassSubjects = [
+        { 
+            id: 'cs_playgroup_001',
+            class_name: 'Playgroup',
+            subject_id: 'SUB001',
+            subject_name: 'English',
+            subject_data: JSON.stringify([{name:'English',maxMarks:100},{name:'Mathematics',maxMarks:100},{name:'Drawing',maxMarks:50}]),
+            max_marks: 100,
+            passing_marks: 35,
+            teacher_name: 'Priya Sharma',
+            academic_year: '2026-27',
+            created_at: new Date().toISOString()
         },
-        {
-            id: 'HW002',
-            title: 'English Reading - ABC Song',
-            subject: 'English',
-            class: 'Playgroup A',
-            due_date: '2026-06-16',
-            description: 'Practice ABC song. Write capital letters A to Z in your notebook.',
-            status: 'Pending',
-            created_by: 'Priya Sharma',
-            created_at: new Date('2026-06-11T09:00:00').toISOString()
+        { 
+            id: 'cs_nursery_001',
+            class_name: 'Nursery',
+            subject_id: 'SUB002',
+            subject_name: 'English',
+            subject_data: JSON.stringify([{name:'English',maxMarks:100},{name:'Mathematics',maxMarks:100},{name:'Science',maxMarks:100}]),
+            max_marks: 100,
+            passing_marks: 35,
+            teacher_name: 'Rajesh Singh',
+            academic_year: '2026-27',
+            created_at: new Date().toISOString()
         },
-        // ===== Playgroup B - Neha Gupta =====
-        {
-            id: 'HW003',
-            title: 'Drawing - Fruits',
-            subject: 'Drawing',
-            class: 'Playgroup B',
-            due_date: '2026-06-15',
-            description: 'Draw any 5 fruits in your drawing book. Color them beautifully.',
-            status: 'Pending',
-            created_by: 'Neha Gupta',
-            created_at: new Date('2026-06-10T11:00:00').toISOString()
-        },
-        {
-            id: 'HW004',
-            title: 'Hindi - Swar Practice',
-            subject: 'Hindi',
-            class: 'Playgroup B',
-            due_date: '2026-06-17',
-            description: 'Write Hindi Swar (अ, आ, इ, ई) 5 times each in your notebook.',
-            status: 'Pending',
-            created_by: 'Neha Gupta',
-            created_at: new Date('2026-06-12T08:30:00').toISOString()
-        },
-        // ===== Nursery A - Rajesh Singh =====
-        {
-            id: 'HW005',
-            title: 'Science - Plants and Trees',
-            subject: 'Science',
-            class: 'Nursery A',
-            due_date: '2026-06-18',
-            description: 'Draw a plant and label its parts (Root, Stem, Leaves, Flower).',
-            status: 'Pending',
-            created_by: 'Rajesh Singh',
-            created_at: new Date('2026-06-13T09:30:00').toISOString()
-        },
-        {
-            id: 'HW006',
-            title: 'English - My Family',
-            subject: 'English',
-            class: 'Nursery A',
-            due_date: '2026-06-19',
-            description: 'Write 5 sentences about your family. Mention your parents and siblings.',
-            status: 'Pending',
-            created_by: 'Rajesh Singh',
-            created_at: new Date('2026-06-14T10:00:00').toISOString()
-        },
-        // ===== Nursery B - Sneha Sharma =====
-        {
-            id: 'HW007',
-            title: 'Social Studies - My School',
-            subject: 'Social Studies',
-            class: 'Nursery B',
-            due_date: '2026-06-19',
-            description: 'Draw your school and write the name of your school. Mention your class teacher.',
-            status: 'Pending',
-            created_by: 'Sneha Sharma',
-            created_at: new Date('2026-06-14T11:30:00').toISOString()
-        },
-        {
-            id: 'HW008',
-            title: 'Hindi - Varnamala Practice',
-            subject: 'Hindi',
-            class: 'Nursery B',
-            due_date: '2026-06-20',
-            description: 'Write Hindi Varnamala (क to ज्ञ) in your notebook. Practice pronunciation.',
-            status: 'Pending',
-            created_by: 'Sneha Sharma',
-            created_at: new Date('2026-06-15T08:00:00').toISOString()
-        },
-        // ===== KG1 A - Anjali Kapoor =====
-        {
-            id: 'HW009',
-            title: 'English - Sentence Making',
-            subject: 'English',
-            class: 'KG1 A',
-            due_date: '2026-06-20',
-            description: 'Write 10 sentences using "This is" and "These are". Example: This is a book.',
-            status: 'Pending',
-            created_by: 'Anjali Kapoor',
-            created_at: new Date('2026-06-15T09:30:00').toISOString()
-        },
-        {
-            id: 'HW010',
-            title: 'Mathematics - Addition Practice',
-            subject: 'Mathematics',
-            class: 'KG1 A',
-            due_date: '2026-06-21',
-            description: 'Solve 15 addition sums (numbers 1 to 20). Write in your notebook.',
-            status: 'Pending',
-            created_by: 'Anjali Kapoor',
-            created_at: new Date('2026-06-16T10:00:00').toISOString()
-        },
-        // ===== KG1 B - Vikram Joshi =====
-        {
-            id: 'HW011',
-            title: 'Science - Animals',
-            subject: 'Science',
-            class: 'KG1 B',
-            due_date: '2026-06-21',
-            description: 'Draw any 5 animals and write their names. Mention their habitats.',
-            status: 'Pending',
-            created_by: 'Vikram Joshi',
-            created_at: new Date('2026-06-16T11:00:00').toISOString()
-        },
-        {
-            id: 'HW012',
-            title: 'English - Opposite Words',
-            subject: 'English',
-            class: 'KG1 B',
-            due_date: '2026-06-22',
-            description: 'Write 10 opposite words. Example: Hot - Cold, Big - Small, etc.',
-            status: 'Pending',
-            created_by: 'Vikram Joshi',
-            created_at: new Date('2026-06-17T08:30:00').toISOString()
-        },
-        // ===== KG2 A - Meera Nair =====
-        {
-            id: 'HW013',
-            title: 'Hindi - Poem "Chanda Mama"',
-            subject: 'Hindi',
-            class: 'KG2 A',
-            due_date: '2026-06-22',
-            description: 'Learn the poem "Chanda Mama" and write it in your notebook.',
-            status: 'Pending',
-            created_by: 'Meera Nair',
-            created_at: new Date('2026-06-17T09:30:00').toISOString()
-        },
-        {
-            id: 'HW014',
-            title: 'Mathematics - Multiplication',
-            subject: 'Mathematics',
-            class: 'KG2 A',
-            due_date: '2026-06-23',
-            description: 'Learn tables from 2 to 5. Write each table 2 times in your notebook.',
-            status: 'Pending',
-            created_by: 'Meera Nair',
-            created_at: new Date('2026-06-18T10:00:00').toISOString()
-        },
-        // ===== KG2 B - Rahul Mehta =====
-        {
-            id: 'HW015',
-            title: 'Computer - Paint Activity',
-            subject: 'Computer',
-            class: 'KG2 B',
-            due_date: '2026-06-23',
-            description: 'Draw a beautiful house in MS Paint. Save it with your name.',
-            status: 'Pending',
-            created_by: 'Rahul Mehta',
-            created_at: new Date('2026-06-18T11:00:00').toISOString()
-        },
-        {
-            id: 'HW016',
-            title: 'Social Studies - My Country India',
-            subject: 'Social Studies',
-            class: 'KG2 B',
-            due_date: '2026-06-24',
-            description: 'Write 5 facts about India. Draw the Indian flag.',
-            status: 'Pending',
-            created_by: 'Rahul Mehta',
-            created_at: new Date('2026-06-19T08:00:00').toISOString()
+        { 
+            id: 'cs_kg1_001',
+            class_name: 'KG1',
+            subject_id: 'SUB003',
+            subject_name: 'English',
+            subject_data: JSON.stringify([{name:'English',maxMarks:100},{name:'Mathematics',maxMarks:100},{name:'Science',maxMarks:100},{name:'Hindi',maxMarks:100}]),
+            max_marks: 100,
+            passing_marks: 35,
+            teacher_name: 'Anjali Kapoor',
+            academic_year: '2026-27',
+            created_at: new Date().toISOString()
         }
     ];
     
-    console.log(`📚 Total Homework: ${allHomework.length} (For all 8 Classes)`);
+    // ===================== EXAMS =====================
+    const allExams = [
+        { 
+            id: 'EXM001', 
+            class_name: 'Playgroup', 
+            exam_name: 'Unit Test 1', 
+            subjects: JSON.stringify([
+                { name: 'English', date: '2026-07-15', startTime: '09:00', endTime: '11:00', maxMarks: 100, venue: 'Room 101' },
+                { name: 'Mathematics', date: '2026-07-16', startTime: '09:00', endTime: '11:00', maxMarks: 100, venue: 'Room 101' }
+            ]), 
+            document_url: docs.marksheet || null, 
+            created_at: new Date().toISOString() 
+        }
+    ];
+    
+    // ===================== EVENTS =====================
+    const allEvents = [
+        { id: 'EVT001', title: 'Annual Day Celebration', date: '2026-12-15', time: '6:00 PM', venue: 'School Auditorium', description: 'Annual function', status: 'Upcoming', poster_url: photos.eventPoster1 || null, created_at: new Date().toISOString() },
+        { id: 'EVT002', title: 'Sports Day', date: '2026-11-20', time: '9:00 AM', venue: 'School Ground', description: 'Annual Sports Meet', status: 'Upcoming', poster_url: photos.eventPoster2 || null, created_at: new Date().toISOString() },
+        { id: 'EVT003', title: 'Parent Teacher Meeting', date: '2026-06-10', time: '10:00 AM', venue: 'School Hall', description: 'PTM for all classes', status: 'Upcoming', poster_url: photos.eventPoster3 || null, created_at: new Date().toISOString() }
+    ];
+    
+    // ===================== EXPENSES =====================
+    const allExpenses = [
+        { id: 'EXP001', title: 'Stationery Purchase', amount: 5000, date: '2026-04-05', category: 'Stationery', vendor: 'ABC Traders', status: 'Paid', created_at: new Date().toISOString() },
+        { id: 'EXP002', title: 'Electricity Bill', amount: 15000, date: '2026-04-10', category: 'Utilities', vendor: 'MSEB', status: 'Paid', created_at: new Date().toISOString() },
+        { id: 'EXP003', title: 'Teacher Salary - April', amount: 150000, date: '2026-04-30', category: 'Salary', vendor: 'Staff', status: 'Paid', created_at: new Date().toISOString() }
+    ];
+    
+    // ===================== LEDGER =====================
+    const allLedger = [
+        { id: 'LGR001', date: '2026-04-01', description: 'Opening Balance', debit: 0, credit: 500000, balance: 500000, created_at: new Date().toISOString() },
+        { id: 'LGR002', date: '2026-04-10', description: 'Fee Collection - Aarav Sharma', debit: 0, credit: 25000, balance: 525000, created_at: new Date().toISOString() },
+        { id: 'LGR003', date: '2026-04-05', description: 'Stationery Purchase', debit: 5000, credit: 0, balance: 520000, created_at: new Date().toISOString() }
+    ];
+    
+    // ===================== STICKY NOTES =====================
+    const allStickyNotes = [
+        { id: 'SN001', date: '2026-06-13', note_text: 'Parent Teacher Meeting tomorrow at 10 AM', color: 'Yellow', created_by: 'Admin', created_at: new Date().toISOString() },
+        { id: 'SN002', date: '2026-06-15', note_text: 'Holiday on Monday - Eid ul-Adha', color: 'Green', created_by: 'Admin', created_at: new Date().toISOString() },
+        { id: 'SN003', date: '2026-06-13', note_text: 'Submit fee pending list of Playgroup by today', color: 'Red', created_by: 'Priya Sharma', created_at: new Date().toISOString() }
+    ];
+    
+    // ===================== NOTIFICATION SETTINGS =====================
+    const allNotificationSettings = [
+        { 
+            id: 'main', 
+            email_notif: false, 
+            push_notif: false, 
+            sms_notif: false, 
+            push_priority: 'Important',
+            updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            updated_by: 'system' 
+        }
+    ];
     
     // ===================== ALL TABLES =====================
     const allTables = {
@@ -6136,133 +6107,26 @@ window.forceUploadToSupabase = async function() {
         students: allStudents,
         fees: allFees,
         profile: allProfile,
-        subjects: [
-            { id: 'SUB001', name: 'English', code: 'ENG101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
-            { id: 'SUB002', name: 'Mathematics', code: 'MAT101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
-            { id: 'SUB003', name: 'Science', code: 'SCI101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
-            { id: 'SUB004', name: 'Hindi', code: 'HIN101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
-            { id: 'SUB005', name: 'Social Studies', code: 'SST101', max_marks: 100, passing_marks: 35, type: 'core', created_at: new Date().toISOString() },
-            { id: 'SUB006', name: 'Computer', code: 'COM101', max_marks: 50, passing_marks: 18, type: 'practical', created_at: new Date().toISOString() },
-            { id: 'SUB007', name: 'Drawing', code: 'DRAW101', max_marks: 50, passing_marks: 18, type: 'practical', created_at: new Date().toISOString() },
-            { id: 'SUB008', name: 'Physical Education', code: 'PE101', max_marks: 50, passing_marks: 18, type: 'practical', created_at: new Date().toISOString() },
-            { id: 'SUB009', name: 'Sanskrit', code: 'SAN101', max_marks: 100, passing_marks: 35, type: 'elective', created_at: new Date().toISOString() },
-            { id: 'SUB010', name: 'General Knowledge', code: 'GK101', max_marks: 50, passing_marks: 25, type: 'practical', created_at: new Date().toISOString() }
-        ],
+        subjects: allSubjects,
         users: allUsers,
         employees: allEmployees,
         notifications: allNotifications,
         feedbacks: allFeedbacks,
-        homework: allHomework,  // ✅ UPDATED: All 8 Classes homework
-        attendance: [
-            { id: 'ATT001', date: '2026-06-10', student_name: 'Aarav Sharma', status: 'Present', class: 'Playgroup A', marked_by: 'Priya Sharma', created_at: new Date().toISOString() },
-            { id: 'ATT002', date: '2026-06-10', student_name: 'Advik Verma', status: 'Present', class: 'Playgroup A', marked_by: 'Priya Sharma', created_at: new Date().toISOString() },
-            { id: 'ATT003', date: '2026-06-10', student_name: 'Diya Mehta', status: 'Absent', class: 'Playgroup B', marked_by: 'Neha Gupta', created_at: new Date().toISOString() }
-        ],
-        events: [
-            { id: 'EVT001', title: 'Annual Day Celebration', date: '2026-12-15', time: '6:00 PM', venue: 'School Auditorium', description: 'Annual function', status: 'Upcoming', poster_url: photos.eventPoster1 || null, created_at: new Date().toISOString() },
-            { id: 'EVT002', title: 'Sports Day', date: '2026-11-20', time: '9:00 AM', venue: 'School Ground', description: 'Annual Sports Meet', status: 'Upcoming', poster_url: photos.eventPoster2 || null, created_at: new Date().toISOString() },
-            { id: 'EVT003', title: 'Parent Teacher Meeting', date: '2026-06-10', time: '10:00 AM', venue: 'School Hall', description: 'PTM for all classes', status: 'Upcoming', poster_url: photos.eventPoster3 || null, created_at: new Date().toISOString() }
-        ],
-        expenses: [
-            { id: 'EXP001', title: 'Stationery Purchase', amount: 5000, date: '2026-04-05', category: 'Stationery', vendor: 'ABC Traders', status: 'Paid', created_at: new Date().toISOString() },
-            { id: 'EXP002', title: 'Electricity Bill', amount: 15000, date: '2026-04-10', category: 'Utilities', vendor: 'MSEB', status: 'Paid', created_at: new Date().toISOString() },
-            { id: 'EXP003', title: 'Teacher Salary - April', amount: 150000, date: '2026-04-30', category: 'Salary', vendor: 'Staff', status: 'Paid', created_at: new Date().toISOString() }
-        ],
-        ledger: [
-            { id: 'LGR001', date: '2026-04-01', description: 'Opening Balance', debit: 0, credit: 500000, balance: 500000, created_at: new Date().toISOString() },
-            { id: 'LGR002', date: '2026-04-10', description: 'Fee Collection - Aarav Sharma', debit: 0, credit: 25000, balance: 525000, created_at: new Date().toISOString() },
-            { id: 'LGR003', date: '2026-04-05', description: 'Stationery Purchase', debit: 5000, credit: 0, balance: 520000, created_at: new Date().toISOString() }
-        ],
-        leaves: [
-            { id: 'LEV001', emp_name: 'Priya Sharma', type: 'Sick Leave', from_date: '2026-04-10', to_date: '2026-04-12', days: 3, status: 'Approved', reason: 'Fever', applied_on: '2026-04-05', document_url: docs.medical || null, created_at: new Date().toISOString() },
-            { id: 'LEV002', emp_name: 'Neha Gupta', type: 'Casual Leave', from_date: '2026-04-15', to_date: '2026-04-15', days: 1, status: 'Pending', reason: 'Personal', applied_on: '2026-04-14', created_at: new Date().toISOString() }
-        ],
-        classes: [
-            { id: 'CLS001', name: 'Playgroup A', teacher: 'Priya Sharma', room: '101', strength: 35, students_count: 5, created_at: new Date().toISOString() },
-            { id: 'CLS002', name: 'Playgroup B', teacher: 'Neha Gupta', room: '102', strength: 35, students_count: 5, created_at: new Date().toISOString() },
-            { id: 'CLS003', name: 'Nursery A', teacher: 'Rajesh Singh', room: '103', strength: 35, students_count: 5, created_at: new Date().toISOString() },
-            { id: 'CLS004', name: 'Nursery B', teacher: 'Sneha Sharma', room: '104', strength: 35, students_count: 5, created_at: new Date().toISOString() },
-            { id: 'CLS005', name: 'KG1 A', teacher: 'Anjali Kapoor', room: '105', strength: 35, students_count: 5, created_at: new Date().toISOString() },
-            { id: 'CLS006', name: 'KG1 B', teacher: 'Vikram Joshi', room: '106', strength: 35, students_count: 5, created_at: new Date().toISOString() },
-            { id: 'CLS007', name: 'KG2 A', teacher: 'Meera Nair', room: '107', strength: 35, students_count: 5, created_at: new Date().toISOString() },
-            { id: 'CLS008', name: 'KG2 B', teacher: 'Rahul Mehta', room: '108', strength: 35, students_count: 5, created_at: new Date().toISOString() }
-        ],
-        results: [
-            { id: 'RES001', student_name: 'Aarav Sharma', exam_name: 'Unit Test 1', marks: '{"English":85,"Mathematics":78,"Drawing":45}', total: 208, max_total: 250, percentage: 83.2, grade: 'A', rank: 1, created_at: new Date().toISOString() },
-            { id: 'RES002', student_name: 'Diya Mehta', exam_name: 'Unit Test 1', marks: '{"English":92,"Mathematics":88,"Drawing":48}', total: 228, max_total: 250, percentage: 91.2, grade: 'A+', rank: 2, created_at: new Date().toISOString() }
-        ],
-        timetable: [
-            { id: 'TT001', day: 'Monday', periods: '["English - 9:00 AM","Mathematics - 10:00 AM","Drawing - 11:00 AM"]', class_name: 'Playgroup A', teacher_name: 'Priya Sharma', created_at: new Date().toISOString() },
-            { id: 'TT002', day: 'Tuesday', periods: '["Hindi - 9:00 AM","English - 10:00 AM","Drawing - 11:00 AM"]', class_name: 'Playgroup A', teacher_name: 'Priya Sharma', created_at: new Date().toISOString() }
-        ],
-        transportation: [
-            { id: 'TRN001', route_name: 'Route 1 - Model Town', vehicle_no: 'DL 01 AB 1234', driver_name: 'Ramesh Singh', driver_phone: '9876543307', stops: 'Model Town, Civil Lines, Mall Road', students_count: 15, driver_photo_url: photos.employeeDriver || null, created_at: new Date().toISOString() },
-            { id: 'TRN002', route_name: 'Route 2 - Andheri East', vehicle_no: 'MH 02 CD 5678', driver_name: 'Suresh Yadav', driver_phone: '9876543308', stops: 'Andheri, Juhu, Vile Parle', students_count: 12, driver_photo_url: photos.employeeMale3 || null, created_at: new Date().toISOString() }
-        ],
-        emp_attendance: [
-            { id: 'EA001', date: '2026-06-10', emp_name: 'Priya Sharma', status: 'Present', in_time: '09:00', out_time: '17:00', hours: 8, created_at: new Date().toISOString() },
-            { id: 'EA002', date: '2026-06-10', emp_name: 'Neha Gupta', status: 'Present', in_time: '09:15', out_time: '17:00', hours: 7.75, created_at: new Date().toISOString() },
-            { id: 'EA003', date: '2026-06-10', emp_name: 'Suresh Kumar', status: 'Present', in_time: '09:00', out_time: '17:00', hours: 8, created_at: new Date().toISOString() }
-        ],
-        sticky_notes: [
-            { id: 'SN001', date: '2026-06-13', note_text: 'Parent Teacher Meeting tomorrow at 10 AM', color: 'Yellow', created_by: 'Admin', created_at: new Date().toISOString() },
-            { id: 'SN002', date: '2026-06-15', note_text: 'Holiday on Monday - Eid ul-Adha', color: 'Green', created_by: 'Admin', created_at: new Date().toISOString() },
-            { id: 'SN003', date: '2026-06-13', note_text: 'Submit fee pending list of Playgroup by today', color: 'Red', created_by: 'Priya Sharma', created_at: new Date().toISOString() }
-        ],
-        class_subjects: [
-            { 
-                id: 'cs_playgroup_001',
-                class_name: 'Playgroup',
-                subject_id: 'SUB001',
-                subject_name: 'English',
-                subject_data: [
-                    { name: 'English', maxMarks: 100 },
-                    { name: 'Mathematics', maxMarks: 100 },
-                    { name: 'Drawing', maxMarks: 50 }
-                ],
-                max_marks: 100,
-                passing_marks: 35,
-                teacher_name: 'Priya Sharma',
-                academic_year: '2026-27',
-                created_at: new Date().toISOString()
-            },
-            { 
-                id: 'cs_nursery_001',
-                class_name: 'Nursery',
-                subject_id: 'SUB002',
-                subject_name: 'English',
-                subject_data: [
-                    { name: 'English', maxMarks: 100 },
-                    { name: 'Mathematics', maxMarks: 100 },
-                    { name: 'Science', maxMarks: 100 }
-                ],
-                max_marks: 100,
-                passing_marks: 35,
-                teacher_name: 'Rajesh Singh',
-                academic_year: '2026-27',
-                created_at: new Date().toISOString()
-            },
-            { 
-                id: 'cs_kg1_001',
-                class_name: 'KG1',
-                subject_id: 'SUB003',
-                subject_name: 'English',
-                subject_data: [
-                    { name: 'English', maxMarks: 100 },
-                    { name: 'Mathematics', maxMarks: 100 },
-                    { name: 'Science', maxMarks: 100 },
-                    { name: 'Hindi', maxMarks: 100 }
-                ],
-                max_marks: 100,
-                passing_marks: 35,
-                teacher_name: 'Anjali Kapoor',
-                academic_year: '2026-27',
-                created_at: new Date().toISOString()
-            }
-        ],
-        exams: [
-            { id: 'EXM001', class_name: 'Playgroup', exam_name: 'Unit Test 1', subjects: '[{"name":"English","date":"2026-07-15","startTime":"09:00","endTime":"11:00","maxMarks":100,"venue":"Room 101"},{"name":"Mathematics","date":"2026-07-16","startTime":"09:00","endTime":"11:00","maxMarks":100,"venue":"Room 101"}]', document_url: docs.marksheet || null, created_at: new Date().toISOString() }
-        ]
+        homework: allHomework,
+        attendance: allAttendance,
+        events: allEvents,
+        expenses: allExpenses,
+        ledger: allLedger,
+        leaves: allLeaves,
+        classes: allClasses,
+        results: allResults,  // ✅ Updated with cls & roll
+        timetable: allTimetable,
+        transportation: allTransportation,
+        emp_attendance: allEmpAttendance,
+        sticky_notes: allStickyNotes,
+        class_subjects: allClassSubjects,
+        exams: allExams,
+        notification_settings: allNotificationSettings
     };
     
     let successCount = 0;
@@ -6360,6 +6224,7 @@ window.forceUploadToSupabase = async function() {
                 <p><strong>✅ SUMMARY:</strong></p>
                 <p>📊 Tables: ${successCount} Success / ${failCount} Failed</p>
                 <p>👨‍🎓 Students: ${allStudents.length} COMPLETELY UNIQUE records</p>
+                <p>📊 Results: ${allResults.length} records with <strong>cls</strong> & <strong>roll</strong> columns</p>
                 <p>👤 Employees: ${allEmployees.length} records</p>
                 <p>💰 Fees: ${allFees.length} records (8 Classes × 5 Students)</p>
                 <p>🏛️ Fee Structures: ${FEE_STRUCTURES_DATA.length} records</p>
@@ -6371,56 +6236,17 @@ window.forceUploadToSupabase = async function() {
                     <i class="fas fa-check-circle"></i> ✅ All 40 Students have COMPLETELY UNIQUE names!
                 </p>
                 <p style="color: #10b981; font-size: 11px; margin-top: 5px;">
+                    <i class="fas fa-check-circle"></i> ✅ Results table has <strong>cls</strong> and <strong>roll</strong> columns!
+                </p>
+                <p style="color: #10b981; font-size: 11px; margin-top: 5px;">
                     <i class="fas fa-check-circle"></i> ✅ Fee calculated dynamically from FEE_STRUCTURES_DATA!
                 </p>
                 <p style="color: #10b981; font-size: 11px; margin-top: 5px;">
                     <i class="fas fa-check-circle"></i> ✅ 4 Fee Structures uploaded (Playgroup, Nursery, KG1, KG2)!
                 </p>
                 <p style="color: #10b981; font-size: 11px; margin-top: 5px;">
-                    <i class="fas fa-check-circle"></i> ✅ <strong>total_paid_fee</strong> column added to students table!
-                </p>
-                <p style="color: #10b981; font-size: 11px; margin-top: 5px;">
                     <i class="fas fa-check-circle"></i> ✅ <strong>16 Homework</strong> uploaded for all 8 Classes!
                 </p>
-                <div style="background: #dbeafe; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 11px;">
-                    <strong>💰 Fee Structures Uploaded:</strong><br>
-                    ${FEE_STRUCTURES_DATA.map(fs => 
-                        `📌 ${fs.class_name}: ₹${fs.grand_total.toLocaleString()} (Base: ₹${fs.base_fee_without_transport.toLocaleString()} + Transport: ₹${fs.transport_fee.toLocaleString()})`
-                    ).join('<br>')}
-                </div>
-                <div style="background: #dbeafe; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 11px;">
-                    <strong>🔔 Notifications Uploaded:</strong><br>
-                    📌 NTF001 - Welcome to New Session (Normal, All)<br>
-                    📌 NTF002 - Parent Teacher Meeting (Important, All)<br>
-                    📌 NTF003 - Fee Payment Reminder (Urgent, Student)<br>
-                    📌 NTF004 - Exam Schedule Updated (Important, Teacher)<br>
-                    📌 NTF005 - Holiday Announcement (Normal, All)
-                </div>
-                <div style="background: #f3e8ff; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 11px;">
-                    <strong>🗣️ Feedbacks Uploaded:</strong><br>
-                    📌 FB001 - System Performance Issue (Bug Report, High)<br>
-                    📌 FB002 - Attendance Module Enhancement (Feature Request, Normal)<br>
-                    📌 FB003 - Fee Payment Issue (Payment Issue, Critical)<br>
-                    📌 FB004 - Receipt Printing Issue (Technical Issue, High)<br>
-                    📌 FB005 - Salary Report Error (Bug Report, High)<br>
-                    📌 FB006 - Library Books Request (Suggestion, Low)<br>
-                    📌 FB007 - Classroom Cleanliness (Complaint, Normal)<br>
-                    📌 FB008 - Online Homework Appreciation (Appreciation, Low)<br>
-                    📌 FB009 - Payment History Export (Feature Request, Normal)<br>
-                    📌 FB010 - Sports Equipment Request (Suggestion, Medium)<br>
-                    📌 FDB001 - Library Books (Suggestion, Medium)
-                </div>
-                <div style="background: #d1fae5; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 11px;">
-                    <strong>📚 Homework Uploaded (All 8 Classes):</strong><br>
-                    📌 Playgroup A: HW001 (Math), HW002 (English)<br>
-                    📌 Playgroup B: HW003 (Drawing), HW004 (Hindi)<br>
-                    📌 Nursery A: HW005 (Science), HW006 (English)<br>
-                    📌 Nursery B: HW007 (Social Studies), HW008 (Hindi)<br>
-                    📌 KG1 A: HW009 (English), HW010 (Math)<br>
-                    📌 KG1 B: HW011 (Science), HW012 (English)<br>
-                    📌 KG2 A: HW013 (Hindi), HW014 (Math)<br>
-                    📌 KG2 B: HW015 (Computer), HW016 (Social Studies)
-                </div>
             </div>
             ${errorMessages.length > 0 ? `<div style="background: #fef2f2; padding: 10px; border-radius: 8px; margin-top: 10px; color: #991b1b;">
                 <strong>⚠️ Errors:</strong><br>${errorMessages.join('<br>')}
@@ -6440,6 +6266,7 @@ window.forceUploadToSupabase = async function() {
 
 console.log('✅ BUTTON 1: forceUploadToSupabase() - Uploads all tables with proper fee structure');
 console.log('👨‍🎓 Students: 40 COMPLETELY UNIQUE records (8 Classes × 5 Students)');
+console.log('📊 Results: 40 records with cls & roll columns');
 console.log('💰 Fees: 40 records with dynamic fee calculation');
 console.log('🏛️ Fee Structures: 4 classes (Playgroup, Nursery, KG1, KG2)');
 console.log('🔔 Notifications: 5 records');
@@ -6447,6 +6274,7 @@ console.log('🗣️ Feedbacks: 11 records');
 console.log('📚 Homework: 16 records (All 8 Classes - Playgroup A to KG2 B)');
 console.log('✅ Fee is calculated dynamically based on class and transport preference!');
 console.log('✅ total_paid_fee column added to students table!');
+console.log('✅ Results table has cls and roll columns!');
 console.log('✅ All data matches the SQL queries provided!');
 // ===================== PART 03-I- ENDS HERE ====================================================================
 // ===================== PART 03-I- ENDS HERE ====================================================================
@@ -26326,7 +26154,13 @@ console.log('📌 Teacher Class Detection - Fixed');
 // ======================= PART 12 ENDS HERE =======================
 // ======================= PART 12 ENDS HERE =======================
 // ======================= PART 13: RESULTS MODULE (COMPLETE FIXED - SUPABASE CONNECTED) =======================
+// ======================= PART 13: RESULTS MODULE (COMPLETE FIXED - SUPABASE CONNECTED) =======================
 let resultFilterText = '', resultCurrentPage = 1, resultRowsPerPage = 10, resultTotalPages = 1;
+
+// ✅ Only declare results if not already declared
+if (typeof results === 'undefined') {
+    var results = [];
+}
 
 // Answer Sheets Storage
 let answerSheets = JSON.parse(localStorage.getItem('answerSheets')) || {};
@@ -26335,7 +26169,24 @@ function saveAnswerSheets() {
     localStorage.setItem('answerSheets', JSON.stringify(answerSheets));
 }
 
-// Helper function to get grade based on percentage
+// ======================= Helper: Get Supabase Client =======================
+function getSupabaseClient() {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        return supabaseClient;
+    }
+    console.warn('⚠️ supabaseClient not available');
+    return null;
+}
+
+// ======================= Helper: Escape HTML =======================
+function escapeHtml(text) {
+    if (!text) return '';
+    let div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ======================= Helper: getGrade =======================
 function getGrade(percentage) {
     if (percentage >= 90) return { grade: 'A+', status: 'Excellent', color: '#10b981' };
     if (percentage >= 80) return { grade: 'A', status: 'Very Good', color: '#10b981' };
@@ -26357,7 +26208,49 @@ function getSubjectGrade(marks, maxMarks) {
     return 'F';
 }
 
-// Helper function to get teacher's class
+// ======================= ✅ FIX 3: Load Answer Sheets from Supabase =======================
+async function loadAnswerSheetsFromSupabase() {
+    console.log('📄 Loading answer sheets from Supabase...');
+    
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
+        console.log('📴 Offline - Using cached answer sheets');
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('answer_sheets')
+            .select('*');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+            // Group by result_id
+            for (let sheet of data) {
+                if (!answerSheets) answerSheets = {};
+                if (!answerSheets[sheet.result_id]) {
+                    answerSheets[sheet.result_id] = {};
+                }
+                answerSheets[sheet.result_id][sheet.subject_name] = {
+                    url: sheet.answer_sheet_url,
+                    data: sheet.answer_sheet_data,
+                    name: sheet.subject_name,
+                    uploadedAt: sheet.uploaded_at
+                };
+            }
+            console.log(`✅ Loaded ${data.length} answer sheets from Supabase`);
+            console.log('📄 Answer sheets by result:', Object.keys(answerSheets));
+            saveAnswerSheets();
+        } else {
+            console.log('📭 No answer sheets found in Supabase');
+        }
+    } catch(e) {
+        console.error('❌ Error loading answer sheets:', e);
+    }
+}
+
+// ======================= Helper Functions for Teacher Access =======================
 function getTeacherClass() {
     let teacher = null;
     for (let i = 0; i < employees.length; i++) {
@@ -26397,18 +26290,18 @@ function canTeacherAccessStudent(studentName) {
 function getFilteredResults() {
     let filtered = [];
     if (currentUser.role === 'admin') {
-        filtered = [...(window.results || [])];
+        filtered = [...(results || [])];
     } else if (currentUser.role === 'teacher') {
         let classStudents = getTeacherClassStudents();
-        for (let i = 0; i < (window.results || []).length; i++) {
-            if (classStudents.includes(window.results[i].studentName)) {
-                filtered.push(window.results[i]);
+        for (let i = 0; i < (results || []).length; i++) {
+            if (classStudents.includes(results[i].studentName)) {
+                filtered.push(results[i]);
             }
         }
     } else if (currentUser.role === 'student') {
-        for (let i = 0; i < (window.results || []).length; i++) {
-            if (window.results[i].studentName === currentUser.name) {
-                filtered.push(window.results[i]);
+        for (let i = 0; i < (results || []).length; i++) {
+            if (results[i].studentName === currentUser.name) {
+                filtered.push(results[i]);
             }
         }
     } else {
@@ -26428,7 +26321,8 @@ function getFilteredResults() {
 
 // ======================= FETCH EXAMS FROM SUPABASE =======================
 async function fetchExamsFromSupabase() {
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Using cached exams');
         let cached = localStorage.getItem('cache_exams');
         if (cached) {
@@ -26441,7 +26335,7 @@ async function fetchExamsFromSupabase() {
     
     try {
         console.log('🔄 Fetching exams from Supabase exams table...');
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabase
             .from('exams')
             .select('*')
             .order('created_at', { ascending: false });
@@ -26468,13 +26362,13 @@ async function fetchExamsFromSupabase() {
 
 // ======================= SUPABASE SYNC FUNCTIONS FOR RESULTS =======================
 async function loadResultsFromSupabase() {
-    // Initialize window.results if not exists
     if (!window.results) {
         window.results = [];
         console.log('✅ Initialized window.results array');
     }
 
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Loading results from localStorage');
         let cached = localStorage.getItem('cache_results');
         if (cached) {
@@ -26488,7 +26382,7 @@ async function loadResultsFromSupabase() {
     
     try {
         console.log('🔄 Loading results from Supabase table...');
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabase
             .from('results')
             .select('*')
             .order('percentage', { ascending: false });
@@ -26497,12 +26391,10 @@ async function loadResultsFromSupabase() {
         
         if (data && data.length > 0) {
             window.results = data.map(result => {
-                // ✅ FIX: Parse marks if it's a string (JSON from Supabase)
                 let marksObj = result.marks;
                 if (typeof marksObj === 'string') {
                     try {
                         marksObj = JSON.parse(marksObj);
-                        console.log('✅ Parsed marks string for:', result.student_name);
                     } catch(e) {
                         console.warn('⚠️ Could not parse marks for:', result.student_name);
                         marksObj = {};
@@ -26519,14 +26411,23 @@ async function loadResultsFromSupabase() {
                     percentage: result.percentage,
                     grade: result.grade,
                     rank: result.rank,
+                    cls: result.cls || 'N/A',          // ✅ NEW: Class from Supabase
+                    roll: result.roll || 'N/A',        // ✅ NEW: Roll from Supabase
                     marksheetUrl: result.marksheet_url,
+                    marksheetData: result.marksheet_data,
+                    studentPhotoUrl: result.student_photo_url || null,
                     createdAt: result.created_at
                 };
             });
             
             localStorage.setItem('cache_results', JSON.stringify(window.results));
             console.log(`✅ Loaded ${window.results.length} results from Supabase`);
-            console.log('📊 Sample marks:', window.results[0]?.marks);
+            
+            // Log cls and roll for verification
+            console.log('📊 Sample results with cls & roll:');
+            for (let i = 0; i < Math.min(3, window.results.length); i++) {
+                console.log(`  ${window.results[i].studentName} | Class: ${window.results[i].cls} | Roll: ${window.results[i].roll}`);
+            }
         } else {
             console.log('📭 No results found in Supabase, checking localStorage...');
             let cached = localStorage.getItem('cache_results');
@@ -26545,20 +26446,20 @@ async function loadResultsFromSupabase() {
 }
 
 async function syncResultToSupabase(resultData) {
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Adding to pending queue');
         addToPendingQueue('results', 'upsert', resultData);
         return false;
     }
     
     try {
-        // ✅ Ensure marks is stored as JSON string in Supabase
         let marksToStore = resultData.marks;
         if (typeof marksToStore === 'object') {
             marksToStore = JSON.stringify(marksToStore);
         }
         
-        const { error } = await supabaseClient.from('results').upsert({
+        const { error } = await supabase.from('results').upsert({
             id: resultData.id,
             student_name: resultData.studentName,
             exam_name: resultData.examName,
@@ -26568,7 +26469,11 @@ async function syncResultToSupabase(resultData) {
             percentage: resultData.percentage,
             grade: resultData.grade,
             rank: resultData.rank,
-            marksheet_url: resultData.marksheetUrl,
+            cls: resultData.cls || 'N/A',           // ✅ NEW: Sync cls
+            roll: resultData.roll || 'N/A',         // ✅ NEW: Sync roll
+            marksheet_url: resultData.marksheetUrl || null,
+            marksheet_data: resultData.marksheetData || null,
+            student_photo_url: resultData.studentPhotoUrl || null,
             created_at: resultData.createdAt || new Date().toISOString(),
             updated_at: new Date().toISOString()
         });
@@ -26594,13 +26499,14 @@ async function syncResultToSupabase(resultData) {
 }
 
 async function deleteResultFromSupabase(resultId) {
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         addToPendingQueue('results', 'delete', { id: resultId });
         return false;
     }
     
     try {
-        const { error } = await supabaseClient.from('results').delete().eq('id', resultId);
+        const { error } = await supabase.from('results').delete().eq('id', resultId);
         if (error) throw error;
         console.log(`✅ Result deleted from Supabase: ${resultId}`);
         
@@ -26618,7 +26524,8 @@ async function deleteResultFromSupabase(resultId) {
 
 // ======================= UPLOAD ANSWER SHEET TO SUPABASE STORAGE =======================
 async function uploadAnswerSheetToSupabase(fileData, fileName, fileType, resultId, subjectName) {
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Answer sheet saved locally only');
         return null;
     }
@@ -26636,13 +26543,13 @@ async function uploadAnswerSheetToSupabase(fileData, fileName, fileType, resultI
         const newFileName = `${Date.now()}_${subjectName.replace(/\s/g, '_')}.${fileExt}`;
         const fullPath = `${resultId}/${newFileName}`;
         
-        const { error } = await supabaseClient.storage
+        const { error } = await supabase.storage
             .from('marksheets')
             .upload(fullPath, blob, { upsert: true, contentType: fileType });
         
         if (error) throw error;
         
-        const { data: urlData } = supabaseClient.storage
+        const { data: urlData } = supabase.storage
             .from('marksheets')
             .getPublicUrl(fullPath);
         
@@ -26656,21 +26563,35 @@ async function uploadAnswerSheetToSupabase(fileData, fileName, fileType, resultI
     }
 }
 
+// ======================= DATA URL TO BLOB HELPER =======================
+function dataURLtoBlob(dataURL) {
+    let byteString = atob(dataURL.split(',')[1]);
+    let mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
+    let ab = new ArrayBuffer(byteString.length);
+    let ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+}
+
 // ======================= CAMERA UPLOAD FUNCTION FOR ANSWER SHEETS =======================
 function openAnswerSheetCapture(callback) {
     const sourceModal = document.createElement('div');
     sourceModal.className = 'modal-overlay';
     sourceModal.style.zIndex = '100001';
+    sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+    
     sourceModal.innerHTML = `
-        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center;">
+        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
             <i class="fas fa-upload" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-            <h3 style="margin-bottom: 15px;">Choose Upload Source</h3>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Choose Upload Source</h3>
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-camera"></i> Take Photo</button>
-                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-images"></i> Choose from Gallery</button>
-                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-file-pdf"></i> Upload PDF</button>
+                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;"><i class="fas fa-camera"></i> 📸 Take Photo</button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;"><i class="fas fa-images"></i> 🖼️ Choose from Gallery</button>
+                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;"><i class="fas fa-file-pdf"></i> 📄 Upload PDF</button>
             </div>
-            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px;">Cancel</button>
+            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px; font-size: 14px; min-height: 44px;">Cancel</button>
         </div>
     `;
     document.body.appendChild(sourceModal);
@@ -26694,13 +26615,24 @@ function openAnswerSheetCapture(callback) {
                         const cropModal = document.createElement('div');
                         cropModal.className = 'modal-overlay';
                         cropModal.style.zIndex = '100002';
+                        cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100002; padding:16px;';
+                        
                         cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width: 500px; text-align: center;">
-                                <div class="modal-header"><h2>Crop Image</h2><button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
-                                <img id="cropAnswerImg" src="${ev.target.result}" style="max-width:100%;">
-                                <div style="margin-top:15px;">
-                                    <button class="btn btn-primary" id="cropSaveBtn">Crop & Save</button>
-                                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                            <div class="modal-content" style="max-width: 500px; width: 95%; text-align: center; border-radius: 24px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
+                                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 15px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                    <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-crop-alt"></i> Crop Image</h2>
+                                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
+                                </div>
+                                <div style="padding: 20px;">
+                                    <img id="cropAnswerImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                        <button id="cropSaveBtn" class="btn btn-primary" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; min-height: 44px;">
+                                            <i class="fas fa-check"></i> Crop & Save
+                                        </button>
+                                        <button id="cancelBtn" class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; min-height: 44px;">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -26734,9 +26666,10 @@ function openAnswerSheetCapture(callback) {
     document.getElementById('closeSourceModal').onclick = closeSourceModal;
 }
 
-// ======================= MAIN LOAD FUNCTION =======================
+// ======================= ✅ FIX 2: Updated loadResults =======================
 async function loadResults() {
-    // Initialize window.results if not exists
+    console.log('📋 [RESULTS] loadResults called...');
+    
     if (!window.results) {
         window.results = [];
         console.log('✅ Initialized window.results array in loadResults');
@@ -26747,7 +26680,16 @@ async function loadResults() {
         return;
     }
     
+    // Load students from localStorage if empty
+    if (!window.students || window.students.length === 0) {
+        console.log('⚠️ Students array is empty, loading from localStorage...');
+        loadAllData();
+    }
+    
     await loadResultsFromSupabase();
+    
+    // ✅ Load answer sheets from Supabase for results
+    await loadAnswerSheetsFromSupabase();
     
     let filteredResults = getFilteredResults();
     
@@ -26875,18 +26817,10 @@ async function loadResults() {
     }, 100);
 }
 
-async function refreshResultsData() {
-    await loadResultsFromSupabase();
-    saveAllData();
-    loadResults();
-    showNotification('Data refreshed from Supabase!', 'success');
-}
-
-// ======================= ✅ FIXED: renderResultList WITH subjectMasterList CHECK & MARKS PARSING =======================
+// ======================= ✅ FIX 1: renderResultList WITH CLS AND ROLL SUPPORT =======================
 function renderResultList(resultsToRender) {
     let canEditDelete = (currentUser.role === 'admin' || currentUser.role === 'teacher');
     
-    // ✅ Ensure subjectMasterList exists
     if (typeof subjectMasterList === 'undefined') {
         window.subjectMasterList = [
             { name: 'English', maxMarks: 100, passingMarks: 35 },
@@ -26908,35 +26842,83 @@ function renderResultList(resultsToRender) {
     for (let i = 0; i < resultsToRender.length; i++) {
         let r = resultsToRender[i];
         
-        // ✅ FIX: Ensure marks is an object (parse if string)
         let marksObj = r.marks;
         if (typeof marksObj === 'string') {
             try {
                 marksObj = JSON.parse(marksObj);
-                console.log('✅ Parsed marks for:', r.studentName);
             } catch(e) {
                 console.warn('⚠️ Could not parse marks for:', r.studentName);
                 marksObj = {};
             }
         }
         
-        let student = null;
-        for (let j = 0; j < students.length; j++) {
-            if (students[j] && students[j].name === r.studentName) {
-                student = students[j];
-                break;
+        // ✅ FIX: Use cls and roll directly from result data
+        let studentClass = r.cls || 'N/A';
+        let rollNo = r.roll || 'N/A';
+        let studentName = r.studentName || '';
+        let studentPhoto = r.studentPhotoUrl || null;
+        
+        // If cls or roll is 'N/A', try to find from students array
+        if (studentClass === 'N/A' || rollNo === 'N/A') {
+            let student = null;
+            for (let j = 0; j < students.length; j++) {
+                if (students[j] && students[j].name === studentName) {
+                    student = students[j];
+                    break;
+                }
+            }
+            if (!student) {
+                for (let j = 0; j < students.length; j++) {
+                    if (students[j] && students[j].name && students[j].name.toLowerCase() === studentName.toLowerCase()) {
+                        student = students[j];
+                        break;
+                    }
+                }
+            }
+            if (!student) {
+                for (let j = 0; j < students.length; j++) {
+                    if (students[j] && students[j].name) {
+                        let studentNameClean = students[j].name.replace(/\s/g, '').toLowerCase();
+                        let searchNameClean = studentName.replace(/\s/g, '').toLowerCase();
+                        if (studentNameClean.includes(searchNameClean) || searchNameClean.includes(studentNameClean)) {
+                            student = students[j];
+                            break;
+                        }
+                    }
+                }
+            }
+            if (student) {
+                studentClass = `${student.cls || ''} ${student.sec || ''}`.trim() || studentClass;
+                rollNo = student.roll || rollNo;
+                if (!studentPhoto) {
+                    studentPhoto = student.photo_url || null;
+                }
             }
         }
-        let studentClass = student ? `${student.cls || ''} ${student.sec || ''}`.trim() || 'N/A' : 'N/A';
+        
         let gradeInfo = getGrade(r.percentage);
         
-        let resultAnswerSheets = answerSheets[r.id] || {};
+        // ✅ Get answer sheets for this result
+        let resultAnswerSheets = {};
+        if (typeof answerSheets !== 'undefined' && answerSheets) {
+            resultAnswerSheets = answerSheets[r.id] || {};
+        }
+        
+        // Generate student photo
+        let photoHtml = '';
+        if (studentPhoto && studentPhoto.startsWith('http')) {
+            photoHtml = `<img src="${studentPhoto}" alt="${escapeHtml(r.studentName)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-user-graduate fallback-icon\\'></i>';" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        } else if (studentPhoto && studentPhoto.startsWith('data:image')) {
+            photoHtml = `<img src="${studentPhoto}" alt="${escapeHtml(r.studentName)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-user-graduate fallback-icon\\'></i>';" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        } else {
+            let initials = studentName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            photoHtml = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #2563eb, #1e40af); color:white; font-size:18px; font-weight:bold; border-radius:50%;">${initials || 'S'}</div>`;
+        }
         
         let subjectsHtml = '<div class="result-subjects-container" style="margin-top: 8px;"><div style="background: var(--bg-body); border-radius: 12px; padding: 6px 10px;">';
         subjectsHtml += '<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px 0; font-size: 11px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-light);">';
         subjectsHtml += '<div>Subject</div><div style="text-align: center;">Marks</div><div style="text-align: center;">Max</div><div style="text-align: center;">Grade</div><div style="text-align: center;">Sheet</div></div>';
         
-        // ✅ FIX: Use marksObj instead of r.marks
         for (let [subject, marks] of Object.entries(marksObj || {})) {
             let subInfo = null;
             for (let k = 0; k < subjectMasterList.length; k++) {
@@ -26948,35 +26930,54 @@ function renderResultList(resultsToRender) {
             let maxMarks = subInfo ? subInfo.maxMarks : 100;
             let percentage = Math.round((marks / maxMarks) * 100);
             let subjectGrade = getSubjectGrade(marks, maxMarks);
-            let hasAnswerSheet = resultAnswerSheets[subject] ? true : false;
+            
+            // Check answer sheet for this subject
+            let hasAnswerSheet = false;
+            let answerSheetUrl = null;
+            
+            if (resultAnswerSheets && resultAnswerSheets[subject]) {
+                hasAnswerSheet = true;
+                answerSheetUrl = resultAnswerSheets[subject].url || resultAnswerSheets[subject].data;
+            }
             
             let gradeColor = subjectGrade === 'A+' ? '#10b981' : subjectGrade === 'A' ? '#10b981' : subjectGrade === 'B' ? '#3b82f6' : subjectGrade === 'C' ? '#f59e0b' : subjectGrade === 'D' ? '#f59e0b' : subjectGrade === 'E' ? '#f59e0b' : '#ef4444';
             
             subjectsHtml += `<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--border-light); align-items: center;">
-                <div style="font-size: 12px; font-weight: 500; overflow-wrap: break-word;">${subject}</div>
+                <div style="font-size: 12px; font-weight: 500; overflow-wrap: break-word;">${escapeHtml(subject)}</div>
                 <div style="text-align: center; font-size: 12px;">${marks}</div>
                 <div style="text-align: center; font-size: 12px;">${maxMarks}</div>
                 <div style="text-align: center;"><span style="background: ${gradeColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 10px; display: inline-block;">${subjectGrade}</span></div>
                 <div style="text-align: center;">
-                    ${hasAnswerSheet ? `<button class="action-chip" onclick="downloadAnswerSheet('${r.id}', '${subject.replace(/'/g, "\\'")}')" style="padding: 4px 8px; background: #10b981; color: white; border: none; font-size: 10px;"><i class="fas fa-download"></i></button>` : '<span style="font-size: 10px; color: #94a3b8;">—</span>'}
+                    ${hasAnswerSheet ? 
+                        `<button class="action-chip" onclick="downloadAnswerSheet('${r.id}', '${subject.replace(/'/g, "\\'")}')" style="padding: 4px 8px; background: #10b981; color: white; border: none; font-size: 10px; border-radius: 12px; cursor: pointer;" title="Download Answer Sheet">
+                            <i class="fas fa-download"></i>
+                        </button>` : 
+                        `<span style="font-size: 10px; color: #94a3b8;">—</span>`
+                    }
                 </div>
             </div>`;
         }
         subjectsHtml += `</div></div>`;
         
-        html += `<div class="data-card" style="margin-bottom: 12px; border-radius: 20px;">
-            <div class="card-header result-card-header" style="flex-direction: row; flex-wrap: wrap; gap: 12px; padding: 12px;">
-                <div class="card-photo" style="width: 50px; height: 50px; flex-shrink: 0;">
-                    <i class="fas fa-user-graduate"></i>
+        // ✅ Display cls and roll from result data
+        html += `<div class="data-card" style="margin-bottom: 12px; border-radius: 20px; border: 1px solid var(--border-light);">
+            <div class="card-header result-card-header" style="display: flex; flex-wrap: wrap; gap: 12px; padding: 12px; align-items: center;">
+                <div class="student-photo-circle" style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #e2e8f0; border: 2px solid #e2e8f0;">
+                    ${photoHtml}
                 </div>
-                <div class="card-title" style="flex: 1;">
-                    <h3 style="font-size: 15px; margin-bottom: 4px;">${escapeHtml(r.studentName) || 'N/A'}</h3>
-                    <p style="font-size: 11px; margin: 0;">${escapeHtml(r.examName) || 'N/A'} | Class: ${studentClass} | Rank: #${r.rank || '-'}</p>
+                <div class="card-title" style="flex: 1; min-width: 140px;">
+                    <h3 style="font-size: 15px; margin-bottom: 4px; color: var(--text-primary);">${escapeHtml(r.studentName) || 'N/A'}</h3>
+                    <p style="font-size: 11px; margin: 0; color: var(--text-secondary);">
+                        ${escapeHtml(r.examName) || 'N/A'} | 
+                        Class: <strong>${escapeHtml(studentClass)}</strong> | 
+                        Roll: <strong>${rollNo}</strong> | 
+                        Rank: #${r.rank || '-'}
+                    </p>
                 </div>
                 <div><span class="badge ${r.percentage >= 40 ? 'badge-success' : 'badge-danger'}" style="font-size: 13px; padding: 5px 12px;">${gradeInfo.grade} (${r.percentage}%)</span></div>
             </div>
             ${subjectsHtml}
-            <div class="card-actions result-card-actions" style="padding: 10px; gap: 6px; flex-wrap: wrap;">
+            <div class="card-actions result-card-actions" style="padding: 10px; gap: 6px; flex-wrap: wrap; border-top: 1px solid var(--border-light);">
                 <button class="action-chip" onclick="viewResultDetails('${r.id}')" style="padding: 6px 10px;"><i class="fas fa-eye"></i> View</button>
                 ${canEditDelete ? `<button class="action-chip" onclick="editResult('${r.id}')" style="padding: 6px 10px;"><i class="fas fa-edit"></i> Edit</button>` : ''}
                 ${canEditDelete ? `<button class="action-chip" onclick="deleteResult('${r.id}')" style="padding: 6px 10px; color: #dc2626;"><i class="fas fa-trash"></i> Del</button>` : ''}
@@ -26987,80 +26988,148 @@ function renderResultList(resultsToRender) {
     }
     
     if (resultsToRender.length === 0) {
-        html = '<div class="profile-card" style="text-align: center; padding: 40px;"><i class="fas fa-chart-line" style="font-size: 48px; color: #94a3b8;"></i><p style="margin-top: 10px;">No results found.</p></div>';
+        html = '<div class="profile-card" style="text-align: center; padding: 40px;"><i class="fas fa-chart-line" style="font-size: 48px; color: #94a3b8;"></i><p style="margin-top: 10px; color: var(--text-secondary);">No results found.</p></div>';
     }
     
     document.getElementById('resultList').innerHTML = html;
 }
 
-function downloadAnswerSheet(resultId, subject) {
-    let sheetData = answerSheets[resultId]?.[subject];
-    if (!sheetData) {
-        showNotification('No answer sheet found for this subject', 'warning');
-        return;
-    }
-    
-    if (currentUser.role === 'student') {
-        let result = null;
-        for (let i = 0; i < (window.results || []).length; i++) {
-            if (window.results[i].id === resultId) {
-                result = window.results[i];
-                break;
-            }
-        }
-        if (result && result.studentName !== currentUser.name) {
-            showNotification('You can only download your own answer sheets', 'error');
-            return;
-        }
-    }
-    
-    if (sheetData.url) {
-        window.open(sheetData.url, '_blank');
-        showNotification('Opening answer sheet from cloud...', 'info');
-    } else if (sheetData.data) {
-        let filename = `answer_sheet_${subject}_${new Date().toISOString().split('T')[0]}.pdf`;
-        downloadFile(sheetData.data, filename);
-        showNotification('Download started!', 'success');
-    } else {
-        showNotification('No file available for download', 'error');
-    }
-}
-
-// ======================= SHOW ADD RESULT FORM (FIXED - EXAMS FROM SUPABASE) =======================
+// ======================= ✅ FIXED: SHOW ADD RESULT FORM =======================
 async function showAddResultForm() {
+    console.log('📝 Opening Add Result Form...');
+    
     if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
         showNotification('You do not have permission to add results', 'error');
         return;
     }
     
-    let studentOptions = '';
-    if (currentUser.role === 'admin') {
-        for (let i = 0; i < students.length; i++) {
-            studentOptions += `<option value="${students[i].name}">${students[i].name} (${students[i].cls} ${students[i].sec})</option>`;
+    // ✅ FIX: Ensure subjectMasterList is defined
+    if (typeof subjectMasterList === 'undefined' || !subjectMasterList || subjectMasterList.length === 0) {
+        window.subjectMasterList = [
+            { name: 'English', maxMarks: 100, passingMarks: 35 },
+            { name: 'Mathematics', maxMarks: 100, passingMarks: 35 },
+            { name: 'Science', maxMarks: 100, passingMarks: 35 },
+            { name: 'Hindi', maxMarks: 100, passingMarks: 35 },
+            { name: 'Social Studies', maxMarks: 100, passingMarks: 35 },
+            { name: 'Computer', maxMarks: 50, passingMarks: 18 },
+            { name: 'Drawing', maxMarks: 50, passingMarks: 18 },
+            { name: 'Physical Education', maxMarks: 50, passingMarks: 18 },
+            { name: 'Sanskrit', maxMarks: 100, passingMarks: 35 },
+            { name: 'General Knowledge', maxMarks: 50, passingMarks: 25 }
+        ];
+        var subjectMasterList = window.subjectMasterList;
+        console.log('✅ subjectMasterList initialized');
+    }
+    
+    // ✅ FIX: Ensure students array is loaded
+    if (!window.students || window.students.length === 0) {
+        console.log('⚠️ Students array is empty, loading from localStorage...');
+        loadAllData();
+        
+        // If still empty, try loading from Supabase
+        if (!window.students || window.students.length === 0) {
+            console.log('🔄 Loading students from Supabase...');
+            await loadStudentsFromSupabase();
         }
-    } else {
-        let myClass = getTeacherClass();
-        let myStudents = [];
-        for (let i = 0; i < students.length; i++) {
-            if (`${students[i].cls} ${students[i].sec}` === myClass) {
-                myStudents.push(students[i]);
-            }
-        }
-        for (let i = 0; i < myStudents.length; i++) {
-            studentOptions += `<option value="${myStudents[i].name}">${myStudents[i].name} (${myStudents[i].cls} ${myStudents[i].sec})</option>`;
-        }
-        if (myStudents.length === 0) {
-            showNotification('No students found in your class', 'error');
+        
+        // If still empty after both attempts, show error
+        if (!window.students || window.students.length === 0) {
+            showNotification('❌ No students found! Please add students first.', 'error');
             return;
         }
     }
     
-    // ======================= FIXED: Get Exams from Supabase =======================
+    console.log(`👨‍🎓 Total students available: ${window.students.length}`);
+    
+    // ✅ FIX: Build student options with proper checking
+    let studentOptions = '';
+    let studentCount = 0;
+    
+    if (currentUser.role === 'admin') {
+        // Admin can see all students
+        for (let i = 0; i < window.students.length; i++) {
+            let student = window.students[i];
+            if (!student || !student.name) continue;
+            
+            let studentPhoto = student.photo_url || '';
+            let cls = student.cls || 'N/A';
+            let sec = student.sec || '';
+            let roll = student.roll || 'N/A';
+            let displayName = `${student.name}`;
+            let displayClass = `${cls} ${sec}`.trim();
+            let displayRoll = `Roll: ${roll}`;
+            
+            studentOptions += `<option value="${student.name.replace(/"/g, '&quot;')}" 
+                                    data-photo="${studentPhoto}" 
+                                    data-cls="${cls}" 
+                                    data-sec="${sec}" 
+                                    data-roll="${roll}">
+                                ${displayName} (${displayClass} | ${displayRoll})
+                            </option>`;
+            studentCount++;
+        }
+    } else if (currentUser.role === 'teacher') {
+        // Teacher can only see their class students
+        let myClass = getTeacherClass();
+        console.log(`👨‍🏫 Teacher's class: ${myClass}`);
+        
+        let myStudents = [];
+        for (let i = 0; i < window.students.length; i++) {
+            let student = window.students[i];
+            if (!student || !student.name) continue;
+            
+            let studentClass = `${student.cls || ''} ${student.sec || ''}`.trim();
+            if (studentClass === myClass) {
+                myStudents.push(student);
+            }
+        }
+        
+        console.log(`📚 Students in your class: ${myStudents.length}`);
+        
+        if (myStudents.length === 0) {
+            showNotification(`No students found in your class (${myClass})`, 'error');
+            return;
+        }
+        
+        for (let i = 0; i < myStudents.length; i++) {
+            let student = myStudents[i];
+            let studentPhoto = student.photo_url || '';
+            let cls = student.cls || 'N/A';
+            let sec = student.sec || '';
+            let roll = student.roll || 'N/A';
+            let displayName = `${student.name}`;
+            let displayClass = `${cls} ${sec}`.trim();
+            let displayRoll = `Roll: ${roll}`;
+            
+            studentOptions += `<option value="${student.name.replace(/"/g, '&quot;')}" 
+                                    data-photo="${studentPhoto}" 
+                                    data-cls="${cls}" 
+                                    data-sec="${sec}" 
+                                    data-roll="${roll}">
+                                ${displayName} (${displayClass} | ${displayRoll})
+                            </option>`;
+            studentCount++;
+        }
+    } else {
+        showNotification('You do not have permission to add results', 'error');
+        return;
+    }
+    
+    console.log(`✅ Generated ${studentCount} student options`);
+    
+    // If no student options, show error
+    if (!studentOptions || studentOptions === '') {
+        showNotification('❌ No students available to add results!', 'error');
+        return;
+    }
+    
+    // Show loader while fetching exams
     showLoader();
     let examOptions = '<option value="">-- Select Exam --</option>';
     
     try {
         let examsData = await fetchExamsFromSupabase();
+        console.log(`📝 Exams fetched: ${examsData.length}`);
         
         if (currentUser.role === 'admin') {
             for (let i = 0; i < examsData.length; i++) {
@@ -27071,9 +27140,11 @@ async function showAddResultForm() {
                     examOptions += `<option value="${examName.replace(/"/g, '&quot;')}">${examName} (${className || 'N/A'})</option>`;
                 }
             }
-        } else {
+        } else if (currentUser.role === 'teacher') {
             let myClass = getTeacherClass();
             let myClassName = myClass ? myClass.split(' ')[0] : '';
+            console.log(`👨‍🏫 Teacher's class for exams: ${myClassName}`);
+            
             for (let i = 0; i < examsData.length; i++) {
                 let exam = examsData[i];
                 let examName = exam.exam_name || exam.examName;
@@ -27088,7 +27159,7 @@ async function showAddResultForm() {
             examOptions = '<option value="">-- No Exams Available --</option>';
         }
         
-        console.log('✅ Exam options generated, count:', examsData.length);
+        console.log('✅ Exam options generated');
         
     } catch(error) {
         console.error('Error fetching exams:', error);
@@ -27097,28 +27168,34 @@ async function showAddResultForm() {
     
     hideLoader();
     
-    // Store answer sheet data temporarily
-    window.pendingAnswerSheets = {};
+    // ✅ FIX: Initialize pendingAnswerSheets
+    if (!window.pendingAnswerSheets) {
+        window.pendingAnswerSheets = {};
+    }
     
+    // ✅ FIX: Generate subject inputs
     let subjectsHTML = '';
     for (let i = 0; i < subjectMasterList.length; i++) {
         let sub = subjectMasterList[i];
+        let subId = sub.name.replace(/\s/g, '');
         subjectsHTML += `
-            <div style="margin-bottom: 16px; border: 1px solid var(--border-light); border-radius: 12px; padding: 12px;">
+            <div style="margin-bottom: 16px; border: 1px solid var(--border-light); border-radius: 12px; padding: 12px; background: var(--bg-surface);">
                 <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">📚 ${sub.name} (Max: ${sub.maxMarks})</label>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <input type="number" id="marks_${sub.name.replace(/\s/g, '')}" class="form-control" placeholder="Enter marks" max="${sub.maxMarks}" style="width: 100%; padding: 12px; border-radius: 12px;">
-                    <div id="answerSheetUpload_${sub.name.replace(/\s/g, '')}" class="upload-area" style="padding: 12px; margin: 0; cursor: pointer; text-align: center; font-size: 12px; border: 2px dashed var(--border-light); border-radius: 12px;" onclick="triggerAnswerSheetUploadInForm('${sub.name.replace(/'/g, "\\'")}')">
-                        <i class="fas fa-cloud-upload-alt"></i> Upload Answer Sheet
+                    <input type="number" id="marks_${subId}" class="form-control" placeholder="Enter marks" max="${sub.maxMarks}" min="0" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <div id="answerSheetUpload_${subId}" class="upload-area" style="padding: 12px; margin: 0; cursor: pointer; text-align: center; font-size: 12px; border: 2px dashed var(--border-light); border-radius: 12px; transition: all 0.3s ease;" onclick="triggerAnswerSheetUploadInForm('${sub.name.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-cloud-upload-alt" style="color: var(--primary);"></i> Upload Answer Sheet
                     </div>
                 </div>
-                <div id="preview_${sub.name.replace(/\s/g, '')}" style="margin-top: 8px; font-size: 10px;"></div>
+                <div id="preview_${subId}" style="margin-top: 8px; font-size: 10px;"></div>
             </div>
         `;
     }
     
+    // ✅ Create modal with properly escaped content
     let modal = document.createElement('div');
     modal.className = 'modal-overlay';
+    modal.id = 'addResultModal';
     modal.style.position = 'fixed';
     modal.style.top = '0';
     modal.style.left = '0';
@@ -27132,8 +27209,9 @@ async function showAddResultForm() {
     modal.style.padding = '16px';
     modal.style.zIndex = '10000';
     modal.style.overflow = 'auto';
+    modal.style.boxSizing = 'border-box';
     
-    modal.innerHTML = `<div class="modal-content" style="max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 28px; background: var(--bg-surface);">
+    modal.innerHTML = `<div class="modal-content" style="max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 28px; background: var(--bg-surface); box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
         <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 15px 20px; border-radius: 28px 28px 0 0; position: sticky; top: 0; z-index: 10;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <h2 style="margin: 0; font-size: 18px; color: white;"><i class="fas fa-plus-circle"></i> Add Result</h2>
@@ -27143,24 +27221,50 @@ async function showAddResultForm() {
         </div>
         
         <div style="padding: 20px;">
-            <div class="form-group"><label style="font-size: 13px; font-weight: 600;"><i class="fas fa-user-graduate"></i> Student *</label>
-                <select id="resultStudent" class="form-control" style="width:100%; padding: 12px; border-radius: 12px;">${studentOptions}</select>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
+                    <i class="fas fa-user-graduate"></i> Student *
+                </label>
+                <select id="resultStudent" class="form-control" style="width:100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-surface); font-size: 14px;">
+                    ${studentOptions}
+                </select>
+                <small style="color: var(--text-secondary); font-size: 11px; display: block; margin-top: 4px;">
+                    ${studentCount} student(s) available
+                </small>
             </div>
-            <div class="form-group"><label style="font-size: 13px; font-weight: 600;"><i class="fas fa-calendar-alt"></i> Exam *</label>
-                <select id="resultExam" class="form-control" style="width:100%; padding: 12px; border-radius: 12px;">${examOptions}</select>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
+                    <i class="fas fa-calendar-alt"></i> Exam *
+                </label>
+                <select id="resultExam" class="form-control" style="width:100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-surface); font-size: 14px;">
+                    ${examOptions}
+                </select>
             </div>
-            <div class="form-group"><label style="font-size: 13px; font-weight: 600;"><i class="fas fa-chart-line"></i> Subject-wise Marks</label>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
+                    <i class="fas fa-chart-line"></i> Subject-wise Marks
+                </label>
                 ${subjectsHTML}
             </div>
+            
             <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="saveResultData()" style="flex: 1; padding: 12px; border-radius: 30px;"><i class="fas fa-save"></i> Save Result</button>
-                <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px; border-radius: 30px;"><i class="fas fa-times"></i> Cancel</button>
+                <button class="btn btn-primary" onclick="saveResultData()" style="flex: 1; padding: 12px; border-radius: 30px; font-size: 14px; min-height: 48px;">
+                    <i class="fas fa-save"></i> Save Result
+                </button>
+                <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px; border-radius: 30px; font-size: 14px; min-height: 48px;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
             </div>
         </div>
     </div>`;
+    
     document.body.appendChild(modal);
     
-    window.triggerAnswerSheetUploadInForm = (subject) => {
+    // ✅ FIX: Define triggerAnswerSheetUploadInForm function
+    window.triggerAnswerSheetUploadInForm = function(subject) {
+        console.log(`📤 Uploading answer sheet for: ${subject}`);
         let folderPath = `answer_sheets/${subject}`;
         
         openAnswerSheetCapture(async (fileData, fileName, fileType) => {
@@ -27169,7 +27273,7 @@ async function showAddResultForm() {
             const supabase = getSupabaseClient();
             const sheetId = 'ANS_' + Date.now();
             
-            if (supabase && STORAGE_BUCKETS && navigator.onLine) {
+            if (supabase && navigator.onLine) {
                 try {
                     const fileExt = fileType === 'application/pdf' ? 'pdf' : 'jpg';
                     const newFileName = `${Date.now()}_${subject}.${fileExt}`;
@@ -27180,7 +27284,13 @@ async function showAddResultForm() {
                         const { data: urlData } = supabase.storage.from('marksheets').getPublicUrl(`${folderPath}/${sheetId}/${newFileName}`);
                         uploadedUrl = urlData.publicUrl;
                     }
-                } catch(err) { console.error('Upload error:', err); }
+                } catch(err) { 
+                    console.error('Upload error:', err); 
+                }
+            }
+            
+            if (!window.pendingAnswerSheets) {
+                window.pendingAnswerSheets = {};
             }
             
             window.pendingAnswerSheets[subject] = {
@@ -27190,7 +27300,8 @@ async function showAddResultForm() {
                 uploadedAt: new Date().toISOString()
             };
             
-            let previewDiv = document.getElementById(`preview_${subject.replace(/\s/g, '')}`);
+            let subId = subject.replace(/\s/g, '');
+            let previewDiv = document.getElementById(`preview_${subId}`);
             if (previewDiv) {
                 if (fileType.startsWith('image/')) {
                     previewDiv.innerHTML = `<div style="background:#d1fae5; padding:8px; border-radius:8px; margin-top:6px; display:flex; align-items:center; gap:8px;">
@@ -27209,9 +27320,15 @@ async function showAddResultForm() {
         });
     };
     
+    // ✅ FIX: Define saveResultData function
     window.saveResultData = async function() {
-        let student = document.getElementById('resultStudent').value;
-        let exam = document.getElementById('resultExam').value;
+        console.log('💾 Saving result data...');
+        
+        let studentSelect = document.getElementById('resultStudent');
+        let examSelect = document.getElementById('resultExam');
+        
+        let student = studentSelect ? studentSelect.value : '';
+        let exam = examSelect ? examSelect.value : '';
         
         if (!student) {
             showNotification('Please select a student', 'error');
@@ -27222,6 +27339,20 @@ async function showAddResultForm() {
             return;
         }
         
+        let selectedOption = studentSelect.options[studentSelect.selectedIndex];
+        let studentPhotoUrl = selectedOption ? selectedOption.getAttribute('data-photo') : null;
+        let studentCls = selectedOption ? selectedOption.getAttribute('data-cls') : 'N/A';
+        let studentSec = selectedOption ? selectedOption.getAttribute('data-sec') : '';
+        let studentRoll = selectedOption ? parseInt(selectedOption.getAttribute('data-roll')) || 'N/A' : 'N/A';
+        
+        // Combine cls and sec if needed
+        let fullClass = studentCls;
+        if (studentSec && studentSec !== '') {
+            fullClass = `${studentCls} ${studentSec}`.trim();
+        }
+        
+        console.log(`📝 Student: ${student}, Class: ${fullClass}, Roll: ${studentRoll}`);
+        
         let marksObj = {};
         let totalMarks = 0;
         let maxTotal = 0;
@@ -27229,13 +27360,21 @@ async function showAddResultForm() {
         
         for (let i = 0; i < subjectMasterList.length; i++) {
             let sub = subjectMasterList[i];
-            let marksInput = document.getElementById(`marks_${sub.name.replace(/\s/g, '')}`);
+            let subId = sub.name.replace(/\s/g, '');
+            let marksInput = document.getElementById(`marks_${subId}`);
             let marks = marksInput ? (parseInt(marksInput.value) || 0) : 0;
+            
+            if (marks < 0) {
+                showNotification(`${sub.name} marks cannot be negative`, 'error');
+                valid = false;
+                return;
+            }
             if (marks > sub.maxMarks) {
                 showNotification(`${sub.name} marks cannot exceed ${sub.maxMarks}`, 'error');
                 valid = false;
                 return;
             }
+            
             marksObj[sub.name] = marks;
             totalMarks += marks;
             maxTotal += sub.maxMarks;
@@ -27258,19 +27397,25 @@ async function showAddResultForm() {
             percentage: percentage,
             grade: gradeInfo.grade,
             rank: (window.results || []).length + 1,
+            cls: fullClass,
+            roll: studentRoll,
             marksheetUrl: null,
+            marksheetData: null,
+            studentPhotoUrl: studentPhotoUrl || null,
             createdAt: new Date().toISOString()
         };
+        
+        console.log('✅ New result object:', newResult);
         
         if (!window.results) window.results = [];
         window.results.push(newResult);
         
-        if (Object.keys(window.pendingAnswerSheets).length > 0) {
+        if (window.pendingAnswerSheets && Object.keys(window.pendingAnswerSheets).length > 0) {
+            if (!answerSheets) answerSheets = {};
             answerSheets[newResultId] = window.pendingAnswerSheets;
             saveAnswerSheets();
         }
         
-        // Sort and update ranks
         window.results.sort((a, b) => b.percentage - a.percentage);
         for (let i = 0; i < window.results.length; i++) {
             window.results[i].rank = i + 1;
@@ -27279,11 +27424,325 @@ async function showAddResultForm() {
         await syncResultToSupabase(newResult);
         saveAllData();
         showNotification(`✅ Result added for ${student} (${percentage}%)!`, 'success');
-        modal.remove();
+        
+        // Close modal
+        let modal = document.getElementById('addResultModal');
+        if (modal) modal.remove();
+        
         loadResults();
     };
+    
+    console.log('✅ Add Result Form opened successfully');
 }
 
+// ======================= ✅ FIX 4: generateMarksheet WITH CLS AND ROLL SUPPORT =======================
+function generateMarksheet(id) {
+    let r = null;
+    for (let i = 0; i < (window.results || []).length; i++) {
+        if (window.results[i].id === id) {
+            r = window.results[i];
+            break;
+        }
+    }
+    
+    if (!r) { 
+        showNotification('Result not found!', 'error'); 
+        return; 
+    }
+    
+    // ✅ Get answer sheets for this result
+    let resultAnswerSheets = answerSheets && answerSheets[id] ? answerSheets[id] : {};
+    console.log(`📄 Answer sheets for marksheet ${id}:`, resultAnswerSheets);
+    
+    let marksObj = r.marks;
+    if (typeof marksObj === 'string') {
+        try {
+            marksObj = JSON.parse(marksObj);
+        } catch(e) {
+            console.warn('⚠️ Could not parse marks for marksheet:', r.studentName);
+            marksObj = {};
+        }
+    }
+    
+    let studentName = r.studentName || '';
+    
+    // ✅ Use cls and roll from result data directly
+    let rollNo = r.roll || 'N/A';
+    let className = r.cls || 'N/A';
+    
+    // If cls or roll is 'N/A', try to find from students array
+    if (className === 'N/A' || rollNo === 'N/A') {
+        let student = null;
+        for (let i = 0; i < students.length; i++) {
+            if (students[i] && students[i].name === studentName) {
+                student = students[i];
+                break;
+            }
+        }
+        if (!student) {
+            for (let i = 0; i < students.length; i++) {
+                if (students[i] && students[i].name && students[i].name.toLowerCase() === studentName.toLowerCase()) {
+                    student = students[i];
+                    break;
+                }
+            }
+        }
+        if (!student) {
+            for (let i = 0; i < students.length; i++) {
+                if (students[i] && students[i].name) {
+                    let studentNameClean = students[i].name.replace(/\s/g, '').toLowerCase();
+                    let searchNameClean = studentName.replace(/\s/g, '').toLowerCase();
+                    if (studentNameClean.includes(searchNameClean) || searchNameClean.includes(studentNameClean)) {
+                        student = students[i];
+                        break;
+                    }
+                }
+            }
+        }
+        if (student) {
+            className = `${student.cls || ''} ${student.sec || ''}`.trim() || className;
+            rollNo = student.roll || rollNo;
+        }
+    }
+    
+    console.log('✅ Marksheet - Student:', studentName, 'Class:', className, 'Roll:', rollNo);
+    
+    let schoolName = localStorage.getItem('schoolName') || 'Wings Convent School';
+    let schoolAddress = localStorage.getItem('schoolAddress') || '';
+    let schoolPhone = localStorage.getItem('schoolPhone') || '';
+    let schoolEmail = localStorage.getItem('schoolEmail') || '';
+    
+    let marksTableRows = '';
+    let subjectKeys = Object.keys(marksObj || {});
+    
+    if (subjectKeys.length === 0) {
+        marksTableRows = `<tr><td colspan="6" style="text-align:center; padding:10px;">No subjects found</td></tr>`;
+    } else {
+        for (let [subject, marks] of Object.entries(marksObj || {})) {
+            let subInfo = null;
+            for (let k = 0; k < subjectMasterList.length; k++) {
+                if (subjectMasterList[k] && subjectMasterList[k].name === subject) {
+                    subInfo = subjectMasterList[k];
+                    break;
+                }
+            }
+            let maxMarks = subInfo ? subInfo.maxMarks : 100;
+            let percentage = maxMarks > 0 ? Math.round((marks / maxMarks) * 100) : 0;
+            let subjectGrade = getSubjectGrade(marks, maxMarks);
+            let gradeColor = subjectGrade === 'A+' ? '#10b981' : subjectGrade === 'A' ? '#10b981' : subjectGrade === 'B' ? '#3b82f6' : subjectGrade === 'C' ? '#f59e0b' : subjectGrade === 'D' ? '#f59e0b' : subjectGrade === 'E' ? '#f59e0b' : '#ef4444';
+            
+            // Check if answer sheet exists for this subject
+            let hasAnswerSheet = resultAnswerSheets && resultAnswerSheets[subject] ? true : false;
+            let sheetUrl = hasAnswerSheet ? resultAnswerSheets[subject].url : null;
+            
+            marksTableRows += `<tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 4px 6px; font-size: 10px;"><strong>${subject}</strong></td>
+                <td style="padding: 4px 6px; text-align: center; font-size: 10px; font-weight: 600;">${marks}</td>
+                <td style="padding: 4px 6px; text-align: center; font-size: 10px;">${maxMarks}</td>
+                <td style="padding: 4px 6px; text-align: center; font-size: 10px;">${percentage}%</td>
+                <td style="padding: 4px 6px; text-align: center; font-size: 10px; font-weight: bold; color: ${gradeColor};">${subjectGrade}</td>
+                <td style="padding: 4px 6px; text-align: center; font-size: 10px;">
+                    ${hasAnswerSheet ? 
+                        `<button onclick="window.open('${sheetUrl}', '_blank')" style="padding:2px 10px; background:#10b981; color:white; border:none; border-radius:12px; cursor:pointer; font-size:8px;">
+                            📎 View
+                        </button>` : 
+                        `<span style="color:#94a3b8; font-size:8px;">No Sheet</span>`
+                    }
+                </td>
+            </tr>`;
+        }
+    }
+    
+    let overallResult = r.percentage >= 40 ? 'PASSED' : 'FAILED';
+    let overallResultColor = r.percentage >= 40 ? '#10b981' : '#ef4444';
+    
+    let logoHtml = '';
+    if (typeof getSchoolLogoHTML === 'function') {
+        logoHtml = getSchoolLogoHTML();
+    } else {
+        let logoData = localStorage.getItem('schoolLogo');
+        let logoUrl = localStorage.getItem('schoolLogoUrl');
+        if (logoUrl && logoUrl.startsWith('http')) {
+            logoHtml = `<img src="${logoUrl}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none';">`;
+        } else if (logoData && logoData.startsWith('data:image')) {
+            logoHtml = `<img src="${logoData}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`;
+        } else {
+            logoHtml = '<i class="fas fa-school" style="font-size: 30px; color: #2563eb;"></i>';
+        }
+    }
+    
+    let modalHtml = `
+        <div class="modal-overlay" id="marksheetModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 16px; box-sizing: border-box; overflow-y: auto;">
+            <div class="modal-content" style="background: var(--bg-surface); border-radius: 24px; padding: 0; max-width: 550px; width: 100%; max-height: 95vh; overflow-y: auto; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
+                <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 15px 20px; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 10;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <h2 style="font-size: 16px; color: white; margin: 0;"><i class="fas fa-file-alt"></i> Marksheet - ${studentName}</h2>
+                        <button class="close-btn" onclick="closeMarksheetModal()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;">&times;</button>
+                    </div>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <div id="marksheetForPrint" style="background: var(--bg-surface); border-radius: 12px; width: 100%;">
+                        <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 5px;">
+                                ${logoHtml}
+                            </div>
+                            <h3 style="margin: 0; font-size: 13px; color: #1e293b;">${schoolName}</h3>
+                            <p style="margin: 2px 0 0; font-size: 8px; color: #64748b;">${schoolAddress}</p>
+                            <p style="margin: 2px 0 0; font-size: 7px; color: #64748b;">📞 ${schoolPhone} | ✉️ ${schoolEmail}</p>
+                            <h4 style="margin: 6px 0 0 0; font-size: 11px; color: #2563eb;">📜 MARKSHEET</h4>
+                            <p style="margin: 2px 0 0; font-size: 8px; color: #64748b;">Academic Year: 2026-27</p>
+                        </div>
+                        
+                        <div style="background: #f8fafc; padding: 8px; border-radius: 8px; margin-bottom: 12px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9px;">
+                                <div><strong>Student Name:</strong><br>${studentName}</div>
+                                <div><strong>Roll No:</strong><br>${rollNo}</div>
+                                <div><strong>Class:</strong><br>${className}</div>
+                                <div><strong>Exam:</strong><br>${r.examName || 'N/A'}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; min-width: 400px;">
+                                <thead>
+                                    <tr style="background: linear-gradient(135deg, #2563eb, #1e40af); color: white;">
+                                        <th style="padding: 6px; text-align: left;">Subject</th>
+                                        <th style="padding: 6px; text-align: center;">Marks</th>
+                                        <th style="padding: 6px; text-align: center;">Max</th>
+                                        <th style="padding: 6px; text-align: center;">%</th>
+                                        <th style="padding: 6px; text-align: center;">Grade</th>
+                                        <th style="padding: 6px; text-align: center;">Sheet</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${marksTableRows}</tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="margin-top: 12px; background: #f0fdf4; padding: 8px; border-radius: 8px;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="font-size: 10px;"><strong>📊 Total Marks:</strong> ${r.total} / ${r.maxTotal || (Object.keys(marksObj).length * 100)}</div>
+                                <div style="font-size: 10px;"><strong>📈 Percentage:</strong> ${r.percentage}%</div>
+                                <div style="font-size: 10px;"><strong>🏆 Grade:</strong> <span style="background: #2563eb; color: white; padding: 2px 6px; border-radius: 15px; font-size: 9px;">${r.grade}</span></div>
+                                <div style="font-size: 10px;"><strong>🎯 Rank:</strong> #${r.rank}</div>
+                                <div style="font-size: 10px;"><strong>✅ Overall Result:</strong> <span style="color: ${overallResultColor}; font-weight: bold; font-size: 11px;">${overallResult}</span></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; text-align: center;">
+                            <div style="display: flex; justify-content: space-between; margin-top: 12px; flex-wrap: wrap;">
+                                <div style="text-align: center; font-size: 8px;">_____________________<br>Class Teacher</div>
+                                <div style="text-align: center; font-size: 8px;">_____________________<br>Principal</div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 12px; font-size: 7px; color: #94a3b8;">* Computer generated marksheet | Valid with school stamp</div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; justify-content: center; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                        <button onclick="printMarksheetPage()" style="padding: 8px 14px; background: #3b82f6; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px; min-height: 36px;"><i class="fas fa-print"></i> Print</button>
+                        <button onclick="downloadMarksheetPNG()" style="padding: 8px 14px; background: #10b981; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px; min-height: 36px;"><i class="fas fa-image"></i> PNG</button>
+                        <button onclick="downloadMarksheetPDF()" style="padding: 8px 14px; background: #ef4444; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px; min-height: 36px;"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button onclick="shareMarksheetWhatsApp()" style="padding: 8px 14px; background: #25D366; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px; min-height: 36px;"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                        <button onclick="shareMarksheetEmail()" style="padding: 8px 14px; background: #6c757d; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px; min-height: 36px;"><i class="fas fa-envelope"></i> Email</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Define modal close and print functions
+    window.closeMarksheetModal = function() {
+        let modal = document.getElementById('marksheetModal');
+        if (modal) modal.remove();
+    };
+    
+    window.printMarksheetPage = function() {
+        let printContent = document.getElementById('marksheetForPrint');
+        if (!printContent) {
+            showNotification('Content not found!', 'error');
+            return;
+        }
+        
+        let cloneContent = printContent.cloneNode(true);
+        let win = window.open('', '_blank');
+        win.document.write(`
+            <html><head>
+                <title>Marksheet - ${studentName}</title>
+                <style>
+                    @page { size: A5 portrait; margin: 0.5cm; }
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 5px; font-size: 10px; }
+                    .header { text-align: center; }
+                </style>
+            </head>
+            <body>${cloneContent.innerHTML}</body></html>
+        `);
+        win.document.close();
+        win.focus();
+        win.print();
+        setTimeout(function() { win.close(); }, 1000);
+    };
+    
+    window.downloadMarksheetPNG = async function() {
+        let element = document.getElementById('marksheetForPrint');
+        if (!element) {
+            showNotification('Content not found!', 'error');
+            return;
+        }
+        showNotification('Generating PNG...', 'info');
+        try {
+            let canvas = await html2canvas(element, { scale: 2.5, backgroundColor: '#ffffff', logging: false });
+            let link = document.createElement('a');
+            link.download = `Marksheet_${studentName}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showNotification('✅ PNG downloaded!', 'success');
+        } catch(e) {
+            showNotification('❌ Error: ' + e.message, 'error');
+        }
+    };
+    
+    window.downloadMarksheetPDF = async function() {
+        let element = document.getElementById('marksheetForPrint');
+        if (!element) {
+            showNotification('Content not found!', 'error');
+            return;
+        }
+        showNotification('Generating PDF...', 'info');
+        try {
+            let canvas = await html2canvas(element, { scale: 2.5, backgroundColor: '#ffffff', logging: false });
+            let imgData = canvas.toDataURL('image/png');
+            let { jsPDF } = window.jspdf;
+            let pdf = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
+            let imgWidth = 140;
+            let imgHeight = (canvas.height * imgWidth) / canvas.width;
+            pdf.addImage(imgData, 'PNG', 4, 4, imgWidth, imgHeight);
+            pdf.save(`Marksheet_${studentName}.pdf`);
+            showNotification('✅ PDF downloaded!', 'success');
+        } catch(e) {
+            showNotification('❌ Error: ' + e.message, 'error');
+        }
+    };
+    
+    window.shareMarksheetWhatsApp = function() {
+        let message = `🏫 ${schoolName}\n📜 MARKSHEET\n\nStudent: ${studentName}\nClass: ${className}\nRoll No: ${rollNo}\nExam: ${r.examName || 'N/A'}\nPercentage: ${r.percentage}%\nGrade: ${r.grade}\nRank: #${r.rank}\nResult: ${r.percentage >= 40 ? '✅ PASSED' : '❌ FAILED'}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    };
+    
+    window.shareMarksheetEmail = function() {
+        let subject = `Marksheet - ${studentName}`;
+        let body = `Student: ${studentName}\nClass: ${className}\nRoll No: ${rollNo}\nExam: ${r.examName || 'N/A'}\nPercentage: ${r.percentage}%\nGrade: ${r.grade}\nRank: #${r.rank}\nResult: ${r.percentage >= 40 ? 'PASSED' : 'FAILED'}`;
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    };
+    
+    console.log('✅ Marksheet modal opened successfully');
+}
+
+// ======================= EDIT RESULT =======================
 function editResult(id) {
     if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
         showNotification('You do not have permission to edit results', 'error');
@@ -27304,7 +27763,6 @@ function editResult(id) {
         return;
     }
     
-    // ✅ FIX: Ensure marks is an object
     let marksObj = r.marks;
     if (typeof marksObj === 'string') {
         try {
@@ -27327,18 +27785,39 @@ function editResult(id) {
         marksInputs += `<div style="margin-bottom: 12px;">
             <label style="display: block; font-size: 12px; font-weight: 600;">${subject} (Max: ${maxMarks})</label>
             <input id="edit_${subject.replace(/\s/g, '')}" class="form-control" type="number" value="${marks}" max="${maxMarks}" style="width: 100%; padding: 10px; border-radius: 12px;">
+            <div id="editAnswerSheetUpload_${subject.replace(/\s/g, '')}" class="upload-area" style="padding: 10px; margin-top: 8px; cursor: pointer; text-align: center; font-size: 11px; border: 2px dashed var(--border-light); border-radius: 8px;" onclick="triggerEditAnswerSheetUpload('${subject.replace(/'/g, "\\'")}')">
+                <i class="fas fa-cloud-upload-alt"></i> Update Answer Sheet
+            </div>
+            <div id="editPreview_${subject.replace(/\s/g, '')}" style="margin-top: 6px; font-size: 10px;"></div>
         </div>`;
     }
     
+    window.editAnswerSheets = answerSheets[id] || {};
+    window.editResultId = id;
+    
     Swal.fire({
-        title: 'Edit Result',
-        html: `<div style="text-align: left; max-height: 60vh; overflow-y: auto; padding: 4px;">${marksInputs}<div style="margin-top: 12px;"><label style="display: block; font-size: 12px; font-weight: 600;">Grade</label><input id="editGrade" class="form-control" value="${r.grade}" style="width:100%; padding:10px; border-radius:12px;"></div></div>`,
+        title: '✏️ Edit Result',
+        html: `<div style="text-align: left; max-height: 60vh; overflow-y: auto; padding: 4px;">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; font-weight: 600;">📚 Class</label>
+                <input id="editCls" class="form-control" value="${r.cls || 'N/A'}" style="width:100%; padding:10px; border-radius:12px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; font-weight: 600;">🎯 Roll No</label>
+                <input id="editRoll" class="form-control" type="number" value="${r.roll || 0}" style="width:100%; padding:10px; border-radius:12px;">
+            </div>
+            ${marksInputs}
+            <div style="margin-top: 12px;">
+                <label style="display: block; font-size: 12px; font-weight: 600;">📊 Grade</label>
+                <input id="editGrade" class="form-control" value="${r.grade}" style="width:100%; padding:10px; border-radius:12px;">
+            </div>
+        </div>`,
         showCancelButton: true,
-        confirmButtonText: 'Update',
+        confirmButtonText: '✅ Update',
         confirmButtonColor: '#10b981',
-        cancelButtonText: 'Cancel',
+        cancelButtonText: '❌ Cancel',
         showCloseButton: true,
-        width: window.innerWidth <= 480 ? '95%' : '500px',
+        width: window.innerWidth <= 480 ? '95%' : '550px',
         customClass: { popup: 'mobile-swal-popup' },
         preConfirm: async () => {
             let newTotal = 0;
@@ -27364,6 +27843,13 @@ function editResult(id) {
             r.percentage = newMaxTotal > 0 ? Math.round((newTotal / newMaxTotal) * 100) : 0;
             let gradeInfo = getGrade(r.percentage);
             r.grade = document.getElementById('editGrade').value || gradeInfo.grade;
+            r.cls = document.getElementById('editCls').value || 'N/A';
+            r.roll = parseInt(document.getElementById('editRoll').value) || 0;
+            
+            if (Object.keys(window.editAnswerSheets).length > 0) {
+                answerSheets[id] = window.editAnswerSheets;
+                saveAnswerSheets();
+            }
             
             window.results.sort((a, b) => b.percentage - a.percentage);
             for (let i = 0; i < window.results.length; i++) {
@@ -27372,10 +27858,59 @@ function editResult(id) {
             
             await syncResultToSupabase(r);
             saveAllData();
-            showNotification('Result updated!', 'success');
+            showNotification('✅ Result updated!', 'success');
             loadResults();
         }
     });
+    
+    window.triggerEditAnswerSheetUpload = (subject) => {
+        let folderPath = `answer_sheets/${subject}`;
+        
+        openAnswerSheetCapture(async (fileData, fileName, fileType) => {
+            showLoader();
+            let uploadedUrl = null;
+            const supabase = getSupabaseClient();
+            const sheetId = 'ANS_' + Date.now();
+            
+            if (supabase && navigator.onLine) {
+                try {
+                    const fileExt = fileType === 'application/pdf' ? 'pdf' : 'jpg';
+                    const newFileName = `${Date.now()}_${subject}.${fileExt}`;
+                    const blob = dataURLtoBlob(fileData);
+                    const fileToUpload = new File([blob], newFileName, { type: fileType });
+                    const { error } = await supabase.storage.from('marksheets').upload(`${folderPath}/${sheetId}/${newFileName}`, fileToUpload, { upsert: true });
+                    if (!error) {
+                        const { data: urlData } = supabase.storage.from('marksheets').getPublicUrl(`${folderPath}/${sheetId}/${newFileName}`);
+                        uploadedUrl = urlData.publicUrl;
+                    }
+                } catch(err) { console.error('Upload error:', err); }
+            }
+            
+            window.editAnswerSheets[subject] = {
+                data: fileData,
+                url: uploadedUrl,
+                name: fileName,
+                uploadedAt: new Date().toISOString()
+            };
+            
+            let previewDiv = document.getElementById(`editPreview_${subject.replace(/\s/g, '')}`);
+            if (previewDiv) {
+                if (fileType.startsWith('image/')) {
+                    previewDiv.innerHTML = `<div style="background:#d1fae5; padding:6px; border-radius:6px; margin-top:4px; display:flex; align-items:center; gap:6px;">
+                        <img src="${fileData}" style="width:30px; height:30px; border-radius:4px; object-fit:cover;">
+                        <span style="font-size:9px; color:${uploadedUrl ? '#10b981' : '#f59e0b'};">${uploadedUrl ? '☁️ Uploaded to Cloud!' : '📁 Saved locally'}</span>
+                    </div>`;
+                } else {
+                    previewDiv.innerHTML = `<div style="background:#d1fae5; padding:6px; border-radius:6px; margin-top:4px;">
+                        <i class="fas fa-file-pdf" style="color:#ef4444; font-size:12px;"></i> ${fileName}<br>
+                        <span style="font-size:9px; color:${uploadedUrl ? '#10b981' : '#f59e0b'};">${uploadedUrl ? '☁️ In Cloud' : '📁 Saved locally'}</span>
+                    </div>`;
+                }
+            }
+            hideLoader();
+            showNotification(uploadedUrl ? 'Answer sheet uploaded to cloud!' : 'Answer sheet saved locally', uploadedUrl ? 'success' : 'warning');
+        });
+    };
 }
 
 async function deleteResult(id) {
@@ -27433,7 +27968,7 @@ async function deleteResult(id) {
     });
 }
 
-// ======================= ✅ FIXED: viewResultDetails WITH MARKS PARSING =======================
+// ======================= viewResultDetails =======================
 function viewResultDetails(id) {
     let r = null;
     for (let i = 0; i < (window.results || []).length; i++) {
@@ -27447,7 +27982,6 @@ function viewResultDetails(id) {
         return; 
     }
     
-    // ✅ FIX: Ensure marks is an object
     let marksObj = r.marks;
     if (typeof marksObj === 'string') {
         try {
@@ -27467,6 +28001,10 @@ function viewResultDetails(id) {
         }
     }
     
+    // ✅ Use cls and roll from result data
+    let clsDisplay = r.cls || (student ? `${student.cls} ${student.sec}`.trim() : 'N/A');
+    let rollDisplay = r.roll || (student ? student.roll : 'N/A');
+    
     let marksTable = '<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">';
     marksTable += '<table style="width: 100%; border-collapse: collapse; font-size: 11px; min-width: 400px;">';
     marksTable += '<thead><tr style="background: linear-gradient(135deg, #2563eb, #1e40af); color: white;">';
@@ -27477,7 +28015,6 @@ function viewResultDetails(id) {
     marksTable += '<th style="padding: 8px; text-align: center;">Grade</th>';
     marksTable += '</tr></thead><tbody>';
     
-    // ✅ FIX: Use marksObj instead of r.marks
     for (let [subject, marks] of Object.entries(marksObj || {})) {
         let subInfo = null;
         for (let k = 0; k < subjectMasterList.length; k++) {
@@ -27497,14 +28034,17 @@ function viewResultDetails(id) {
             <td style="padding: 8px;"><strong>${subject}</strong></td>
             <td style="padding: 8px; text-align: center;">${marks}</td>
             <td style="padding: 8px; text-align: center;">${maxMarks}</td>
-            <td style="padding: 8px; text-align: center;">${percent}%</span></td>
+            <td style="padding: 8px; text-align: center;">${percent}%</td>
             <td style="padding: 8px; text-align: center;"><span style="background: ${gradeColor}; color: white; padding: 3px 8px; border-radius: 20px; font-size: 10px; display: inline-block;">${subjectGrade}</span></td>
         </tr>`;
     }
     marksTable += '</tbody></table></div>';
     
     Swal.fire({
-        title: '<div style="font-size: 16px; color: #2563eb;"><i class="fas fa-chart-line"></i> ' + (r.studentName || 'N/A') + '</div><div style="font-size: 11px; color: #64748b; margin-top: 4px;">' + (r.examName || 'N/A') + '</div>',
+        title: `<div style="font-size: 16px; color: #2563eb;"><i class="fas fa-chart-line"></i> ${r.studentName || 'N/A'}</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+                    📚 ${clsDisplay} | 🎯 Roll: ${rollDisplay} | ${r.examName || 'N/A'}
+                </div>`,
         html: `
             <div style="padding: 5px;">
                 <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 10px; border-radius: 12px; color: white; margin-bottom: 16px;">
@@ -27527,17 +28067,19 @@ function viewResultDetails(id) {
     });
 }
 
-// ======================= ✅ FIXED: exportResultsCSV WITH MARKS PARSING =======================
+// ======================= exportResultsCSV =======================
 function exportResultsCSV() {
     let filteredResults = getFilteredResults();
     let csvRows = [];
-    csvRows.push(['Student Name', 'Exam Name', 'Subject', 'Obtained Marks', 'Max Marks', 'Percentage', 'Grade', 'Status', 'Has Answer Sheet']);
+    csvRows.push(['Student Name', 'Class', 'Roll', 'Exam Name', 'Subject', 'Obtained Marks', 'Max Marks', 'Percentage', 'Grade', 'Status', 'Has Answer Sheet']);
     
     for (let i = 0; i < filteredResults.length; i++) {
         let r = filteredResults[i];
         let sheets = answerSheets[r.id] || {};
         
-        // ✅ FIX: Ensure marks is an object
+        let cls = r.cls || 'N/A';
+        let roll = r.roll || 'N/A';
+        
         let marksObj = r.marks;
         if (typeof marksObj === 'string') {
             try {
@@ -27561,7 +28103,7 @@ function exportResultsCSV() {
             let subjectGrade = getSubjectGrade(marks, maxMarks);
             let status = marks >= (subInfo ? subInfo.passingMarks : 35) ? 'PASS' : 'FAIL';
             let hasSheet = sheets[subject] ? 'Yes' : 'No';
-            csvRows.push([`"${r.studentName}"`, `"${r.examName}"`, `"${subject}"`, marks, maxMarks, `${percent}%`, subjectGrade, status, hasSheet]);
+            csvRows.push([`"${r.studentName}"`, `"${cls}"`, roll, `"${r.examName}"`, `"${subject}"`, marks, maxMarks, `${percent}%`, subjectGrade, status, hasSheet]);
         }
     }
     
@@ -27578,7 +28120,7 @@ function exportResultsCSV() {
     showNotification('Results exported to CSV!', 'success');
 }
 
-// ======================= PDF EXPORT (FIXED - NO INFINITE LOOP) =======================
+// ======================= PDF EXPORT =======================
 async function exportResultsPDF() {
     let filteredResults = getFilteredResults();
     
@@ -27589,6 +28131,8 @@ async function exportResultsPDF() {
     
     showLoader();
     showNotification('Generating PDF, please wait...', 'info');
+    
+    let tempDiv = null;
     
     try {
         let passCount = 0, failCount = 0;
@@ -27660,7 +28204,9 @@ async function exportResultsPDF() {
             let r = filteredResults[i];
             let sheets = answerSheets[r.id] || {};
             
-            // ✅ FIX: Ensure marks is an object
+            let cls = r.cls || 'N/A';
+            let roll = r.roll || 'N/A';
+            
             let marksObj = r.marks;
             if (typeof marksObj === 'string') {
                 try {
@@ -27672,22 +28218,15 @@ async function exportResultsPDF() {
             
             let gradeInfo = getGrade(r.percentage);
             
-            let studentClass = 'N/A';
-            for (let j = 0; j < students.length; j++) {
-                if (students[j] && students[j].name === r.studentName) {
-                    studentClass = `${students[j].cls || ''} ${students[j].sec || ''}`.trim() || 'N/A';
-                    break;
-                }
-            }
-            
             pdfHtml += `
             <div class="result-block">
                 <div class="result-title"><strong>${escapeHtml(r.studentName)}</strong> - ${escapeHtml(r.examName)}</div>
                 <div class="result-stats">
+                    <span>📚 Class: <strong>${escapeHtml(cls)}</strong></span>
+                    <span>🎯 Roll: <strong>${roll}</strong></span>
                     <span>📊 Percentage: <strong>${r.percentage}%</strong></span>
                     <span>🏆 Grade: <strong>${gradeInfo.grade}</strong> (${gradeInfo.status})</span>
                     <span>🎯 Rank: <strong>#${r.rank}</strong></span>
-                    <span>📚 Class: <strong>${escapeHtml(studentClass)}</strong></span>
                 </div>
                 <table>
                     <thead>
@@ -27714,10 +28253,10 @@ async function exportResultsPDF() {
                     <td style="text-align:left;"><strong>${escapeHtml(subject)}</strong></td>
                     <td>${marks}</td>
                     <td>${maxMarks}</td>
-                    <td>${percent}%</span></td>
-                    <td>${subjectGrade}</span></td>
-                    <td style="color:${statusColor}; font-weight:bold;">${status}</span></td>
-                    <td>${hasSheet}</span></td>
+                    <td>${percent}%</td>
+                    <td>${subjectGrade}</td>
+                    <td style="color:${statusColor}; font-weight:bold;">${status}</td>
+                    <td>${hasSheet}</td>
                 </tr>`;
             }
             
@@ -27728,7 +28267,7 @@ async function exportResultsPDF() {
         
         pdfHtml += `<div class="footer"><p>This is a computer generated report | Valid with school stamp</p><p>${escapeHtml(schoolNameText)} - Empowering Education</p></div></body></html>`;
         
-        let tempDiv = document.createElement('div');
+        tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
         tempDiv.style.left = '-9999px';
         tempDiv.style.top = '-9999px';
@@ -27752,7 +28291,7 @@ async function exportResultsPDF() {
         pdf.save(`Results_Report_${new Date().toISOString().split('T')[0]}.pdf`);
         
         showNotification('✅ PDF downloaded successfully!', 'success');
-        document.body.removeChild(tempDiv);
+        if (tempDiv && document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
         hideLoader();
         
     } catch (error) {
@@ -27763,237 +28302,37 @@ async function exportResultsPDF() {
     }
 }
 
-// ======================= ✅ FIXED: GENERATE MARKSHEET WITH MARKS PARSING =======================
-function generateMarksheet(id) {
-    let r = null;
-    for (let i = 0; i < (window.results || []).length; i++) {
-        if (window.results[i].id === id) {
-            r = window.results[i];
-            break;
-        }
-    }
-    if (!r) { 
-        showNotification('Result not found!', 'error'); 
-        return; 
+function downloadAnswerSheet(resultId, subject) {
+    let sheetData = answerSheets[resultId]?.[subject];
+    if (!sheetData) {
+        showNotification('No answer sheet found for this subject', 'warning');
+        return;
     }
     
-    // ✅ FIX: Ensure marks is an object
-    let marksObj = r.marks;
-    if (typeof marksObj === 'string') {
-        try {
-            marksObj = JSON.parse(marksObj);
-        } catch(e) {
-            console.warn('⚠️ Could not parse marks for marksheet:', r.studentName);
-            marksObj = {};
-        }
-    }
-    
-    // ======================= FIXED: Better student search =======================
-    let student = null;
-    for (let i = 0; i < students.length; i++) {
-        if (students[i] && students[i].name === r.studentName) {
-            student = students[i];
-            break;
-        }
-    }
-    
-    if (!student) {
-        for (let i = 0; i < students.length; i++) {
-            if (students[i] && students[i].name && students[i].name.toLowerCase() === r.studentName.toLowerCase()) {
-                student = students[i];
+    if (currentUser.role === 'student') {
+        let result = null;
+        for (let i = 0; i < (window.results || []).length; i++) {
+            if (window.results[i].id === resultId) {
+                result = window.results[i];
                 break;
             }
         }
-    }
-    
-    if (!student) {
-        for (let i = 0; i < students.length; i++) {
-            if (students[i] && students[i].name && students[i].name.toLowerCase().includes(r.studentName.toLowerCase())) {
-                student = students[i];
-                break;
-            }
+        if (result && result.studentName !== currentUser.name) {
+            showNotification('You can only download your own answer sheets', 'error');
+            return;
         }
     }
     
-    if (!student) { 
-        showNotification(`Student "${r.studentName}" not found!`, 'error'); 
-        return; 
+    if (sheetData.url) {
+        window.open(sheetData.url, '_blank');
+        showNotification('Opening answer sheet from cloud...', 'info');
+    } else if (sheetData.data) {
+        let filename = `answer_sheet_${subject}_${new Date().toISOString().split('T')[0]}.pdf`;
+        downloadFile(sheetData.data, filename);
+        showNotification('Download started!', 'success');
+    } else {
+        showNotification('No file available for download', 'error');
     }
-    
-    let className = student.cls;
-    
-    let marksTableRows = '';
-    // ✅ FIX: Use marksObj instead of r.marks
-    for (let [subject, marks] of Object.entries(marksObj || {})) {
-        let subInfo = null;
-        for (let k = 0; k < subjectMasterList.length; k++) {
-            if (subjectMasterList[k].name === subject) {
-                subInfo = subjectMasterList[k];
-                break;
-            }
-        }
-        let maxMarks = subInfo ? subInfo.maxMarks : 100;
-        let percentage = Math.round((marks / maxMarks) * 100);
-        let subjectGrade = getSubjectGrade(marks, maxMarks);
-        let gradeColor = subjectGrade === 'A+' ? '#10b981' : subjectGrade === 'A' ? '#10b981' : subjectGrade === 'B' ? '#3b82f6' : subjectGrade === 'C' ? '#f59e0b' : subjectGrade === 'D' ? '#f59e0b' : subjectGrade === 'E' ? '#f59e0b' : '#ef4444';
-        
-        marksTableRows += `<tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 4px 3px; font-size: 10px;"><strong>${subject}</strong></td>
-            <td style="padding: 4px 3px; text-align: center; font-size: 10px; font-weight: 600;">${marks}</td>
-            <td style="padding: 4px 3px; text-align: center; font-size: 10px;">${maxMarks}</td>
-            <td style="padding: 4px 3px; text-align: center; font-size: 10px;">${percentage}%</span></td>
-            <td style="padding: 4px 3px; text-align: center; font-size: 10px; font-weight: bold; color: ${gradeColor};">${subjectGrade}</span></td>
-        </tr>`;
-    }
-    
-    let overallResult = r.percentage >= 40 ? 'PASSED' : 'FAILED';
-    let overallResultColor = r.percentage >= 40 ? '#10b981' : '#ef4444';
-    
-    let modalHtml = `
-        <div class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 16px; box-sizing: border-box;">
-            <div class="modal-content" style="background: var(--bg-surface); border-radius: 24px; padding: 0; max-width: 550px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
-                <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 15px 20px; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 10;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <h2 style="font-size: 16px; color: white; margin: 0;"><i class="fas fa-file-alt"></i> Marksheet - ${r.studentName}</h2>
-                        <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;">&times;</button>
-                    </div>
-                </div>
-                
-                <div style="padding: 20px;">
-                    <div id="marksheetForPrint" style="background: var(--bg-surface); border-radius: 12px; width: 100%;">
-                        <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 12px;">
-                            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 5px;">
-                                <i class="fas fa-school" style="font-size: 24px; color: #2563eb;"></i>
-                            </div>
-                            <h3 style="margin: 0; font-size: 13px; color: #1e293b;">${schoolName || 'Wings Convent School'}</h3>
-                            <p style="margin: 2px 0 0; font-size: 8px; color: #64748b;">${schoolAddress || ''}</p>
-                            <p style="margin: 2px 0 0; font-size: 7px; color: #64748b;">📞 ${schoolPhone} | ✉️ ${schoolEmail}</p>
-                            <h4 style="margin: 6px 0 0 0; font-size: 11px; color: #2563eb;">📜 MARKSHEET</h4>
-                            <p style="margin: 2px 0 0; font-size: 8px; color: #64748b;">Academic Year: 2026-27</p>
-                        </div>
-                        
-                        <div style="background: #f8fafc; padding: 8px; border-radius: 8px; margin-bottom: 12px;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9px;">
-                                <div><strong>Student Name:</strong><br>${r.studentName}</div>
-                                <div><strong>Roll No:</strong><br>${student.roll}</div>
-                                <div><strong>Class:</strong><br>${className}</div>
-                                <div><strong>Exam:</strong><br>${r.examName}</div>
-                                <div><strong>Father's Name:</strong><br>${student.fatherName || 'N/A'}</div>
-                                <div><strong>Date:</strong><br>${new Date().toLocaleDateString()}</div>
-                            </div>
-                        </div>
-                        
-                        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; min-width: 350px;">
-                                <thead>
-                                    <tr style="background: linear-gradient(135deg, #2563eb, #1e40af); color: white;">
-                                        <th style="padding: 6px; text-align: left;">Subject</th>
-                                        <th style="padding: 6px; text-align: center;">Marks</th>
-                                        <th style="padding: 6px; text-align: center;">Max</th>
-                                        <th style="padding: 6px; text-align: center;">%</th>
-                                        <th style="padding: 6px; text-align: center;">Grade</th>
-                                      </tr>
-                                </thead>
-                                <tbody>${marksTableRows}</tbody>
-                              </table>
-                        </div>
-                        
-                        <div style="margin-top: 12px; background: #f0fdf4; padding: 8px; border-radius: 8px;">
-                            <div style="display: flex; flex-direction: column; gap: 4px;">
-                                <div style="font-size: 10px;"><strong>📊 Total Marks:</strong> ${r.total} / ${r.maxTotal || (Object.keys(marksObj).length * 100)}</div>
-                                <div style="font-size: 10px;"><strong>📈 Percentage:</strong> ${r.percentage}%</div>
-                                <div style="font-size: 10px;"><strong>🏆 Grade:</strong> <span style="background: #2563eb; color: white; padding: 2px 6px; border-radius: 15px; font-size: 9px;">${r.grade}</span></div>
-                                <div style="font-size: 10px;"><strong>🎯 Rank:</strong> #${r.rank}</div>
-                                <div style="font-size: 10px;"><strong>✅ Overall Result:</strong> <span style="color: ${overallResultColor}; font-weight: bold; font-size: 11px;">${overallResult}</span></div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 20px; text-align: center;">
-                            <div style="display: flex; justify-content: space-between; margin-top: 12px; flex-wrap: wrap;">
-                                <div style="text-align: center; font-size: 8px;">_____________________<br>Class Teacher</div>
-                                <div style="text-align: center; font-size: 8px;">_____________________<br>Principal</div>
-                            </div>
-                        </div>
-                        
-                        <div style="text-align: center; margin-top: 12px; font-size: 7px; color: #94a3b8;">* Computer generated marksheet | Valid with school stamp</div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; justify-content: center; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                        <button onclick="printMarksheetPage()" style="padding: 8px 14px; background: #3b82f6; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px;"><i class="fas fa-print"></i> Print</button>
-                        <button onclick="downloadMarksheetPNG()" style="padding: 8px 14px; background: #10b981; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px;"><i class="fas fa-image"></i> PNG</button>
-                        <button onclick="downloadMarksheetPDF()" style="padding: 8px 14px; background: #ef4444; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px;"><i class="fas fa-file-pdf"></i> PDF</button>
-                        <button onclick="shareMarksheetWhatsApp()" style="padding: 8px 14px; background: #25D366; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px;"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                        <button onclick="shareMarksheetEmail()" style="padding: 8px 14px; background: #6c757d; color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 10px;"><i class="fas fa-envelope"></i> Email</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    window.printMarksheetPage = function() {
-        var iframe = document.createElement('iframe');
-        iframe.style.position = 'absolute';
-        iframe.style.width = '0px';
-        iframe.style.height = '0px';
-        iframe.style.border = '0';
-        document.body.appendChild(iframe);
-        
-        var printContents = document.getElementById('marksheetForPrint').innerHTML;
-        var iframeDoc = iframe.contentWindow.document;
-        iframeDoc.write('<html><head><title>Marksheet - ' + r.studentName + '</title>');
-        iframeDoc.write('<style>');
-        iframeDoc.write('@page { size: A5 portrait; margin: 0.5cm; }');
-        iframeDoc.write('body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }');
-        iframeDoc.write('table { width: 100%; border-collapse: collapse; }');
-        iframeDoc.write('th, td { border: 1px solid #ddd; padding: 5px; }');
-        iframeDoc.write('</style></head><body>');
-        iframeDoc.write(printContents);
-        iframeDoc.write('</body></html>');
-        iframeDoc.close();
-        
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        
-        setTimeout(function() {
-            document.body.removeChild(iframe);
-        }, 1000);
-    };
-    
-    window.downloadMarksheetPNG = async function() {
-        let element = document.getElementById('marksheetForPrint');
-        let canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
-        let link = document.createElement('a');
-        link.download = `Marksheet_${r.studentName}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-        showNotification('PNG downloaded!', 'success');
-    };
-    
-    window.downloadMarksheetPDF = async function() {
-        let element = document.getElementById('marksheetForPrint');
-        let canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
-        let imgData = canvas.toDataURL('image/png');
-        let { jsPDF } = window.jspdf;
-        let pdf = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
-        let imgWidth = 140;
-        let imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 4, 4, imgWidth, imgHeight);
-        pdf.save(`Marksheet_${r.studentName}.pdf`);
-        showNotification('PDF downloaded!', 'success');
-    };
-    
-    window.shareMarksheetWhatsApp = function() {
-        let message = `🏫 ${schoolName}\n📜 MARKSHEET\n\nStudent: ${r.studentName}\nClass: ${className}\nExam: ${r.examName}\nPercentage: ${r.percentage}%\nGrade: ${r.grade}\nRank: #${r.rank}\nResult: ${r.percentage >= 40 ? 'PASSED' : 'FAILED'}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-    };
-    
-    window.shareMarksheetEmail = function() {
-        let subject = `Marksheet - ${r.studentName}`;
-        let body = `Student: ${r.studentName}\nClass: ${className}\nExam: ${r.examName}\nPercentage: ${r.percentage}%\nGrade: ${r.grade}\nRank: #${r.rank}\nResult: ${r.percentage >= 40 ? 'PASSED' : 'FAILED'}`;
-        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    };
 }
 
 // ======================= PAGINATION FUNCTIONS =======================
@@ -28044,8 +28383,19 @@ function shareResult(id) {
     }
     if (!r) return;
     
-    let message = `📊 *Result*\n\nStudent: ${r.studentName}\nExam: ${r.examName}\nPercentage: ${r.percentage}%\nGrade: ${r.grade}\nRank: #${r.rank}\n\n🏫 ${schoolName || 'Wings Convent School'}`;
+    let cls = r.cls || 'N/A';
+    let roll = r.roll || 'N/A';
+    let schoolName = localStorage.getItem('schoolName') || 'Wings Convent School';
+    let message = `📊 *Result*\n\nStudent: ${r.studentName}\nClass: ${cls}\nRoll: ${roll}\nExam: ${r.examName}\nPercentage: ${r.percentage}%\nGrade: ${r.grade}\nRank: #${r.rank}\n\n🏫 ${schoolName}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+}
+
+async function refreshResultsData() {
+    await loadResultsFromSupabase();
+    await loadAnswerSheetsFromSupabase();
+    saveAllData();
+    loadResults();
+    showNotification('Data refreshed from Supabase!', 'success');
 }
 
 // ======================= EXPOSE FUNCTIONS GLOBALLY =======================
@@ -28065,9 +28415,22 @@ window.changeResultRowsPerPage = changeResultRowsPerPage;
 window.shareResult = shareResult;
 window.downloadAnswerSheet = downloadAnswerSheet;
 window.generateMarksheet = generateMarksheet;
+window.loadAnswerSheetsFromSupabase = loadAnswerSheetsFromSupabase;
 
-console.log('✅ PART 13 COMPLETE - Results Module with all fixes!');
+console.log('✅ PART 13 COMPLETE - Results Module with CLS and ROLL support!');
 console.log('📌 Fixes: marks JSON parsing, subjectMasterList check, all functions updated');
+console.log('📌 CLS and ROLL columns added to Results display');
+console.log('📌 Edit Result: Class and Roll fields added');
+console.log('📌 Add Result: Class and Roll auto-populated from selected student');
+console.log('📌 Marksheet: Class and Roll displayed from result data');
+console.log('📌 View Details: Class and Roll displayed');
+console.log('📌 CSV Export: Class and Roll columns added');
+console.log('📌 PDF Export: Class and Roll columns added');
+console.log('📌 Share Result: Class and Roll included in WhatsApp message');
+console.log('📌 Student names fixed in Add Result form');
+console.log('📌 subjectMasterList initialized properly');
+console.log('📌 Students loaded from localStorage and Supabase');
+// ===================== PART 13 ENDS HERE ====================================================================
 // ======================= PART 13 ENDS HERE =======================
 // ======================= PART 14: LEAVE MANAGEMENT MODULE (FULLY FIXED) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
