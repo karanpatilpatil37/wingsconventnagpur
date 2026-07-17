@@ -26208,7 +26208,7 @@ function getSubjectGrade(marks, maxMarks) {
     return 'F';
 }
 
-// ======================= ✅ FIX 3: Load Answer Sheets from Supabase =======================
+// ======================= Load Answer Sheets from Supabase =======================
 async function loadAnswerSheetsFromSupabase() {
     console.log('📄 Loading answer sheets from Supabase...');
     
@@ -26226,7 +26226,6 @@ async function loadAnswerSheetsFromSupabase() {
         if (error) throw error;
         
         if (data && data.length > 0) {
-            // Group by result_id
             for (let sheet of data) {
                 if (!answerSheets) answerSheets = {};
                 if (!answerSheets[sheet.result_id]) {
@@ -26240,7 +26239,6 @@ async function loadAnswerSheetsFromSupabase() {
                 };
             }
             console.log(`✅ Loaded ${data.length} answer sheets from Supabase`);
-            console.log('📄 Answer sheets by result:', Object.keys(answerSheets));
             saveAnswerSheets();
         } else {
             console.log('📭 No answer sheets found in Supabase');
@@ -26411,8 +26409,8 @@ async function loadResultsFromSupabase() {
                     percentage: result.percentage,
                     grade: result.grade,
                     rank: result.rank,
-                    cls: result.cls || 'N/A',          // ✅ NEW: Class from Supabase
-                    roll: result.roll || 'N/A',        // ✅ NEW: Roll from Supabase
+                    cls: result.cls || 'N/A',
+                    roll: result.roll || 'N/A',
                     marksheetUrl: result.marksheet_url,
                     marksheetData: result.marksheet_data,
                     studentPhotoUrl: result.student_photo_url || null,
@@ -26422,12 +26420,6 @@ async function loadResultsFromSupabase() {
             
             localStorage.setItem('cache_results', JSON.stringify(window.results));
             console.log(`✅ Loaded ${window.results.length} results from Supabase`);
-            
-            // Log cls and roll for verification
-            console.log('📊 Sample results with cls & roll:');
-            for (let i = 0; i < Math.min(3, window.results.length); i++) {
-                console.log(`  ${window.results[i].studentName} | Class: ${window.results[i].cls} | Roll: ${window.results[i].roll}`);
-            }
         } else {
             console.log('📭 No results found in Supabase, checking localStorage...');
             let cached = localStorage.getItem('cache_results');
@@ -26469,8 +26461,8 @@ async function syncResultToSupabase(resultData) {
             percentage: resultData.percentage,
             grade: resultData.grade,
             rank: resultData.rank,
-            cls: resultData.cls || 'N/A',           // ✅ NEW: Sync cls
-            roll: resultData.roll || 'N/A',         // ✅ NEW: Sync roll
+            cls: resultData.cls || 'N/A',
+            roll: resultData.roll || 'N/A',
             marksheet_url: resultData.marksheetUrl || null,
             marksheet_data: resultData.marksheetData || null,
             student_photo_url: resultData.studentPhotoUrl || null,
@@ -26522,7 +26514,7 @@ async function deleteResultFromSupabase(resultId) {
     }
 }
 
-// ======================= UPLOAD ANSWER SHEET TO SUPABASE STORAGE =======================
+// ======================= ✅ FIXED: UPLOAD ANSWER SHEET TO RESULTS BUCKET =======================
 async function uploadAnswerSheetToSupabase(fileData, fileName, fileType, resultId, subjectName) {
     const supabase = getSupabaseClient();
     if (!supabase || !navigator.onLine) {
@@ -26541,18 +26533,26 @@ async function uploadAnswerSheetToSupabase(fileData, fileName, fileType, resultI
         const blob = dataURLtoBlob(fileDataToUpload);
         const fileExt = fileType === 'application/pdf' ? 'pdf' : 'jpg';
         const newFileName = `${Date.now()}_${subjectName.replace(/\s/g, '_')}.${fileExt}`;
-        const fullPath = `${resultId}/${newFileName}`;
+        
+        // ✅ FIX: Upload to 'results' bucket instead of 'marksheets'
+        const fullPath = `answer_sheets/${resultId}/${newFileName}`;
+        
+        console.log(`📤 Uploading answer sheet to results bucket: ${fullPath}`);
         
         const { error } = await supabase.storage
-            .from('marksheets')
+            .from('results')  // ✅ Changed from 'marksheets' to 'results'
             .upload(fullPath, blob, { upsert: true, contentType: fileType });
         
-        if (error) throw error;
+        if (error) {
+            console.error('❌ Upload error:', error);
+            throw error;
+        }
         
         const { data: urlData } = supabase.storage
-            .from('marksheets')
+            .from('results')  // ✅ Changed from 'marksheets' to 'results'
             .getPublicUrl(fullPath);
         
+        console.log(`✅ Answer sheet uploaded to results bucket: ${urlData.publicUrl}`);
         showNotification('✅ Answer sheet uploaded to cloud!', 'success');
         return urlData.publicUrl;
         
@@ -26560,6 +26560,36 @@ async function uploadAnswerSheetToSupabase(fileData, fileName, fileType, resultI
         console.error('Upload error:', error); 
         showNotification('⚠️ Upload failed: ' + error.message, 'warning'); 
         return null; 
+    }
+}
+
+// ======================= SAVE ANSWER SHEET TO SUPABASE TABLE =======================
+async function saveAnswerSheetToSupabase(resultId, subjectName, fileData, fileUrl, fileName, fileType) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
+        console.log('📴 Offline - Answer sheet saved locally only');
+        return false;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('answer_sheets')
+            .upsert({
+                result_id: resultId,
+                subject_name: subjectName,
+                answer_sheet_url: fileUrl,
+                answer_sheet_data: fileData,
+                file_name: fileName,
+                file_type: fileType,
+                uploaded_at: new Date().toISOString()
+            });
+        
+        if (error) throw error;
+        console.log(`✅ Answer sheet saved to Supabase table for ${subjectName}`);
+        return true;
+    } catch(e) {
+        console.error('❌ Error saving answer sheet to Supabase:', e);
+        return false;
     }
 }
 
@@ -26666,7 +26696,7 @@ function openAnswerSheetCapture(callback) {
     document.getElementById('closeSourceModal').onclick = closeSourceModal;
 }
 
-// ======================= ✅ FIX 2: Updated loadResults =======================
+// ======================= loadResults =======================
 async function loadResults() {
     console.log('📋 [RESULTS] loadResults called...');
     
@@ -26680,15 +26710,12 @@ async function loadResults() {
         return;
     }
     
-    // Load students from localStorage if empty
     if (!window.students || window.students.length === 0) {
         console.log('⚠️ Students array is empty, loading from localStorage...');
         loadAllData();
     }
     
     await loadResultsFromSupabase();
-    
-    // ✅ Load answer sheets from Supabase for results
     await loadAnswerSheetsFromSupabase();
     
     let filteredResults = getFilteredResults();
@@ -26817,7 +26844,7 @@ async function loadResults() {
     }, 100);
 }
 
-// ======================= ✅ FIX 1: renderResultList WITH CLS AND ROLL SUPPORT =======================
+// ======================= renderResultList =======================
 function renderResultList(resultsToRender) {
     let canEditDelete = (currentUser.role === 'admin' || currentUser.role === 'teacher');
     
@@ -26852,13 +26879,11 @@ function renderResultList(resultsToRender) {
             }
         }
         
-        // ✅ FIX: Use cls and roll directly from result data
         let studentClass = r.cls || 'N/A';
         let rollNo = r.roll || 'N/A';
         let studentName = r.studentName || '';
         let studentPhoto = r.studentPhotoUrl || null;
         
-        // If cls or roll is 'N/A', try to find from students array
         if (studentClass === 'N/A' || rollNo === 'N/A') {
             let student = null;
             for (let j = 0; j < students.length; j++) {
@@ -26875,18 +26900,6 @@ function renderResultList(resultsToRender) {
                     }
                 }
             }
-            if (!student) {
-                for (let j = 0; j < students.length; j++) {
-                    if (students[j] && students[j].name) {
-                        let studentNameClean = students[j].name.replace(/\s/g, '').toLowerCase();
-                        let searchNameClean = studentName.replace(/\s/g, '').toLowerCase();
-                        if (studentNameClean.includes(searchNameClean) || searchNameClean.includes(studentNameClean)) {
-                            student = students[j];
-                            break;
-                        }
-                    }
-                }
-            }
             if (student) {
                 studentClass = `${student.cls || ''} ${student.sec || ''}`.trim() || studentClass;
                 rollNo = student.roll || rollNo;
@@ -26897,14 +26910,11 @@ function renderResultList(resultsToRender) {
         }
         
         let gradeInfo = getGrade(r.percentage);
-        
-        // ✅ Get answer sheets for this result
         let resultAnswerSheets = {};
         if (typeof answerSheets !== 'undefined' && answerSheets) {
             resultAnswerSheets = answerSheets[r.id] || {};
         }
         
-        // Generate student photo
         let photoHtml = '';
         if (studentPhoto && studentPhoto.startsWith('http')) {
             photoHtml = `<img src="${studentPhoto}" alt="${escapeHtml(r.studentName)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-user-graduate fallback-icon\\'></i>';" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
@@ -26931,13 +26941,9 @@ function renderResultList(resultsToRender) {
             let percentage = Math.round((marks / maxMarks) * 100);
             let subjectGrade = getSubjectGrade(marks, maxMarks);
             
-            // Check answer sheet for this subject
             let hasAnswerSheet = false;
-            let answerSheetUrl = null;
-            
             if (resultAnswerSheets && resultAnswerSheets[subject]) {
                 hasAnswerSheet = true;
-                answerSheetUrl = resultAnswerSheets[subject].url || resultAnswerSheets[subject].data;
             }
             
             let gradeColor = subjectGrade === 'A+' ? '#10b981' : subjectGrade === 'A' ? '#10b981' : subjectGrade === 'B' ? '#3b82f6' : subjectGrade === 'C' ? '#f59e0b' : subjectGrade === 'D' ? '#f59e0b' : subjectGrade === 'E' ? '#f59e0b' : '#ef4444';
@@ -26959,7 +26965,6 @@ function renderResultList(resultsToRender) {
         }
         subjectsHtml += `</div></div>`;
         
-        // ✅ Display cls and roll from result data
         html += `<div class="data-card" style="margin-bottom: 12px; border-radius: 20px; border: 1px solid var(--border-light);">
             <div class="card-header result-card-header" style="display: flex; flex-wrap: wrap; gap: 12px; padding: 12px; align-items: center;">
                 <div class="student-photo-circle" style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #e2e8f0; border: 2px solid #e2e8f0;">
@@ -26994,448 +26999,7 @@ function renderResultList(resultsToRender) {
     document.getElementById('resultList').innerHTML = html;
 }
 
-// ======================= ✅ FIXED: SHOW ADD RESULT FORM =======================
-async function showAddResultForm() {
-    console.log('📝 Opening Add Result Form...');
-    
-    if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
-        showNotification('You do not have permission to add results', 'error');
-        return;
-    }
-    
-    // ✅ FIX: Ensure subjectMasterList is defined
-    if (typeof subjectMasterList === 'undefined' || !subjectMasterList || subjectMasterList.length === 0) {
-        window.subjectMasterList = [
-            { name: 'English', maxMarks: 100, passingMarks: 35 },
-            { name: 'Mathematics', maxMarks: 100, passingMarks: 35 },
-            { name: 'Science', maxMarks: 100, passingMarks: 35 },
-            { name: 'Hindi', maxMarks: 100, passingMarks: 35 },
-            { name: 'Social Studies', maxMarks: 100, passingMarks: 35 },
-            { name: 'Computer', maxMarks: 50, passingMarks: 18 },
-            { name: 'Drawing', maxMarks: 50, passingMarks: 18 },
-            { name: 'Physical Education', maxMarks: 50, passingMarks: 18 },
-            { name: 'Sanskrit', maxMarks: 100, passingMarks: 35 },
-            { name: 'General Knowledge', maxMarks: 50, passingMarks: 25 }
-        ];
-        var subjectMasterList = window.subjectMasterList;
-        console.log('✅ subjectMasterList initialized');
-    }
-    
-    // ✅ FIX: Ensure students array is loaded
-    if (!window.students || window.students.length === 0) {
-        console.log('⚠️ Students array is empty, loading from localStorage...');
-        loadAllData();
-        
-        // If still empty, try loading from Supabase
-        if (!window.students || window.students.length === 0) {
-            console.log('🔄 Loading students from Supabase...');
-            await loadStudentsFromSupabase();
-        }
-        
-        // If still empty after both attempts, show error
-        if (!window.students || window.students.length === 0) {
-            showNotification('❌ No students found! Please add students first.', 'error');
-            return;
-        }
-    }
-    
-    console.log(`👨‍🎓 Total students available: ${window.students.length}`);
-    
-    // ✅ FIX: Build student options with proper checking
-    let studentOptions = '';
-    let studentCount = 0;
-    
-    if (currentUser.role === 'admin') {
-        // Admin can see all students
-        for (let i = 0; i < window.students.length; i++) {
-            let student = window.students[i];
-            if (!student || !student.name) continue;
-            
-            let studentPhoto = student.photo_url || '';
-            let cls = student.cls || 'N/A';
-            let sec = student.sec || '';
-            let roll = student.roll || 'N/A';
-            let displayName = `${student.name}`;
-            let displayClass = `${cls} ${sec}`.trim();
-            let displayRoll = `Roll: ${roll}`;
-            
-            studentOptions += `<option value="${student.name.replace(/"/g, '&quot;')}" 
-                                    data-photo="${studentPhoto}" 
-                                    data-cls="${cls}" 
-                                    data-sec="${sec}" 
-                                    data-roll="${roll}">
-                                ${displayName} (${displayClass} | ${displayRoll})
-                            </option>`;
-            studentCount++;
-        }
-    } else if (currentUser.role === 'teacher') {
-        // Teacher can only see their class students
-        let myClass = getTeacherClass();
-        console.log(`👨‍🏫 Teacher's class: ${myClass}`);
-        
-        let myStudents = [];
-        for (let i = 0; i < window.students.length; i++) {
-            let student = window.students[i];
-            if (!student || !student.name) continue;
-            
-            let studentClass = `${student.cls || ''} ${student.sec || ''}`.trim();
-            if (studentClass === myClass) {
-                myStudents.push(student);
-            }
-        }
-        
-        console.log(`📚 Students in your class: ${myStudents.length}`);
-        
-        if (myStudents.length === 0) {
-            showNotification(`No students found in your class (${myClass})`, 'error');
-            return;
-        }
-        
-        for (let i = 0; i < myStudents.length; i++) {
-            let student = myStudents[i];
-            let studentPhoto = student.photo_url || '';
-            let cls = student.cls || 'N/A';
-            let sec = student.sec || '';
-            let roll = student.roll || 'N/A';
-            let displayName = `${student.name}`;
-            let displayClass = `${cls} ${sec}`.trim();
-            let displayRoll = `Roll: ${roll}`;
-            
-            studentOptions += `<option value="${student.name.replace(/"/g, '&quot;')}" 
-                                    data-photo="${studentPhoto}" 
-                                    data-cls="${cls}" 
-                                    data-sec="${sec}" 
-                                    data-roll="${roll}">
-                                ${displayName} (${displayClass} | ${displayRoll})
-                            </option>`;
-            studentCount++;
-        }
-    } else {
-        showNotification('You do not have permission to add results', 'error');
-        return;
-    }
-    
-    console.log(`✅ Generated ${studentCount} student options`);
-    
-    // If no student options, show error
-    if (!studentOptions || studentOptions === '') {
-        showNotification('❌ No students available to add results!', 'error');
-        return;
-    }
-    
-    // Show loader while fetching exams
-    showLoader();
-    let examOptions = '<option value="">-- Select Exam --</option>';
-    
-    try {
-        let examsData = await fetchExamsFromSupabase();
-        console.log(`📝 Exams fetched: ${examsData.length}`);
-        
-        if (currentUser.role === 'admin') {
-            for (let i = 0; i < examsData.length; i++) {
-                let exam = examsData[i];
-                let examName = exam.exam_name || exam.examName;
-                let className = exam.class_name || exam.className;
-                if (examName) {
-                    examOptions += `<option value="${examName.replace(/"/g, '&quot;')}">${examName} (${className || 'N/A'})</option>`;
-                }
-            }
-        } else if (currentUser.role === 'teacher') {
-            let myClass = getTeacherClass();
-            let myClassName = myClass ? myClass.split(' ')[0] : '';
-            console.log(`👨‍🏫 Teacher's class for exams: ${myClassName}`);
-            
-            for (let i = 0; i < examsData.length; i++) {
-                let exam = examsData[i];
-                let examName = exam.exam_name || exam.examName;
-                let className = exam.class_name || exam.className;
-                if (examName && className === myClassName) {
-                    examOptions += `<option value="${examName.replace(/"/g, '&quot;')}">${examName} (${className})</option>`;
-                }
-            }
-        }
-        
-        if (examsData.length === 0) {
-            examOptions = '<option value="">-- No Exams Available --</option>';
-        }
-        
-        console.log('✅ Exam options generated');
-        
-    } catch(error) {
-        console.error('Error fetching exams:', error);
-        examOptions = '<option value="">-- Error loading exams --</option>';
-    }
-    
-    hideLoader();
-    
-    // ✅ FIX: Initialize pendingAnswerSheets
-    if (!window.pendingAnswerSheets) {
-        window.pendingAnswerSheets = {};
-    }
-    
-    // ✅ FIX: Generate subject inputs
-    let subjectsHTML = '';
-    for (let i = 0; i < subjectMasterList.length; i++) {
-        let sub = subjectMasterList[i];
-        let subId = sub.name.replace(/\s/g, '');
-        subjectsHTML += `
-            <div style="margin-bottom: 16px; border: 1px solid var(--border-light); border-radius: 12px; padding: 12px; background: var(--bg-surface);">
-                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">📚 ${sub.name} (Max: ${sub.maxMarks})</label>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <input type="number" id="marks_${subId}" class="form-control" placeholder="Enter marks" max="${sub.maxMarks}" min="0" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light);">
-                    <div id="answerSheetUpload_${subId}" class="upload-area" style="padding: 12px; margin: 0; cursor: pointer; text-align: center; font-size: 12px; border: 2px dashed var(--border-light); border-radius: 12px; transition: all 0.3s ease;" onclick="triggerAnswerSheetUploadInForm('${sub.name.replace(/'/g, "\\'")}')">
-                        <i class="fas fa-cloud-upload-alt" style="color: var(--primary);"></i> Upload Answer Sheet
-                    </div>
-                </div>
-                <div id="preview_${subId}" style="margin-top: 8px; font-size: 10px;"></div>
-            </div>
-        `;
-    }
-    
-    // ✅ Create modal with properly escaped content
-    let modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.id = 'addResultModal';
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.right = '0';
-    modal.style.bottom = '0';
-    modal.style.backgroundColor = 'rgba(0,0,0,0.6)';
-    modal.style.backdropFilter = 'blur(4px)';
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.style.padding = '16px';
-    modal.style.zIndex = '10000';
-    modal.style.overflow = 'auto';
-    modal.style.boxSizing = 'border-box';
-    
-    modal.innerHTML = `<div class="modal-content" style="max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 28px; background: var(--bg-surface); box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
-        <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 15px 20px; border-radius: 28px 28px 0 0; position: sticky; top: 0; z-index: 10;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <h2 style="margin: 0; font-size: 18px; color: white;"><i class="fas fa-plus-circle"></i> Add Result</h2>
-                <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;">&times;</button>
-            </div>
-            <p style="margin: 8px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.85);">Fill the details below to add student result</p>
-        </div>
-        
-        <div style="padding: 20px;">
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
-                    <i class="fas fa-user-graduate"></i> Student *
-                </label>
-                <select id="resultStudent" class="form-control" style="width:100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-surface); font-size: 14px;">
-                    ${studentOptions}
-                </select>
-                <small style="color: var(--text-secondary); font-size: 11px; display: block; margin-top: 4px;">
-                    ${studentCount} student(s) available
-                </small>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
-                    <i class="fas fa-calendar-alt"></i> Exam *
-                </label>
-                <select id="resultExam" class="form-control" style="width:100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-surface); font-size: 14px;">
-                    ${examOptions}
-                </select>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
-                    <i class="fas fa-chart-line"></i> Subject-wise Marks
-                </label>
-                ${subjectsHTML}
-            </div>
-            
-            <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="saveResultData()" style="flex: 1; padding: 12px; border-radius: 30px; font-size: 14px; min-height: 48px;">
-                    <i class="fas fa-save"></i> Save Result
-                </button>
-                <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px; border-radius: 30px; font-size: 14px; min-height: 48px;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </div>
-    </div>`;
-    
-    document.body.appendChild(modal);
-    
-    // ✅ FIX: Define triggerAnswerSheetUploadInForm function
-    window.triggerAnswerSheetUploadInForm = function(subject) {
-        console.log(`📤 Uploading answer sheet for: ${subject}`);
-        let folderPath = `answer_sheets/${subject}`;
-        
-        openAnswerSheetCapture(async (fileData, fileName, fileType) => {
-            showLoader();
-            let uploadedUrl = null;
-            const supabase = getSupabaseClient();
-            const sheetId = 'ANS_' + Date.now();
-            
-            if (supabase && navigator.onLine) {
-                try {
-                    const fileExt = fileType === 'application/pdf' ? 'pdf' : 'jpg';
-                    const newFileName = `${Date.now()}_${subject}.${fileExt}`;
-                    const blob = dataURLtoBlob(fileData);
-                    const fileToUpload = new File([blob], newFileName, { type: fileType });
-                    const { error } = await supabase.storage.from('marksheets').upload(`${folderPath}/${sheetId}/${newFileName}`, fileToUpload, { upsert: true });
-                    if (!error) {
-                        const { data: urlData } = supabase.storage.from('marksheets').getPublicUrl(`${folderPath}/${sheetId}/${newFileName}`);
-                        uploadedUrl = urlData.publicUrl;
-                    }
-                } catch(err) { 
-                    console.error('Upload error:', err); 
-                }
-            }
-            
-            if (!window.pendingAnswerSheets) {
-                window.pendingAnswerSheets = {};
-            }
-            
-            window.pendingAnswerSheets[subject] = {
-                data: fileData,
-                url: uploadedUrl,
-                name: fileName,
-                uploadedAt: new Date().toISOString()
-            };
-            
-            let subId = subject.replace(/\s/g, '');
-            let previewDiv = document.getElementById(`preview_${subId}`);
-            if (previewDiv) {
-                if (fileType.startsWith('image/')) {
-                    previewDiv.innerHTML = `<div style="background:#d1fae5; padding:8px; border-radius:8px; margin-top:6px; display:flex; align-items:center; gap:8px;">
-                        <img src="${fileData}" style="width:40px; height:40px; border-radius:6px; object-fit:cover;">
-                        <span style="font-size:10px; color:${uploadedUrl ? '#10b981' : '#f59e0b'};">${uploadedUrl ? '☁️ Uploaded to Cloud!' : '📁 Saved locally'}</span>
-                    </div>`;
-                } else {
-                    previewDiv.innerHTML = `<div style="background:#d1fae5; padding:8px; border-radius:8px; margin-top:6px;">
-                        <i class="fas fa-file-pdf" style="color:#ef4444;"></i> ${fileName}<br>
-                        <span style="font-size:10px; color:${uploadedUrl ? '#10b981' : '#f59e0b'};">${uploadedUrl ? '☁️ In Cloud' : '📁 Saved locally'}</span>
-                    </div>`;
-                }
-            }
-            hideLoader();
-            showNotification(uploadedUrl ? 'Answer sheet uploaded to cloud!' : 'Answer sheet saved locally', uploadedUrl ? 'success' : 'warning');
-        });
-    };
-    
-    // ✅ FIX: Define saveResultData function
-    window.saveResultData = async function() {
-        console.log('💾 Saving result data...');
-        
-        let studentSelect = document.getElementById('resultStudent');
-        let examSelect = document.getElementById('resultExam');
-        
-        let student = studentSelect ? studentSelect.value : '';
-        let exam = examSelect ? examSelect.value : '';
-        
-        if (!student) {
-            showNotification('Please select a student', 'error');
-            return;
-        }
-        if (!exam || exam === '-- Select Exam --') {
-            showNotification('Please select an exam', 'error');
-            return;
-        }
-        
-        let selectedOption = studentSelect.options[studentSelect.selectedIndex];
-        let studentPhotoUrl = selectedOption ? selectedOption.getAttribute('data-photo') : null;
-        let studentCls = selectedOption ? selectedOption.getAttribute('data-cls') : 'N/A';
-        let studentSec = selectedOption ? selectedOption.getAttribute('data-sec') : '';
-        let studentRoll = selectedOption ? parseInt(selectedOption.getAttribute('data-roll')) || 'N/A' : 'N/A';
-        
-        // Combine cls and sec if needed
-        let fullClass = studentCls;
-        if (studentSec && studentSec !== '') {
-            fullClass = `${studentCls} ${studentSec}`.trim();
-        }
-        
-        console.log(`📝 Student: ${student}, Class: ${fullClass}, Roll: ${studentRoll}`);
-        
-        let marksObj = {};
-        let totalMarks = 0;
-        let maxTotal = 0;
-        let valid = true;
-        
-        for (let i = 0; i < subjectMasterList.length; i++) {
-            let sub = subjectMasterList[i];
-            let subId = sub.name.replace(/\s/g, '');
-            let marksInput = document.getElementById(`marks_${subId}`);
-            let marks = marksInput ? (parseInt(marksInput.value) || 0) : 0;
-            
-            if (marks < 0) {
-                showNotification(`${sub.name} marks cannot be negative`, 'error');
-                valid = false;
-                return;
-            }
-            if (marks > sub.maxMarks) {
-                showNotification(`${sub.name} marks cannot exceed ${sub.maxMarks}`, 'error');
-                valid = false;
-                return;
-            }
-            
-            marksObj[sub.name] = marks;
-            totalMarks += marks;
-            maxTotal += sub.maxMarks;
-        }
-        
-        if (!valid) return;
-        
-        let percentage = maxTotal > 0 ? Math.round((totalMarks / maxTotal) * 100) : 0;
-        let gradeInfo = getGrade(percentage);
-        
-        let newResultId = 'R' + Date.now();
-        
-        let newResult = {
-            id: newResultId,
-            studentName: student,
-            examName: exam,
-            marks: marksObj,
-            total: totalMarks,
-            maxTotal: maxTotal,
-            percentage: percentage,
-            grade: gradeInfo.grade,
-            rank: (window.results || []).length + 1,
-            cls: fullClass,
-            roll: studentRoll,
-            marksheetUrl: null,
-            marksheetData: null,
-            studentPhotoUrl: studentPhotoUrl || null,
-            createdAt: new Date().toISOString()
-        };
-        
-        console.log('✅ New result object:', newResult);
-        
-        if (!window.results) window.results = [];
-        window.results.push(newResult);
-        
-        if (window.pendingAnswerSheets && Object.keys(window.pendingAnswerSheets).length > 0) {
-            if (!answerSheets) answerSheets = {};
-            answerSheets[newResultId] = window.pendingAnswerSheets;
-            saveAnswerSheets();
-        }
-        
-        window.results.sort((a, b) => b.percentage - a.percentage);
-        for (let i = 0; i < window.results.length; i++) {
-            window.results[i].rank = i + 1;
-        }
-        
-        await syncResultToSupabase(newResult);
-        saveAllData();
-        showNotification(`✅ Result added for ${student} (${percentage}%)!`, 'success');
-        
-        // Close modal
-        let modal = document.getElementById('addResultModal');
-        if (modal) modal.remove();
-        
-        loadResults();
-    };
-    
-    console.log('✅ Add Result Form opened successfully');
-}
-
-// ======================= ✅ FIX 4: generateMarksheet WITH CLS AND ROLL SUPPORT =======================
+// ======================= generateMarksheet =======================
 function generateMarksheet(id) {
     let r = null;
     for (let i = 0; i < (window.results || []).length; i++) {
@@ -27450,10 +27014,6 @@ function generateMarksheet(id) {
         return; 
     }
     
-    // ✅ Get answer sheets for this result
-    let resultAnswerSheets = answerSheets && answerSheets[id] ? answerSheets[id] : {};
-    console.log(`📄 Answer sheets for marksheet ${id}:`, resultAnswerSheets);
-    
     let marksObj = r.marks;
     if (typeof marksObj === 'string') {
         try {
@@ -27465,12 +27025,9 @@ function generateMarksheet(id) {
     }
     
     let studentName = r.studentName || '';
-    
-    // ✅ Use cls and roll from result data directly
     let rollNo = r.roll || 'N/A';
     let className = r.cls || 'N/A';
     
-    // If cls or roll is 'N/A', try to find from students array
     if (className === 'N/A' || rollNo === 'N/A') {
         let student = null;
         for (let i = 0; i < students.length; i++) {
@@ -27484,18 +27041,6 @@ function generateMarksheet(id) {
                 if (students[i] && students[i].name && students[i].name.toLowerCase() === studentName.toLowerCase()) {
                     student = students[i];
                     break;
-                }
-            }
-        }
-        if (!student) {
-            for (let i = 0; i < students.length; i++) {
-                if (students[i] && students[i].name) {
-                    let studentNameClean = students[i].name.replace(/\s/g, '').toLowerCase();
-                    let searchNameClean = studentName.replace(/\s/g, '').toLowerCase();
-                    if (studentNameClean.includes(searchNameClean) || searchNameClean.includes(studentNameClean)) {
-                        student = students[i];
-                        break;
-                    }
                 }
             }
         }
@@ -27516,7 +27061,7 @@ function generateMarksheet(id) {
     let subjectKeys = Object.keys(marksObj || {});
     
     if (subjectKeys.length === 0) {
-        marksTableRows = `<tr><td colspan="6" style="text-align:center; padding:10px;">No subjects found</td></tr>`;
+        marksTableRows = `<tr><td colspan="5" style="text-align:center; padding:10px;">No subjects found</td></tr>`;
     } else {
         for (let [subject, marks] of Object.entries(marksObj || {})) {
             let subInfo = null;
@@ -27531,24 +27076,12 @@ function generateMarksheet(id) {
             let subjectGrade = getSubjectGrade(marks, maxMarks);
             let gradeColor = subjectGrade === 'A+' ? '#10b981' : subjectGrade === 'A' ? '#10b981' : subjectGrade === 'B' ? '#3b82f6' : subjectGrade === 'C' ? '#f59e0b' : subjectGrade === 'D' ? '#f59e0b' : subjectGrade === 'E' ? '#f59e0b' : '#ef4444';
             
-            // Check if answer sheet exists for this subject
-            let hasAnswerSheet = resultAnswerSheets && resultAnswerSheets[subject] ? true : false;
-            let sheetUrl = hasAnswerSheet ? resultAnswerSheets[subject].url : null;
-            
             marksTableRows += `<tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 4px 6px; font-size: 10px;"><strong>${subject}</strong></td>
                 <td style="padding: 4px 6px; text-align: center; font-size: 10px; font-weight: 600;">${marks}</td>
                 <td style="padding: 4px 6px; text-align: center; font-size: 10px;">${maxMarks}</td>
                 <td style="padding: 4px 6px; text-align: center; font-size: 10px;">${percentage}%</td>
                 <td style="padding: 4px 6px; text-align: center; font-size: 10px; font-weight: bold; color: ${gradeColor};">${subjectGrade}</td>
-                <td style="padding: 4px 6px; text-align: center; font-size: 10px;">
-                    ${hasAnswerSheet ? 
-                        `<button onclick="window.open('${sheetUrl}', '_blank')" style="padding:2px 10px; background:#10b981; color:white; border:none; border-radius:12px; cursor:pointer; font-size:8px;">
-                            📎 View
-                        </button>` : 
-                        `<span style="color:#94a3b8; font-size:8px;">No Sheet</span>`
-                    }
-                </td>
             </tr>`;
         }
     }
@@ -27604,7 +27137,7 @@ function generateMarksheet(id) {
                         </div>
                         
                         <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; min-width: 400px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; min-width: 300px;">
                                 <thead>
                                     <tr style="background: linear-gradient(135deg, #2563eb, #1e40af); color: white;">
                                         <th style="padding: 6px; text-align: left;">Subject</th>
@@ -27612,7 +27145,6 @@ function generateMarksheet(id) {
                                         <th style="padding: 6px; text-align: center;">Max</th>
                                         <th style="padding: 6px; text-align: center;">%</th>
                                         <th style="padding: 6px; text-align: center;">Grade</th>
-                                        <th style="padding: 6px; text-align: center;">Sheet</th>
                                     </tr>
                                 </thead>
                                 <tbody>${marksTableRows}</tbody>
@@ -27653,7 +27185,6 @@ function generateMarksheet(id) {
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    // Define modal close and print functions
     window.closeMarksheetModal = function() {
         let modal = document.getElementById('marksheetModal');
         if (modal) modal.remove();
@@ -27740,6 +27271,484 @@ function generateMarksheet(id) {
     };
     
     console.log('✅ Marksheet modal opened successfully');
+}
+
+// ======================= showAddResultForm =======================
+async function showAddResultForm() {
+    console.log('📝 Opening Add Result Form...');
+    
+    if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
+        showNotification('You do not have permission to add results', 'error');
+        return;
+    }
+    
+    if (typeof subjectMasterList === 'undefined' || !subjectMasterList || subjectMasterList.length === 0) {
+        window.subjectMasterList = [
+            { name: 'English', maxMarks: 100, passingMarks: 35 },
+            { name: 'Mathematics', maxMarks: 100, passingMarks: 35 },
+            { name: 'Science', maxMarks: 100, passingMarks: 35 },
+            { name: 'Hindi', maxMarks: 100, passingMarks: 35 },
+            { name: 'Social Studies', maxMarks: 100, passingMarks: 35 },
+            { name: 'Computer', maxMarks: 50, passingMarks: 18 },
+            { name: 'Drawing', maxMarks: 50, passingMarks: 18 },
+            { name: 'Physical Education', maxMarks: 50, passingMarks: 18 },
+            { name: 'Sanskrit', maxMarks: 100, passingMarks: 35 },
+            { name: 'General Knowledge', maxMarks: 50, passingMarks: 25 }
+        ];
+        var subjectMasterList = window.subjectMasterList;
+        console.log('✅ subjectMasterList initialized');
+    }
+    
+    if (!window.students || window.students.length === 0) {
+        console.log('⚠️ Students array is empty, loading from localStorage...');
+        loadAllData();
+        
+        if (!window.students || window.students.length === 0) {
+            console.log('🔄 Loading students from Supabase...');
+            await loadStudentsFromSupabase();
+        }
+        
+        if (!window.students || window.students.length === 0) {
+            showNotification('❌ No students found! Please add students first.', 'error');
+            return;
+        }
+    }
+    
+    console.log(`👨‍🎓 Total students available: ${window.students.length}`);
+    
+    let studentOptions = '';
+    let studentCount = 0;
+    
+    if (currentUser.role === 'admin') {
+        for (let i = 0; i < window.students.length; i++) {
+            let student = window.students[i];
+            if (!student || !student.name) continue;
+            
+            let studentPhoto = student.photo_url || '';
+            let cls = student.cls || 'N/A';
+            let sec = student.sec || '';
+            let roll = student.roll || 'N/A';
+            let displayName = `${student.name}`;
+            let displayClass = `${cls} ${sec}`.trim();
+            let displayRoll = `Roll: ${roll}`;
+            
+            studentOptions += `<option value="${student.name.replace(/"/g, '&quot;')}" 
+                                    data-photo="${studentPhoto}" 
+                                    data-cls="${cls}" 
+                                    data-sec="${sec}" 
+                                    data-roll="${roll}">
+                                ${displayName} (${displayClass} | ${displayRoll})
+                            </option>`;
+            studentCount++;
+        }
+    } else if (currentUser.role === 'teacher') {
+        let myClass = getTeacherClass();
+        console.log(`👨‍🏫 Teacher's class: ${myClass}`);
+        
+        let myStudents = [];
+        for (let i = 0; i < window.students.length; i++) {
+            let student = window.students[i];
+            if (!student || !student.name) continue;
+            
+            let studentClass = `${student.cls || ''} ${student.sec || ''}`.trim();
+            if (studentClass === myClass) {
+                myStudents.push(student);
+            }
+        }
+        
+        console.log(`📚 Students in your class: ${myStudents.length}`);
+        
+        if (myStudents.length === 0) {
+            showNotification(`No students found in your class (${myClass})`, 'error');
+            return;
+        }
+        
+        for (let i = 0; i < myStudents.length; i++) {
+            let student = myStudents[i];
+            let studentPhoto = student.photo_url || '';
+            let cls = student.cls || 'N/A';
+            let sec = student.sec || '';
+            let roll = student.roll || 'N/A';
+            let displayName = `${student.name}`;
+            let displayClass = `${cls} ${sec}`.trim();
+            let displayRoll = `Roll: ${roll}`;
+            
+            studentOptions += `<option value="${student.name.replace(/"/g, '&quot;')}" 
+                                    data-photo="${studentPhoto}" 
+                                    data-cls="${cls}" 
+                                    data-sec="${sec}" 
+                                    data-roll="${roll}">
+                                ${displayName} (${displayClass} | ${displayRoll})
+                            </option>`;
+            studentCount++;
+        }
+    } else {
+        showNotification('You do not have permission to add results', 'error');
+        return;
+    }
+    
+    console.log(`✅ Generated ${studentCount} student options`);
+    
+    if (!studentOptions || studentOptions === '') {
+        showNotification('❌ No students available to add results!', 'error');
+        return;
+    }
+    
+    showLoader();
+    let examOptions = '<option value="">-- Select Exam --</option>';
+    
+    try {
+        let examsData = await fetchExamsFromSupabase();
+        console.log(`📝 Exams fetched: ${examsData.length}`);
+        
+        if (currentUser.role === 'admin') {
+            for (let i = 0; i < examsData.length; i++) {
+                let exam = examsData[i];
+                let examName = exam.exam_name || exam.examName;
+                let className = exam.class_name || exam.className;
+                if (examName) {
+                    examOptions += `<option value="${examName.replace(/"/g, '&quot;')}">${examName} (${className || 'N/A'})</option>`;
+                }
+            }
+        } else if (currentUser.role === 'teacher') {
+            let myClass = getTeacherClass();
+            let myClassName = myClass ? myClass.split(' ')[0] : '';
+            console.log(`👨‍🏫 Teacher's class for exams: ${myClassName}`);
+            
+            for (let i = 0; i < examsData.length; i++) {
+                let exam = examsData[i];
+                let examName = exam.exam_name || exam.examName;
+                let className = exam.class_name || exam.className;
+                if (examName && className === myClassName) {
+                    examOptions += `<option value="${examName.replace(/"/g, '&quot;')}">${examName} (${className})</option>`;
+                }
+            }
+        }
+        
+        if (examsData.length === 0) {
+            examOptions = '<option value="">-- No Exams Available --</option>';
+        }
+        
+        console.log('✅ Exam options generated');
+        
+    } catch(error) {
+        console.error('Error fetching exams:', error);
+        examOptions = '<option value="">-- Error loading exams --</option>';
+    }
+    
+    hideLoader();
+    
+    if (!window.pendingAnswerSheets) {
+        window.pendingAnswerSheets = {};
+    }
+    
+    let subjectsHTML = '';
+    for (let i = 0; i < subjectMasterList.length; i++) {
+        let sub = subjectMasterList[i];
+        let subId = sub.name.replace(/\s/g, '');
+        subjectsHTML += `
+            <div style="margin-bottom: 16px; border: 1px solid var(--border-light); border-radius: 12px; padding: 12px; background: var(--bg-surface);">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">📚 ${sub.name} (Max: ${sub.maxMarks})</label>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <input type="number" id="marks_${subId}" class="form-control" placeholder="Enter marks" max="${sub.maxMarks}" min="0" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <div id="answerSheetUpload_${subId}" class="upload-area" style="padding: 12px; margin: 0; cursor: pointer; text-align: center; font-size: 12px; border: 2px dashed var(--border-light); border-radius: 12px; transition: all 0.3s ease;" onclick="triggerAnswerSheetUploadInForm('${sub.name.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-cloud-upload-alt" style="color: var(--primary);"></i> Upload Answer Sheet
+                    </div>
+                </div>
+                <div id="preview_${subId}" style="margin-top: 8px; font-size: 10px;"></div>
+            </div>
+        `;
+    }
+    
+    let modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'addResultModal';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.right = '0';
+    modal.style.bottom = '0';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.6)';
+    modal.style.backdropFilter = 'blur(4px)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.padding = '16px';
+    modal.style.zIndex = '10000';
+    modal.style.overflow = 'auto';
+    modal.style.boxSizing = 'border-box';
+    
+    modal.innerHTML = `<div class="modal-content" style="max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 28px; background: var(--bg-surface); box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
+        <div style="background: linear-gradient(135deg, #2563eb, #1e40af); padding: 15px 20px; border-radius: 28px 28px 0 0; position: sticky; top: 0; z-index: 10;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h2 style="margin: 0; font-size: 18px; color: white;"><i class="fas fa-plus-circle"></i> Add Result</h2>
+                <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            <p style="margin: 8px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.85);">Fill the details below to add student result</p>
+        </div>
+        
+        <div style="padding: 20px;">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
+                    <i class="fas fa-user-graduate"></i> Student *
+                </label>
+                <select id="resultStudent" class="form-control" style="width:100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-surface); font-size: 14px;">
+                    ${studentOptions}
+                </select>
+                <small style="color: var(--text-secondary); font-size: 11px; display: block; margin-top: 4px;">
+                    ${studentCount} student(s) available
+                </small>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
+                    <i class="fas fa-calendar-alt"></i> Exam *
+                </label>
+                <select id="resultExam" class="form-control" style="width:100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-surface); font-size: 14px;">
+                    ${examOptions}
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; color: var(--text-primary);">
+                    <i class="fas fa-chart-line"></i> Subject-wise Marks
+                </label>
+                ${subjectsHTML}
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="saveResultData()" style="flex: 1; padding: 12px; border-radius: 30px; font-size: 14px; min-height: 48px;">
+                    <i class="fas fa-save"></i> Save Result
+                </button>
+                <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="flex: 1; padding: 12px; border-radius: 30px; font-size: 14px; min-height: 48px;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.appendChild(modal);
+    
+    // ✅ FIXED: triggerAnswerSheetUploadInForm - Now saves to results bucket
+    window.triggerAnswerSheetUploadInForm = function(subject) {
+        console.log(`📤 Uploading answer sheet for: ${subject}`);
+        
+        openAnswerSheetCapture(async (fileData, fileName, fileType) => {
+            showLoader();
+            let uploadedUrl = null;
+            const supabase = getSupabaseClient();
+            
+            // Get the current result ID or generate a temporary one
+            let resultId = window.currentResultId || 'TEMP_' + Date.now();
+            
+            if (supabase && navigator.onLine) {
+                try {
+                    // ✅ Upload to 'results' bucket
+                    const fileExt = fileType === 'application/pdf' ? 'pdf' : 'jpg';
+                    const newFileName = `${Date.now()}_${subject}.${fileExt}`;
+                    const blob = dataURLtoBlob(fileData);
+                    const fileToUpload = new File([blob], newFileName, { type: fileType });
+                    
+                    // Upload to results bucket
+                    const { error } = await supabase.storage
+                        .from('results')
+                        .upload(`answer_sheets/${resultId}/${newFileName}`, fileToUpload, { upsert: true });
+                    
+                    if (error) {
+                        console.error('❌ Upload error:', error);
+                        throw error;
+                    }
+                    
+                    const { data: urlData } = supabase.storage
+                        .from('results')
+                        .getPublicUrl(`answer_sheets/${resultId}/${newFileName}`);
+                    
+                    uploadedUrl = urlData.publicUrl;
+                    console.log(`✅ Answer sheet uploaded to results bucket: ${uploadedUrl}`);
+                } catch(err) { 
+                    console.error('Upload error:', err); 
+                }
+            }
+            
+            if (!window.pendingAnswerSheets) {
+                window.pendingAnswerSheets = {};
+            }
+            
+            window.pendingAnswerSheets[subject] = {
+                data: fileData,
+                url: uploadedUrl,
+                name: fileName,
+                uploadedAt: new Date().toISOString()
+            };
+            
+            let subId = subject.replace(/\s/g, '');
+            let previewDiv = document.getElementById(`preview_${subId}`);
+            if (previewDiv) {
+                if (fileType.startsWith('image/')) {
+                    previewDiv.innerHTML = `<div style="background:#d1fae5; padding:8px; border-radius:8px; margin-top:6px; display:flex; align-items:center; gap:8px;">
+                        <img src="${fileData}" style="width:40px; height:40px; border-radius:6px; object-fit:cover;">
+                        <span style="font-size:10px; color:${uploadedUrl ? '#10b981' : '#f59e0b'};">${uploadedUrl ? '☁️ Uploaded to Cloud!' : '📁 Saved locally'}</span>
+                    </div>`;
+                } else {
+                    previewDiv.innerHTML = `<div style="background:#d1fae5; padding:8px; border-radius:8px; margin-top:6px;">
+                        <i class="fas fa-file-pdf" style="color:#ef4444;"></i> ${fileName}<br>
+                        <span style="font-size:10px; color:${uploadedUrl ? '#10b981' : '#f59e0b'};">${uploadedUrl ? '☁️ In Cloud' : '📁 Saved locally'}</span>
+                    </div>`;
+                }
+            }
+            hideLoader();
+            showNotification(uploadedUrl ? '✅ Answer sheet uploaded to results bucket!' : '📁 Answer sheet saved locally', uploadedUrl ? 'success' : 'warning');
+        });
+    };
+    
+    // ✅ FIXED: saveResultData - Saves answer sheets to results bucket
+    window.saveResultData = async function() {
+        console.log('💾 Saving result data...');
+        
+        let studentSelect = document.getElementById('resultStudent');
+        let examSelect = document.getElementById('resultExam');
+        
+        let student = studentSelect ? studentSelect.value : '';
+        let exam = examSelect ? examSelect.value : '';
+        
+        if (!student) {
+            showNotification('Please select a student', 'error');
+            return;
+        }
+        if (!exam || exam === '-- Select Exam --') {
+            showNotification('Please select an exam', 'error');
+            return;
+        }
+        
+        let selectedOption = studentSelect.options[studentSelect.selectedIndex];
+        let studentPhotoUrl = selectedOption ? selectedOption.getAttribute('data-photo') : null;
+        let studentCls = selectedOption ? selectedOption.getAttribute('data-cls') : 'N/A';
+        let studentSec = selectedOption ? selectedOption.getAttribute('data-sec') : '';
+        let studentRoll = selectedOption ? parseInt(selectedOption.getAttribute('data-roll')) || 'N/A' : 'N/A';
+        
+        let fullClass = studentCls;
+        if (studentSec && studentSec !== '') {
+            fullClass = `${studentCls} ${studentSec}`.trim();
+        }
+        
+        console.log(`📝 Student: ${student}, Class: ${fullClass}, Roll: ${studentRoll}`);
+        
+        let marksObj = {};
+        let totalMarks = 0;
+        let maxTotal = 0;
+        let valid = true;
+        
+        for (let i = 0; i < subjectMasterList.length; i++) {
+            let sub = subjectMasterList[i];
+            let subId = sub.name.replace(/\s/g, '');
+            let marksInput = document.getElementById(`marks_${subId}`);
+            let marks = marksInput ? (parseInt(marksInput.value) || 0) : 0;
+            
+            if (marks < 0) {
+                showNotification(`${sub.name} marks cannot be negative`, 'error');
+                valid = false;
+                return;
+            }
+            if (marks > sub.maxMarks) {
+                showNotification(`${sub.name} marks cannot exceed ${sub.maxMarks}`, 'error');
+                valid = false;
+                return;
+            }
+            
+            marksObj[sub.name] = marks;
+            totalMarks += marks;
+            maxTotal += sub.maxMarks;
+        }
+        
+        if (!valid) return;
+        
+        let percentage = maxTotal > 0 ? Math.round((totalMarks / maxTotal) * 100) : 0;
+        let gradeInfo = getGrade(percentage);
+        
+        let newResultId = 'R' + Date.now();
+        window.currentResultId = newResultId;
+        
+        let newResult = {
+            id: newResultId,
+            studentName: student,
+            examName: exam,
+            marks: marksObj,
+            total: totalMarks,
+            maxTotal: maxTotal,
+            percentage: percentage,
+            grade: gradeInfo.grade,
+            rank: (window.results || []).length + 1,
+            cls: fullClass,
+            roll: studentRoll,
+            marksheetUrl: null,
+            marksheetData: null,
+            studentPhotoUrl: studentPhotoUrl || null,
+            createdAt: new Date().toISOString()
+        };
+        
+        console.log('✅ New result object:', newResult);
+        
+        if (!window.results) window.results = [];
+        window.results.push(newResult);
+        
+        // ✅ Save answer sheets to Supabase
+        if (window.pendingAnswerSheets && Object.keys(window.pendingAnswerSheets).length > 0) {
+            if (!answerSheets) answerSheets = {};
+            
+            const supabase = getSupabaseClient();
+            
+            for (let [subject, sheetData] of Object.entries(window.pendingAnswerSheets)) {
+                // Save to answerSheets object
+                if (!answerSheets[newResultId]) {
+                    answerSheets[newResultId] = {};
+                }
+                answerSheets[newResultId][subject] = sheetData;
+                
+                // ✅ Save to Supabase answer_sheets table
+                if (supabase && navigator.onLine) {
+                    try {
+                        const { error } = await supabase
+                            .from('answer_sheets')
+                            .upsert({
+                                result_id: newResultId,
+                                subject_name: subject,
+                                answer_sheet_url: sheetData.url || null,
+                                answer_sheet_data: sheetData.data || null,
+                                file_name: sheetData.name || null,
+                                file_type: sheetData.file_type || null,
+                                uploaded_at: new Date().toISOString()
+                            });
+                        
+                        if (error) {
+                            console.error(`❌ Error saving answer sheet for ${subject}:`, error);
+                        } else {
+                            console.log(`✅ Answer sheet saved for ${subject}`);
+                        }
+                    } catch(e) {
+                        console.error(`❌ Error saving answer sheet for ${subject}:`, e);
+                    }
+                }
+            }
+            
+            saveAnswerSheets();
+        }
+        
+        window.results.sort((a, b) => b.percentage - a.percentage);
+        for (let i = 0; i < window.results.length; i++) {
+            window.results[i].rank = i + 1;
+        }
+        
+        await syncResultToSupabase(newResult);
+        saveAllData();
+        showNotification(`✅ Result added for ${student} (${percentage}%)!`, 'success');
+        
+        let modal = document.getElementById('addResultModal');
+        if (modal) modal.remove();
+        
+        loadResults();
+    };
+    
+    console.log('✅ Add Result Form opened successfully');
 }
 
 // ======================= EDIT RESULT =======================
@@ -27864,13 +27873,11 @@ function editResult(id) {
     });
     
     window.triggerEditAnswerSheetUpload = (subject) => {
-        let folderPath = `answer_sheets/${subject}`;
-        
         openAnswerSheetCapture(async (fileData, fileName, fileType) => {
             showLoader();
             let uploadedUrl = null;
             const supabase = getSupabaseClient();
-            const sheetId = 'ANS_' + Date.now();
+            const resultId = window.editResultId;
             
             if (supabase && navigator.onLine) {
                 try {
@@ -27878,11 +27885,19 @@ function editResult(id) {
                     const newFileName = `${Date.now()}_${subject}.${fileExt}`;
                     const blob = dataURLtoBlob(fileData);
                     const fileToUpload = new File([blob], newFileName, { type: fileType });
-                    const { error } = await supabase.storage.from('marksheets').upload(`${folderPath}/${sheetId}/${newFileName}`, fileToUpload, { upsert: true });
-                    if (!error) {
-                        const { data: urlData } = supabase.storage.from('marksheets').getPublicUrl(`${folderPath}/${sheetId}/${newFileName}`);
-                        uploadedUrl = urlData.publicUrl;
-                    }
+                    
+                    // ✅ Upload to results bucket
+                    const { error } = await supabase.storage
+                        .from('results')
+                        .upload(`answer_sheets/${resultId}/${newFileName}`, fileToUpload, { upsert: true });
+                    
+                    if (error) throw error;
+                    
+                    const { data: urlData } = supabase.storage
+                        .from('results')
+                        .getPublicUrl(`answer_sheets/${resultId}/${newFileName}`);
+                    
+                    uploadedUrl = urlData.publicUrl;
                 } catch(err) { console.error('Upload error:', err); }
             }
             
@@ -27908,11 +27923,12 @@ function editResult(id) {
                 }
             }
             hideLoader();
-            showNotification(uploadedUrl ? 'Answer sheet uploaded to cloud!' : 'Answer sheet saved locally', uploadedUrl ? 'success' : 'warning');
+            showNotification(uploadedUrl ? '✅ Answer sheet uploaded to results bucket!' : '📁 Answer sheet saved locally', uploadedUrl ? 'success' : 'warning');
         });
     };
 }
 
+// ======================= DELETE RESULT =======================
 async function deleteResult(id) {
     if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
         showNotification('You do not have permission to delete results', 'error');
@@ -28001,7 +28017,6 @@ function viewResultDetails(id) {
         }
     }
     
-    // ✅ Use cls and roll from result data
     let clsDisplay = r.cls || (student ? `${student.cls} ${student.sec}`.trim() : 'N/A');
     let rollDisplay = r.roll || (student ? student.roll : 'N/A');
     
@@ -28417,31 +28432,38 @@ window.downloadAnswerSheet = downloadAnswerSheet;
 window.generateMarksheet = generateMarksheet;
 window.loadAnswerSheetsFromSupabase = loadAnswerSheetsFromSupabase;
 
-console.log('✅ PART 13 COMPLETE - Results Module with CLS and ROLL support!');
-console.log('📌 Fixes: marks JSON parsing, subjectMasterList check, all functions updated');
-console.log('📌 CLS and ROLL columns added to Results display');
-console.log('📌 Edit Result: Class and Roll fields added');
-console.log('📌 Add Result: Class and Roll auto-populated from selected student');
-console.log('📌 Marksheet: Class and Roll displayed from result data');
-console.log('📌 View Details: Class and Roll displayed');
-console.log('📌 CSV Export: Class and Roll columns added');
-console.log('📌 PDF Export: Class and Roll columns added');
-console.log('📌 Share Result: Class and Roll included in WhatsApp message');
-console.log('📌 Student names fixed in Add Result form');
-console.log('📌 subjectMasterList initialized properly');
-console.log('📌 Students loaded from localStorage and Supabase');
+console.log('✅ PART 13 COMPLETE - Results Module with Results Bucket for Answer Sheets!');
+console.log('📌 Answer sheets now save to "results" bucket instead of "marksheets" bucket');
+console.log('📌 Storage path: results/answer_sheets/{resultId}/{filename}');
+console.log('📌 All other features: CLS, ROLL, CSV, PDF, Share, View, Edit, Delete');
 // ===================== PART 13 ENDS HERE ====================================================================
 // ======================= PART 13 ENDS HERE =======================
 // ======================= PART 14: LEAVE MANAGEMENT MODULE (FULLY FIXED) =======================
+// ======================= PART 14: LEAVE MANAGEMENT MODULE (COMPLETE FIXED) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.leaveModuleLoaded === 'undefined') {
     window.leaveModuleLoaded = true;
 
-// Supabase Configuration:
-// Table Name: leaves
-// Columns: id, emp_name, type, from_date, to_date, days, status, reason, 
-//          document_url, document_data, applied_on, approved_on, rejected_on, 
-//          emp_photo_url, created_at, updated_at
+// ======================= SUPABASE TABLE STRUCTURE =======================
+// Table: leaves
+// Columns:
+// id (TEXT PRIMARY KEY)
+// emp_name (TEXT) - Employee Name
+// designation (TEXT) - Employee Designation
+// type (TEXT) - Leave Type (Sick Leave, Casual Leave, etc.)
+// from_date (DATE) - Leave Start Date
+// to_date (DATE) - Leave End Date
+// days (INTEGER) - Total Days
+// status (TEXT) - Pending, Approved, Rejected
+// reason (TEXT) - Reason for Leave
+// document_url (TEXT) - Cloud Storage URL
+// document_data (TEXT) - Base64 Document Data
+// applied_on (DATE) - Application Date
+// approved_on (DATE) - Approval Date
+// rejected_on (DATE) - Rejection Date
+// emp_photo_url (TEXT) - Employee Photo URL
+// created_at (TIMESTAMP) - Record Creation Date
+// updated_at (TIMESTAMP) - Record Update Date
 
 let leaveFilterText = '';
 let leaveCurrentPage = 1;
@@ -28541,7 +28563,8 @@ function getSupabaseClient() {
 async function loadLeavesFromSupabase() {
     console.log('🔄 [LEAVE] loadLeavesFromSupabase called...');
     
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Loading leaves from localStorage');
         let cached = localStorage.getItem('cache_leaves');
         if (cached) {
@@ -28561,7 +28584,7 @@ async function loadLeavesFromSupabase() {
     
     try {
         console.log('🔄 Loading leaves from Supabase table: leaves...');
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabase
             .from('leaves')
             .select('*')
             .order('created_at', { ascending: false });
@@ -28577,6 +28600,7 @@ async function loadLeavesFromSupabase() {
                 leaves.push({
                     id: leave.id,
                     empName: leave.emp_name,
+                    designation: leave.designation || 'Employee',  // ✅ NEW: Designation from Supabase
                     type: leave.type,
                     fromDate: leave.from_date,
                     toDate: leave.to_date,
@@ -28591,7 +28615,7 @@ async function loadLeavesFromSupabase() {
                     rejectedOn: leave.rejected_on,
                     createdAt: leave.created_at
                 });
-                console.log(`📸 [LEAVE] Record ${i+1}: ${leave.emp_name} - Photo: ${leave.emp_photo_url ? '✅' : '❌'}`);
+                console.log(`📸 [LEAVE] Record ${i+1}: ${leave.emp_name} - Designation: ${leave.designation || 'N/A'}`);
             }
             
             localStorage.setItem('cache_leaves', JSON.stringify(leaves));
@@ -28616,7 +28640,8 @@ async function loadLeavesFromSupabase() {
 async function syncLeaveToSupabase(leaveData) {
     console.log('🔄 [LEAVE] syncLeaveToSupabase called for:', leaveData.empName);
     
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Adding to pending queue');
         if (typeof addToPendingQueue === 'function') {
             addToPendingQueue('leaves', 'upsert', leaveData);
@@ -28625,16 +28650,21 @@ async function syncLeaveToSupabase(leaveData) {
     }
     
     try {
-        // Get employee photo URL from employees table if not provided
+        // Get employee designation and photo from employees table if not provided
+        let empDesignation = leaveData.designation || 'Employee';
         let empPhotoUrl = leaveData.empPhotoUrl || null;
-        if (!empPhotoUrl && leaveData.empName) {
-            if (window.employees && window.employees.length > 0) {
-                for (let i = 0; i < window.employees.length; i++) {
-                    if (window.employees[i].name === leaveData.empName) {
-                        empPhotoUrl = window.employees[i].photo_url || null;
-                        console.log('📸 [LEAVE] Found employee photo from employees table:', empPhotoUrl);
-                        break;
+        
+        if (leaveData.empName && window.employees && window.employees.length > 0) {
+            for (let i = 0; i < window.employees.length; i++) {
+                if (window.employees[i].name === leaveData.empName) {
+                    if (!empDesignation || empDesignation === 'Employee') {
+                        empDesignation = window.employees[i].designation || 'Employee';
                     }
+                    if (!empPhotoUrl) {
+                        empPhotoUrl = window.employees[i].photo_url || null;
+                    }
+                    console.log('📸 [LEAVE] Found employee data:', empDesignation, empPhotoUrl);
+                    break;
                 }
             }
         }
@@ -28642,6 +28672,7 @@ async function syncLeaveToSupabase(leaveData) {
         const dbData = {
             id: leaveData.id,
             emp_name: leaveData.empName,
+            designation: empDesignation,  // ✅ NEW: Designation column
             type: leaveData.type,
             from_date: leaveData.fromDate,
             to_date: leaveData.toDate,
@@ -28660,7 +28691,7 @@ async function syncLeaveToSupabase(leaveData) {
         
         console.log('📤 [LEAVE] Syncing to Supabase:', dbData);
         
-        const { error } = await supabaseClient.from('leaves').upsert(dbData, { onConflict: 'id' });
+        const { error } = await supabase.from('leaves').upsert(dbData, { onConflict: 'id' });
         
         if (error) throw error;
         console.log(`✅ Leave synced to Supabase table: leaves - ${leaveData.empName}`);
@@ -28691,7 +28722,8 @@ async function syncLeaveToSupabase(leaveData) {
 async function deleteLeaveFromSupabase(leaveId) {
     console.log('🗑️ [LEAVE] deleteLeaveFromSupabase called for:', leaveId);
     
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         if (typeof addToPendingQueue === 'function') {
             addToPendingQueue('leaves', 'delete', { id: leaveId });
         }
@@ -28699,7 +28731,7 @@ async function deleteLeaveFromSupabase(leaveId) {
     }
     
     try {
-        const { error } = await supabaseClient.from('leaves').delete().eq('id', leaveId);
+        const { error } = await supabase.from('leaves').delete().eq('id', leaveId);
         if (error) throw error;
         console.log(`✅ Leave deleted from Supabase table: leaves - ${leaveId}`);
         
@@ -28721,7 +28753,8 @@ async function deleteLeaveFromSupabase(leaveId) {
 async function uploadLeaveDocToSupabase(fileData, fileName, fileType, leaveId, empName) {
     console.log('📤 [LEAVE] uploadLeaveDocToSupabase called for:', empName);
     
-    if (!supabaseClient || !navigator.onLine) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Document saved locally only');
         return null;
     }
@@ -28740,19 +28773,19 @@ async function uploadLeaveDocToSupabase(fileData, fileName, fileType, leaveId, e
         const fullPath = `${leaveId}/${newFileName}`;
         
         // Check if bucket exists
-        const { data: buckets } = await supabaseClient.storage.listBuckets();
+        const { data: buckets } = await supabase.storage.listBuckets();
         if (!buckets.some(b => b.name === 'leave_documents')) {
-            await supabaseClient.storage.createBucket('leave_documents', { public: true });
+            await supabase.storage.createBucket('leave_documents', { public: true });
             console.log('✅ Created leave_documents bucket');
         }
         
-        const { error } = await supabaseClient.storage
+        const { error } = await supabase.storage
             .from('leave_documents')
             .upload(fullPath, blob, { upsert: true, contentType: fileType });
         
         if (error) throw error;
         
-        const { data: urlData } = supabaseClient.storage
+        const { data: urlData } = supabase.storage
             .from('leave_documents')
             .getPublicUrl(fullPath);
         
@@ -28770,16 +28803,18 @@ function openLeaveDocCapture(callback) {
     const sourceModal = document.createElement('div');
     sourceModal.className = 'modal-overlay';
     sourceModal.style.zIndex = '100001';
+    sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+    
     sourceModal.innerHTML = `
-        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center;">
+        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
             <i class="fas fa-upload" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-            <h3 style="margin-bottom: 15px;">Choose Upload Source</h3>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Choose Upload Source</h3>
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-camera"></i> Take Photo</button>
-                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-images"></i> Choose from Gallery</button>
-                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-file-pdf"></i> Upload PDF</button>
+                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;"><i class="fas fa-camera"></i> 📸 Take Photo</button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;"><i class="fas fa-images"></i> 🖼️ Choose from Gallery</button>
+                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 14px; min-height: 48px;"><i class="fas fa-file-pdf"></i> 📄 Upload PDF</button>
             </div>
-            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px;">Cancel</button>
+            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px; font-size: 14px; min-height: 44px;">Cancel</button>
         </div>
     `;
     document.body.appendChild(sourceModal);
@@ -28803,13 +28838,24 @@ function openLeaveDocCapture(callback) {
                         const cropModal = document.createElement('div');
                         cropModal.className = 'modal-overlay';
                         cropModal.style.zIndex = '100002';
+                        cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100002; padding:16px;';
+                        
                         cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width: 500px; text-align: center;">
-                                <div class="modal-header"><h2>Crop Image</h2><button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
-                                <img id="cropLeaveImg" src="${ev.target.result}" style="max-width:100%;">
-                                <div style="margin-top:15px;">
-                                    <button class="btn btn-primary" id="cropSaveBtn">Crop & Save</button>
-                                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                            <div class="modal-content" style="max-width: 500px; width: 95%; text-align: center; border-radius: 24px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);">
+                                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 15px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                    <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-crop-alt"></i> Crop Image</h2>
+                                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
+                                </div>
+                                <div style="padding: 20px;">
+                                    <img id="cropLeaveImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                        <button id="cropSaveBtn" class="btn btn-primary" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; min-height: 44px;">
+                                            <i class="fas fa-check"></i> Crop & Save
+                                        </button>
+                                        <button id="cancelBtn" class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; min-height: 44px;">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -28873,7 +28919,7 @@ function getFilteredLeaves() {
     return filtered;
 }
 
-// ======================= RENDER LEAVE LIST (FIXED - WITH PHOTOS AND DOWNLOAD) =======================
+// ======================= ✅ RENDER LEAVE LIST (WITH DESIGNATION FROM SUPABASE) =======================
 function renderLeaveList(leavesToRender) {
     console.log('🎨 [LEAVE] renderLeaveList called with', leavesToRender.length, 'records');
     
@@ -28883,54 +28929,30 @@ function renderLeaveList(leavesToRender) {
     let html = '';
     for (let i = 0; i < leavesToRender.length; i++) {
         let l = leavesToRender[i];
-        console.log('📸 [LEAVE] Processing:', l.empName, 'Photo URL:', l.empPhotoUrl);
         
-        let employee = null;
-        for (let j = 0; j < employees.length; j++) {
-            if (employees[j] && employees[j].name === l.empName) {
-                employee = employees[j];
-                break;
-            }
-        }
+        // ✅ Use designation from Supabase directly
+        let designation = l.designation || 'Employee';
+        console.log('📌 [LEAVE] Designation from Supabase for', l.empName, ':', designation);
         
-        // ======================= ✅ FIX: GET PHOTO FROM leaves.emp_photo_url =======================
+        // Get photo
         let photoSrc = null;
-        
-        // SOURCE 1: Direct from leaves table (emp_photo_url)
         if (l.empPhotoUrl && l.empPhotoUrl.startsWith('http')) {
             photoSrc = l.empPhotoUrl;
-            console.log('📸 [LEAVE] Using emp_photo_url from leaves table:', photoSrc);
-        }
-        // SOURCE 2: From employees table
-        else if (employee && employee.photo_url && employee.photo_url.startsWith('http')) {
-            photoSrc = employee.photo_url;
-            console.log('📸 [LEAVE] Using employee.photo_url:', photoSrc);
-        }
-        // SOURCE 3: From employees.photo_data
-        else if (employee && employee.photo_data && employee.photo_data.startsWith('data:image')) {
-            photoSrc = employee.photo_data;
-            console.log('📸 [LEAVE] Using employee.photo_data');
-        }
-        // SOURCE 4: From users table
-        else if (window.users && window.users.length > 0) {
-            for (let k = 0; k < window.users.length; k++) {
-                if (window.users[k].name === l.empName && window.users[k].photo_url) {
-                    photoSrc = window.users[k].photo_url;
-                    console.log('📸 [LEAVE] Using users.photo_url:', photoSrc);
+        } else if (window.employees && window.employees.length > 0) {
+            for (let j = 0; j < window.employees.length; j++) {
+                if (window.employees[j].name === l.empName) {
+                    if (window.employees[j].photo_url) photoSrc = window.employees[j].photo_url;
                     break;
                 }
             }
         }
         
-        // ✅ Generate photo HTML
         let photoHtml = photoSrc ? 
             `<img src="${photoSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-user-tie\\' style=\\'font-size:24px; color:white;\\'></i>';">` :
             '<i class="fas fa-user-tie" style="font-size:24px; color:white;"></i>';
         
         let isOverdue = l.fromDate && new Date(l.fromDate) < new Date() && l.status === 'Pending';
         let showCancelButton = canCancel && l.status === 'Pending' && l.empName === currentUser.name;
-        
-        // ✅ Fix: Document download button
         let hasDocument = !!(l.documentUrl || l.document);
         
         html += `<div class="data-card" style="margin-bottom: 12px; border-radius: 20px;">
@@ -28940,18 +28962,23 @@ function renderLeaveList(leavesToRender) {
                 </div>
                 <div class="card-title" style="flex: 1;">
                     <h3 style="font-size: 15px; margin-bottom: 4px;">${escapeHtml(l.empName) || 'N/A'}</h3>
-                    <p style="font-size: 11px; margin: 0;">${escapeHtml(l.type) || 'N/A'} | ${l.fromDate || 'N/A'} to ${l.toDate || 'N/A'} ${isOverdue ? '<span class="badge-danger" style="margin-left:8px; padding: 2px 6px;">⚠️ Overdue</span>' : ''}</p>
+                    <p style="font-size: 11px; margin: 0;">
+                        <span style="font-weight: 600; color: var(--primary);">${escapeHtml(designation)}</span> | 
+                        ${escapeHtml(l.type) || 'N/A'} | ${l.fromDate || 'N/A'} to ${l.toDate || 'N/A'} 
+                        ${isOverdue ? '<span class="badge-danger" style="margin-left:8px; padding: 2px 6px;">⚠️ Overdue</span>' : ''}
+                    </p>
                 </div>
                 <div><span class="badge ${l.status === 'Approved' ? 'badge-success' : l.status === 'Rejected' ? 'badge-danger' : 'badge-warning'}" style="font-size: 12px; padding: 5px 12px;">${l.status || 'Pending'}</span></div>
             </div>
+            
             <div class="info-grid" style="padding: 10px 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-                <div class="info-item"><span class="info-label"><i class="fas fa-building"></i> Department</span><span class="info-value">${employee?.department || 'N/A'}</span></div>
+                <div class="info-item"><span class="info-label"><i class="fas fa-user-tag"></i> Designation</span><span class="info-value" style="font-weight: 600; color: var(--primary);">${escapeHtml(designation)}</span></div>
                 <div class="info-item"><span class="info-label"><i class="fas fa-calendar-day"></i> Days</span><span class="info-value">${l.days || 0}</span></div>
                 <div class="info-item"><span class="info-label"><i class="fas fa-clock"></i> Applied On</span><span class="info-value">${l.appliedOn || l.date || 'N/A'}</span></div>
                 <div class="info-item"><span class="info-label"><i class="fas fa-comment"></i> Reason</span><span class="info-value">${escapeHtml(l.reason) || '-'}</span></div>
             </div>`;
         
-        // ✅ FIX: Document section with working download
+        // Document section
         if (l.documentUrl) {
             html += `<div style="background:#f0fdf4; padding: 8px 12px; margin: 0 12px 8px 12px; border-radius: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -28994,7 +29021,7 @@ function renderLeaveList(leavesToRender) {
     document.getElementById('leaveList').innerHTML = html;
 }
 
-// ======================= VIEW LEAVE DETAILS WITH PHOTO =======================
+// ======================= ✅ VIEW LEAVE DETAILS (WITH DESIGNATION FROM SUPABASE) =======================
 function viewLeaveDetails(id) {
     console.log('🔍 [LEAVE] viewLeaveDetails called for:', id);
     
@@ -29010,25 +29037,24 @@ function viewLeaveDetails(id) {
         return;
     }
     
-    let employee = null;
-    for (let i = 0; i < employees.length; i++) {
-        if (employees[i] && employees[i].name === l.empName) {
-            employee = employees[i];
-            break;
-        }
-    }
+    // ✅ Use designation from Supabase directly
+    let designation = l.designation || 'Employee';
+    
     let isOverdue = l.fromDate && new Date(l.fromDate) < new Date() && l.status === 'Pending';
     let statusColor = l.status === 'Approved' ? '#10b981' : (l.status === 'Rejected' ? '#ef4444' : '#f59e0b');
     let statusIcon = l.status === 'Approved' ? '✅' : (l.status === 'Rejected' ? '❌' : '⏳');
     
-    // ✅ FIX: Get photo from leaves.emp_photo_url
+    // Get photo
     let photoSrc = null;
     if (l.empPhotoUrl && l.empPhotoUrl.startsWith('http')) {
         photoSrc = l.empPhotoUrl;
-    } else if (employee && employee.photo_url) {
-        photoSrc = employee.photo_url;
-    } else if (employee && employee.photo_data) {
-        photoSrc = employee.photo_data;
+    } else if (window.employees && window.employees.length > 0) {
+        for (let j = 0; j < window.employees.length; j++) {
+            if (window.employees[j].name === l.empName) {
+                if (window.employees[j].photo_url) photoSrc = window.employees[j].photo_url;
+                break;
+            }
+        }
     }
     
     let employeePhotoHtml = photoSrc ? 
@@ -29070,9 +29096,8 @@ function viewLeaveDetails(id) {
                             ${employeePhotoHtml}
                         </div>
                         <div style="flex: 1;">
-                            <h3 style="margin: 0 0 4px 0; font-size: 15px; color: #1e293b;">${escapeHtml(employee?.name || l.empName)}</h3>
-                            <p style="margin: 0 0 2px 0; font-size: 12px; color: #64748b;"><i class="fas fa-briefcase"></i> ${escapeHtml(employee?.designation) || 'Employee'}</p>
-                            <p style="margin: 0; font-size: 11px; color: #64748b;"><i class="fas fa-building"></i> ${escapeHtml(employee?.department) || 'N/A'}</p>
+                            <h3 style="margin: 0 0 4px 0; font-size: 15px; color: #1e293b;">${escapeHtml(l.empName)}</h3>
+                            <p style="margin: 0 0 2px 0; font-size: 12px; color: #2563eb; font-weight: 600;"><i class="fas fa-user-tag"></i> ${escapeHtml(designation)}</p>
                         </div>
                         <div>
                             <span class="badge ${l.status === 'Approved' ? 'badge-success' : l.status === 'Rejected' ? 'badge-danger' : 'badge-warning'}" style="font-size: 12px; padding: 5px 12px;">
@@ -29336,14 +29361,9 @@ function shareLeave(id) {
         }
     }
     if (!l) return;
-    let employee = null;
-    for (let i = 0; i < employees.length; i++) {
-        if (employees[i] && employees[i].name === l.empName) {
-            employee = employees[i];
-            break;
-        }
-    }
-    let message = `🌴 *Leave Application*\n\nEmployee: ${l.empName}\nDepartment: ${employee?.department || 'N/A'}\nType: ${l.type}\nDates: ${l.fromDate} to ${l.toDate}\nDays: ${l.days}\nStatus: ${l.status}\nReason: ${l.reason || 'Not specified'}`; 
+    
+    let designation = l.designation || 'Employee';
+    let message = `🌴 *Leave Application*\n\nEmployee: ${l.empName}\nDesignation: ${designation}\nType: ${l.type}\nDates: ${l.fromDate} to ${l.toDate}\nDays: ${l.days}\nStatus: ${l.status}\nReason: ${l.reason || 'Not specified'}`; 
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank'); 
 }
 
@@ -29427,7 +29447,7 @@ async function cancelLeave(id) {
     }); 
 }
 
-// ======================= ✅ FIX: DOWNLOAD LEAVE DOCUMENT (WORKING) =======================
+// ======================= DOWNLOAD LEAVE DOCUMENT =======================
 function downloadLeaveDoc(id) { 
     console.log('📥 [LEAVE] downloadLeaveDoc called for:', id);
     
@@ -29444,7 +29464,6 @@ function downloadLeaveDoc(id) {
         return;
     }
     
-    // ✅ If document URL exists (cloud)
     if (l.documentUrl && l.documentUrl.startsWith('http')) {
         console.log('📥 [LEAVE] Opening document from cloud:', l.documentUrl);
         window.open(l.documentUrl, '_blank'); 
@@ -29452,17 +29471,14 @@ function downloadLeaveDoc(id) {
         return;
     }
     
-    // ✅ If document data exists (local)
     if (l.document) {
         console.log('📥 [LEAVE] Downloading local document');
         let filename = `leave_certificate_${l.empName.replace(/\s/g, '_')}_${l.fromDate}.pdf`;
         
-        // Check if document is base64 data
         if (l.document.startsWith('data:')) {
             downloadFile(l.document, filename);
             if (typeof showNotification === 'function') showNotification('Document downloaded!', 'success');
         } else {
-            // Try to create a blob
             try {
                 const blob = new Blob([l.document], { type: 'application/pdf' });
                 const link = document.createElement('a');
@@ -29477,17 +29493,17 @@ function downloadLeaveDoc(id) {
         return;
     }
     
-    // ❌ No document found
     if (typeof showNotification === 'function') showNotification('No document attached to this leave', 'warning'); 
 }
 
 // ======================= EXPORT FUNCTIONS =======================
 function exportLeavesCSV() { 
     let filteredLeaves = getFilteredLeaves();
-    let csv = "Employee,Leave Type,From Date,To Date,Days,Status,Reason,Applied On,Has Document\n"; 
+    let csv = "Employee,Designation,Leave Type,From Date,To Date,Days,Status,Reason,Applied On,Has Document\n"; 
     for (let i = 0; i < filteredLeaves.length; i++) {
         let l = filteredLeaves[i];
-        csv += `${l.empName},${l.type},${l.fromDate},${l.toDate},${l.days},${l.status},${(l.reason || '').replace(/,/g, ' ')},${l.appliedOn || l.date || ''},${l.documentUrl ? 'Yes (Cloud)' : (l.document ? 'Yes (Local)' : 'No')}\n`;
+        let designation = l.designation || 'Employee';
+        csv += `${l.empName},${designation},${l.type},${l.fromDate},${l.toDate},${l.days},${l.status},${(l.reason || '').replace(/,/g, ' ')},${l.appliedOn || l.date || ''},${l.documentUrl ? 'Yes (Cloud)' : (l.document ? 'Yes (Local)' : 'No')}\n`;
     }
     let blob = new Blob([csv], { type: 'text/csv' }); 
     let link = document.createElement('a'); 
@@ -29497,7 +29513,7 @@ function exportLeavesCSV() {
     if (typeof showNotification === 'function') showNotification('Leaves exported to CSV!', 'success'); 
 }
 
-// ======================= PDF EXPORT WITH SCHOOL LOGO =======================
+// ======================= PDF EXPORT =======================
 async function exportLeavesPDF() {
     let filteredLeaves = getFilteredLeaves();
     
@@ -29530,19 +29546,13 @@ async function exportLeavesPDF() {
         let tableRows = '';
         for (let i = 0; i < filteredLeaves.length; i++) {
             let l = filteredLeaves[i];
-            let employee = null;
-            for (let j = 0; j < employees.length; j++) {
-                if (employees[j] && employees[j].name === l.empName) {
-                    employee = employees[j];
-                    break;
-                }
-            }
+            let designation = l.designation || 'Employee';
             let statusColor = l.status === 'Approved' ? '#10b981' : l.status === 'Rejected' ? '#ef4444' : '#f59e0b';
             let statusIcon = l.status === 'Approved' ? '✅' : l.status === 'Rejected' ? '❌' : '⏳';
             
             tableRows += `<tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px; text-align: left;">${escapeHtml(l.empName)}</td>
-                <td style="padding: 8px; text-align: left;">${employee?.department || 'N/A'}</td>
+                <td style="padding: 8px; text-align: left;">${escapeHtml(designation)}</td>
                 <td style="padding: 8px; text-align: left;">${escapeHtml(l.type)}</td>
                 <td style="padding: 8px; text-align: center;">${l.fromDate || '-'}</td>
                 <td style="padding: 8px; text-align: center;">${l.toDate || '-'}</td>
@@ -29580,7 +29590,7 @@ async function exportLeavesPDF() {
         <body>
             <div class="header">${schoolLogoHtml}<h1>${typeof schoolName !== 'undefined' ? schoolName : 'Wings Convent School'}</h1><p>${typeof schoolAddress !== 'undefined' ? schoolAddress : ''} | 📞 ${typeof schoolPhone !== 'undefined' ? schoolPhone : ''} | ✉️ ${typeof schoolEmail !== 'undefined' ? schoolEmail : ''}</p><h3>📋 LEAVE MANAGEMENT REPORT</h3><p>Generated: ${new Date().toLocaleString()} | By: ${currentUser?.name || 'Admin'}</p></div>
             <div class="summary"><div class="summary-card"><div class="number">${total}</div><div class="label">Total Leaves</div></div><div class="summary-card"><div class="number">${pending}</div><div class="label">Pending</div></div><div class="summary-card"><div class="number">${approved}</div><div class="label">Approved</div></div><div class="summary-card"><div class="number">${rejected}</div><div class="label">Rejected</div></div><div class="summary-card"><div class="number">${totalDays}</div><div class="label">Days Taken</div></div></div>
-            <div style="overflow-x: auto;"><table style="min-width: 900px;"><thead><tr style="background:#2563eb; color:white;"><th>Employee</th><th>Department</th><th>Leave Type</th><th>From Date</th><th>To Date</th><th>Days</th><th>Status</th><th>Reason</th><th>Applied On</th><th>Document</th></tr></thead><tbody>${tableRows}</tbody></table></div>
+            <div style="overflow-x: auto;"><table style="min-width: 900px;"><thead><tr style="background:#2563eb; color:white;"><th>Employee</th><th>Designation</th><th>Leave Type</th><th>From Date</th><th>To Date</th><th>Days</th><th>Status</th><th>Reason</th><th>Applied On</th><th>Document</th></tr></thead><tbody>${tableRows}</tbody></table></div>
             <div class="footer"><p>* Computer generated report | Valid with school stamp *</p><p>${typeof schoolName !== 'undefined' ? schoolName : 'Wings Convent School'} - Empowering Education</p></div>
         </body>
         </html>`;
@@ -29640,13 +29650,8 @@ function printLeaveDetails(id) {
         }
     }
     if (!l) return;
-    let employee = null;
-    for (let i = 0; i < employees.length; i++) {
-        if (employees[i] && employees[i].name === l.empName) {
-            employee = employees[i];
-            break;
-        }
-    }
+    
+    let designation = l.designation || 'Employee';
     let printWindow = window.open('', '_blank');
     
     printWindow.document.write(`
@@ -29680,8 +29685,7 @@ function printLeaveDetails(id) {
             </div>
             <div class="info-grid">
                 <div class="info-box"><strong>Employee Name:</strong><br>${l.empName}</div>
-                <div class="info-box"><strong>Department:</strong><br>${employee?.department || 'N/A'}</div>
-                <div class="info-box"><strong>Designation:</strong><br>${employee?.designation || 'N/A'}</div>
+                <div class="info-box"><strong>Designation:</strong><br>${designation}</div>
                 <div class="info-box"><strong>Leave Type:</strong><br>${l.type}</div>
                 <div class="info-box"><strong>From Date:</strong><br>${l.fromDate}</div>
                 <div class="info-box"><strong>To Date:</strong><br>${l.toDate}</div>
@@ -29709,14 +29713,9 @@ function shareLeaveDetails(id) {
         }
     }
     if (!l) return;
-    let employee = null;
-    for (let i = 0; i < employees.length; i++) {
-        if (employees[i] && employees[i].name === l.empName) {
-            employee = employees[i];
-            break;
-        }
-    }
-    let message = `🏫 *${typeof schoolName !== 'undefined' ? schoolName : 'Wings Convent School'}*\n━━━━━━━━━━━━━━━━━━━━\n📋 *LEAVE APPLICATION DETAILS*\n━━━━━━━━━━━━━━━━━━━━\n\n👤 *Employee:* ${l.empName}\n📌 *Department:* ${employee?.department || 'N/A'}\n📌 *Designation:* ${employee?.designation || 'N/A'}\n\n📅 *Leave Type:* ${l.type}\n📆 *From:* ${l.fromDate}\n📆 *To:* ${l.toDate}\n⏱️ *Days:* ${l.days} days\n\n📝 *Reason:* ${l.reason || 'Not specified'}\n\n🏷️ *Status:* ${l.status}\n📅 *Applied On:* ${l.appliedOn || l.date || 'N/A'}\n${l.approvedOn ? `✅ *Approved On:* ${l.approvedOn}` : ''}${l.rejectedOn ? `❌ *Rejected On:* ${l.rejectedOn}` : ''}\n━━━━━━━━━━━━━━━━━━━━\n📞 ${typeof schoolPhone !== 'undefined' ? schoolPhone : ''}\n✉️ ${typeof schoolEmail !== 'undefined' ? schoolEmail : ''}`;
+    
+    let designation = l.designation || 'Employee';
+    let message = `🏫 *${typeof schoolName !== 'undefined' ? schoolName : 'Wings Convent School'}*\n━━━━━━━━━━━━━━━━━━━━\n📋 *LEAVE APPLICATION DETAILS*\n━━━━━━━━━━━━━━━━━━━━\n\n👤 *Employee:* ${l.empName}\n📌 *Designation:* ${designation}\n\n📅 *Leave Type:* ${l.type}\n📆 *From:* ${l.fromDate}\n📆 *To:* ${l.toDate}\n⏱️ *Days:* ${l.days} days\n\n📝 *Reason:* ${l.reason || 'Not specified'}\n\n🏷️ *Status:* ${l.status}\n📅 *Applied On:* ${l.appliedOn || l.date || 'N/A'}\n${l.approvedOn ? `✅ *Approved On:* ${l.approvedOn}` : ''}${l.rejectedOn ? `❌ *Rejected On:* ${l.rejectedOn}` : ''}\n━━━━━━━━━━━━━━━━━━━━\n📞 ${typeof schoolPhone !== 'undefined' ? schoolPhone : ''}\n✉️ ${typeof schoolEmail !== 'undefined' ? schoolEmail : ''}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
 }
 
@@ -29729,6 +29728,17 @@ function showApplyLeaveForm() {
     
     window.modalLeaveDoc = null;
     window.modalLeaveDocUrl = null;
+    
+    // Get user's designation from employees table
+    let userDesignation = 'Employee';
+    if (window.employees && window.employees.length > 0) {
+        for (let i = 0; i < window.employees.length; i++) {
+            if (window.employees[i].name === currentUser.name) {
+                userDesignation = window.employees[i].designation || 'Employee';
+                break;
+            }
+        }
+    }
     
     let modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -29752,7 +29762,7 @@ function showApplyLeaveForm() {
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
                         <h2 style="margin: 0; font-size: 18px; color: white;"><i class="fas fa-calendar-alt"></i> Apply for Leave</h2>
-                        <p style="margin: 4px 0 0 0; font-size: 11px; color: rgba(255,255,255,0.85);">Fill the details below to apply for leave</p>
+                        <p style="margin: 4px 0 0 0; font-size: 11px; color: rgba(255,255,255,0.85);">Employee: ${currentUser.name} | Designation: ${userDesignation}</p>
                     </div>
                     <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;">&times;</button>
                 </div>
@@ -29885,9 +29895,21 @@ function showApplyLeaveForm() {
         let days = Math.ceil((new Date(toDate) - new Date(fromDate)) / (1000 * 3600 * 24)) + 1;
         let leaveId = 'L' + Date.now();
         
+        // Get user's designation
+        let userDesignation = 'Employee';
+        if (window.employees && window.employees.length > 0) {
+            for (let i = 0; i < window.employees.length; i++) {
+                if (window.employees[i].name === currentUser.name) {
+                    userDesignation = window.employees[i].designation || 'Employee';
+                    break;
+                }
+            }
+        }
+        
         let newLeave = {
             id: leaveId,
             empName: currentUser.name,
+            designation: userDesignation,  // ✅ NEW: Designation from employee
             type: leaveType,
             fromDate: fromDate,
             toDate: toDate,
@@ -29991,10 +30013,13 @@ setTimeout(() => {
 }, 1000);
 
 console.log('✅ PART 14 COMPLETE - Leave Module Fully Fixed!');
+console.log('📌 [LEAVE] Table Columns: id, emp_name, designation, type, from_date, to_date, days, status, reason, document_url, document_data, applied_on, approved_on, rejected_on, emp_photo_url, created_at, updated_at');
+console.log('📌 [LEAVE] Designation added and working properly');
 console.log('📸 [LEAVE] Photos will display from emp_photo_url column');
 console.log('📥 [LEAVE] Download button working for documents');
 
 } // End of duplicate check
+// ======================= PART 14 ENDS HERE =======================
 // ======================= PART 14 ENDS HERE =======================
 // ======================= PART 15: CLASS MANAGEMENT MODULE (FIXED) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
