@@ -16,38 +16,54 @@
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
     <meta name="format-detection" content="telephone=yes">
     
-    <!-- ✅ PRECONNECT for Faster Loading -->
+    <!-- ✅ PRECONNECT - DNS Fast Track -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://hghwbysjvkqcxdoqwkim.supabase.co">
     
-    <!-- ======================= FONT AWESOME ======================= -->
+    <!-- ======================= FONT AWESOME (Fastest CDN) ======================= -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     
     <!-- ======================= GOOGLE FONTS ======================= -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- ======================= CHART.JS ======================= -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- ======================= CHART.JS (Async - Non Blocking) ======================= -->
+    <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
-    <!-- ======================= SWEETALERT2 ======================= -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- ======================= SWEETALERT2 (Async - Non Blocking) ======================= -->
+    <script async src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <!-- ======================= HTML2CANVAS ======================= -->
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <!-- ======================= HTML2CANVAS (Defer - Load After Page) ======================= -->
+    <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
-    <!-- ======================= jsPDF ======================= -->
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <!-- ======================= jsPDF (Defer - Load After Page) ======================= -->
+    <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     
-    <!-- ======================= ✅ CROPPER.JS ======================= -->
-    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.12/dist/cropper.min.js"></script>
+    <!-- ======================= CROPPER.JS (Defer - Load After Page) ======================= -->
+    <script defer src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.12/dist/cropper.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.12/dist/cropper.min.css">
     
-    <!-- ======================= ✅ html2pdf.js ======================= -->
-    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+    <!-- ======================= html2pdf.js (Defer - Load After Page) ======================= -->
+    <script defer src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
     
-    <!-- ======================= SUPABASE JS ======================= -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- ======================= SUPABASE JS (Async - Non Blocking) ======================= -->
+    <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+    <!-- ✅ ANDROID WEBVIEW - FAST TOUCH RESPONSE -->
+    <script>
+        // Force GPU Acceleration for Android
+        if (navigator.userAgent.toLowerCase().indexOf('android') > -1) {
+            document.documentElement.style.webkitTransform = 'translateZ(0)';
+            document.documentElement.style.transform = 'translateZ(0)';
+        }
+        // Fast touch events
+        document.addEventListener('touchstart', function() {}, { passive: true });
+        document.addEventListener('touchmove', function() {}, { passive: true });
+        
+        // ✅ Show login screen IMMEDIATELY
+        console.log('🚀 App starting...');
+    </script>
 
     <style>
         /* ======================= ALL CSS STYLES ======================= */
@@ -1039,7 +1055,251 @@
         //     navigator.app.exitApp();
         // }
     }, false);
+	
+// ============================================
+// FIX: Chrome Notification Support
+// ============================================
 
+// ======================= NOTIFICATION FUNCTIONS =======================
+
+// Show browser notification (Cross-browser compatible)
+function showBrowserNotification(title, body, icon = '🔔') {
+    console.log(`🔔 Showing notification: ${title}`);
+    
+    // Check if browser supports notifications
+    if (!('Notification' in window)) {
+        console.log('❌ This browser does not support notifications');
+        return false;
+    }
+    
+    // Check if permission is already granted
+    if (Notification.permission === 'granted') {
+        sendNotification(title, body, icon);
+        return true;
+    }
+    
+    // If permission is denied, show instructions
+    if (Notification.permission === 'denied') {
+        console.log('❌ Notifications are blocked');
+        showNotificationEnableInstructions();
+        return false;
+    }
+    
+    // If permission is default, request it
+    if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                sendNotification(title, body, icon);
+                return true;
+            } else {
+                console.log('❌ Permission denied');
+                return false;
+            }
+        });
+        return false;
+    }
+}
+
+// Send notification (internal function)
+function sendNotification(title, body, icon = '🔔') {
+    try {
+        // Create icon
+        const iconSvg = `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232563eb"/%3E%3Ctext x="50" y="67" font-size="40" text-anchor="middle" fill="white"%3E${encodeURIComponent(icon)}%3C/text%3E%3C/svg%3E`;
+        
+        const notification = new Notification(title, {
+            body: body,
+            icon: iconSvg,
+            requireInteraction: false,
+            silent: false,
+            tag: Date.now().toString()
+        });
+        
+        // Handle click
+        notification.onclick = function() {
+            console.log('🔔 Notification clicked!');
+            window.focus();
+            notification.close();
+        };
+        
+        // Auto close after 8 seconds
+        setTimeout(() => {
+            notification.close();
+        }, 8000);
+        
+        console.log('✅ Notification sent successfully');
+        return true;
+        
+    } catch(e) {
+        console.error('❌ Error sending notification:', e);
+        // Fallback to toast notification
+        showNotification(title, 'success');
+        return false;
+    }
+}
+
+// Show instructions to enable notifications
+function showNotificationEnableInstructions() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: '🔔 Enable Notifications',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>Please enable notifications to stay updated:</strong></p>
+                    <br>
+                    <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; border-left: 4px solid #10b981;">
+                        <p><strong>For Chrome:</strong></p>
+                        <p>1. Click the <strong>🔒 Lock Icon</strong> in address bar</p>
+                        <p>2. Click <strong>"Site settings"</strong></p>
+                        <p>3. Find <strong>"Notifications"</strong></p>
+                        <p>4. Select <strong>"Allow"</strong></p>
+                        <p>5. <strong>Refresh</strong> the page</p>
+                    </div>
+                    <br>
+                    <div style="background: #fef3c7; padding: 12px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <p><strong>For Firefox:</strong></p>
+                        <p>1. Click the <strong>🔒 Lock Icon</strong> in address bar</p>
+                        <p>2. Click <strong>"Connection secure"</strong></p>
+                        <p>3. Click <strong>"More information"</strong></p>
+                        <p>4. Go to <strong>"Permissions"</strong></p>
+                        <p>5. Allow <strong>"Send notifications"</strong></p>
+                        <p>6. <strong>Refresh</strong> the page</p>
+                    </div>
+                </div>
+            `,
+            icon: 'info',
+            confirmButtonText: '🔄 Refresh Now',
+            confirmButtonColor: '#2563eb',
+            showCancelButton: true,
+            cancelButtonText: 'Later',
+            width: window.innerWidth <= 480 ? '95%' : '550px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                location.reload();
+            }
+        });
+    } else {
+        alert('Please enable notifications in your browser settings.');
+    }
+}
+
+// Request notification permission (called on page load)
+async function requestNotificationPermission() {
+    console.log('🔔 Requesting notification permission...');
+    
+    if (!('Notification' in window)) {
+        console.log('❌ This browser does not support notifications');
+        return;
+    }
+    
+    // If already granted, return
+    if (Notification.permission === 'granted') {
+        console.log('✅ Notifications already enabled');
+        return;
+    }
+    
+    // If denied, show instructions
+    if (Notification.permission === 'denied') {
+        console.log('❌ Notifications are blocked');
+        setTimeout(() => {
+            showNotificationEnableInstructions();
+        }, 2000);
+        return;
+    }
+    
+    // Request permission
+    try {
+        const permission = await Notification.requestPermission();
+        console.log('📋 Permission result:', permission);
+        
+        if (permission === 'granted') {
+            console.log('✅ Notifications enabled!');
+            showNotification('✅ Notifications enabled successfully!', 'success');
+            
+            // Send welcome notification
+            setTimeout(() => {
+                showBrowserNotification(
+                    '🔔 Welcome!',
+                    'You will receive notifications from Wings Convent School.',
+                    '🏫'
+                );
+            }, 1000);
+        } else if (permission === 'denied') {
+            console.log('❌ Notifications denied');
+        }
+    } catch(e) {
+        console.error('❌ Error requesting permission:', e);
+    }
+}
+
+// ======================= FIX: Override Existing Notification Function =======================
+
+// Override the existing showNotification function to include browser notifications
+const originalShowNotification = window.showNotification;
+
+window.showNotification = function(msg, type) {
+    // Call original function
+    if (typeof originalShowNotification === 'function') {
+        originalShowNotification(msg, type);
+    }
+    
+    // Also show browser notification for important messages
+    if (type === 'success' || type === 'info') {
+        // Check if browser notifications are enabled
+        if (Notification.permission === 'granted') {
+            // Get icon based on type
+            let icon = '✅';
+            if (type === 'info') icon = 'ℹ️';
+            if (type === 'success') icon = '✅';
+            if (type === 'warning') icon = '⚠️';
+            if (type === 'error') icon = '❌';
+            
+            // Send browser notification
+            try {
+                const notification = new Notification('🏫 Wings Convent School', {
+                    body: msg,
+                    icon: `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232563eb"/%3E%3Ctext x="50" y="67" font-size="40" text-anchor="middle" fill="white"%3E${encodeURIComponent(icon)}%3C/text%3E%3C/svg%3E`,
+                    requireInteraction: false,
+                    silent: false,
+                    tag: Date.now().toString()
+                });
+                
+                setTimeout(() => {
+                    notification.close();
+                }, 5000);
+                
+            } catch(e) {
+                // Silently fail if notification fails
+                console.log('Browser notification not sent:', e.message);
+            }
+        }
+    }
+};
+
+// ======================= INIT =======================
+
+// Request notification permission on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Delay notification request to avoid blocking page load
+    setTimeout(() => {
+        requestNotificationPermission();
+    }, 3000);
+});
+
+// Also on login
+const originalLoginSuccess = window.loginSuccess;
+window.loginSuccess = function(user) {
+    if (typeof originalLoginSuccess === 'function') {
+        originalLoginSuccess(user);
+    }
+    
+    // Request notification permission on login
+    setTimeout(() => {
+        requestNotificationPermission();
+    }, 1000);
+};
+
+console.log('✅ Chrome Notification Fix Applied!');
+console.log('📋 Current permission:', Notification.permission);
 // ============================================================ PART 01 INDEX.HTML ENDS HERE ===========================================	
 //============================================================= PART 02 SUPABASE DATABASE START HERE ===================================
 // ======================= PART 2: SUPABASE CREDENTIALS & CONFIGURATION =======================
@@ -9517,52 +9777,79 @@ console.log('   ✅ Android Back Button Support');
 
 // ======================= PART 03-O- ENDS HERE ======================================================================================
 //======================================== PART 03-P: COMPLETE LOGIN FUNCTION START PART =============================================
-// ======================= PART 3P: COMPLETE LOGIN FUNCTION ==========================================================================
+// ======================= PART 3P: COMPLETE LOGIN FUNCTION (OPTIMIZED) =======================
 
 async function login() {
     let loginInput = document.getElementById('loginEmailMobile').value.trim();
     let password = document.getElementById('password').value.trim();
     let rememberMe = document.getElementById('rememberMe')?.checked || false;
     
+    // ✅ FAST VALIDATION
     if (!loginInput || !password) {
         showNotification('Please enter email/mobile and password', 'error');
         return;
     }
+    
+    // ✅ SHOW LOADER IMMEDIATELY
     showLoader();
+    
+    // ✅ ALLOW UI TO RENDER
+    await new Promise(resolve => setTimeout(resolve, 50));
     
     try {
         let usersData = [];
         
-        if (navigator.onLine && supabaseClient) {
+        // ============================================
+        // ✅ STEP 1: CHECK CACHE FIRST (FAST)
+        // ============================================
+        const cached = localStorage.getItem('cache_users');
+        if (cached) {
             try {
-                console.log('🔄 Fetching users from Supabase...');
-                const { data, error } = await supabaseClient.from('users').select('*');
-                if (!error && data && data.length > 0) {
-                    usersData = data;
-                    window.users = data;
-                    localStorage.setItem('cache_users', JSON.stringify(data));
-                    console.log(`✅ Loaded ${usersData.length} users from Supabase`);
-                } else {
-                    console.log('⚠️ No users from Supabase, checking cache...');
+                usersData = JSON.parse(cached);
+                window.users = usersData;
+                console.log(`📦 Loaded ${usersData.length} users from cache (fast)`);
+            } catch(e) {
+                console.error('Cache parse error:', e);
+            }
+        }
+        
+        // ============================================
+        // ✅ STEP 2: IF CACHE EMPTY, FETCH FROM SUPABASE
+        // ============================================
+        if (usersData.length === 0 && navigator.onLine) {
+            try {
+                // ✅ Try to get supabase client
+                let supabase = null;
+                if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) {
+                    supabase = window.supabaseClient;
+                } else if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                    supabase = supabaseClient;
+                } else if (typeof supabase !== 'undefined' && supabase.createClient) {
+                    supabase = supabase.createClient(
+                        "https://hghwbysjvkqcxdoqwkim.supabase.co",
+                        "sb_publishable_6T05auZDBn2okYevOxMjUg_TIF9nZ1w"
+                    );
+                    window.supabaseClient = supabase;
+                }
+                
+                if (supabase) {
+                    console.log('🔄 Fetching users from Supabase...');
+                    const { data, error } = await supabase.from('users').select('*');
+                    if (!error && data && data.length > 0) {
+                        usersData = data;
+                        window.users = data;
+                        localStorage.setItem('cache_users', JSON.stringify(data));
+                        console.log(`✅ Loaded ${usersData.length} users from Supabase`);
+                    }
                 }
             } catch(supabaseError) {
                 console.warn('⚠️ Supabase fetch error:', supabaseError);
             }
         }
         
-        if (usersData.length === 0) {
-            const cached = localStorage.getItem('cache_users');
-            if (cached) {
-                try {
-                    usersData = JSON.parse(cached);
-                    window.users = usersData;
-                    console.log(`📦 Loaded ${usersData.length} users from cache`);
-                } catch(e) {
-                    console.error('Cache parse error:', e);
-                }
-            }
-        }
-        
+        // ============================================
+        // ✅ STEP 3: CHECK IF ANY USER EXISTS
+        // ============================================
         if (usersData.length === 0) {
             hideLoader();
             showNotification('⚠️ No users found! Please set up the system first.', 'warning');
@@ -9578,6 +9865,9 @@ async function login() {
             return;
         }
         
+        // ============================================
+        // ✅ STEP 4: FIND USER (FAST)
+        // ============================================
         const foundUser = usersData.find(u => 
             (u.email && u.email.toLowerCase() === loginInput.toLowerCase()) || 
             (u.mobile && u.mobile === loginInput)
@@ -9595,6 +9885,9 @@ async function login() {
             return;
         }
         
+        // ============================================
+        // ✅ STEP 5: GET USER PHOTO (FAST)
+        // ============================================
         let userPhotoUrl = foundUser.photo_url || null;
         
         if (!userPhotoUrl && foundUser.photo_data && foundUser.photo_data.startsWith('data:image')) {
@@ -9610,6 +9903,9 @@ async function login() {
             }
         }
         
+        // ============================================
+        // ✅ STEP 6: SET CURRENT USER (FAST)
+        // ============================================
         window.currentUser = {
             id: foundUser.id,
             name: foundUser.name,
@@ -9639,13 +9935,13 @@ async function login() {
             localStorage.removeItem('rememberedUser');
         }
         
-        if (typeof rebuildCacheAfterLogin === 'function') {
-            await rebuildCacheAfterLogin();
-        }
-        
+        // ============================================
+        // ✅ STEP 7: SWITCH SCREENS IMMEDIATELY
+        // ============================================
         document.getElementById('loginScreen').classList.remove('active');
         document.getElementById('mainScreen').classList.add('active');
         
+        // Update header
         if (typeof updateSchoolLogoInHeader === 'function') {
             updateSchoolLogoInHeader();
         }
@@ -9655,6 +9951,7 @@ async function login() {
             headerUserName.innerHTML = window.currentUser.name || 'User';
         }
         
+        // ✅ Render Dashboard FAST (Without waiting for all data)
         if (typeof renderDashboard === 'function') {
             renderDashboard();
         }
@@ -9663,29 +9960,65 @@ async function login() {
             startDateTime();
         }
         
-        console.log('🔔 Loading notifications after login...');
-        if (typeof loadNotificationsFromSupabase === 'function') {
-            await loadNotificationsFromSupabase();
-            if (typeof updateNotificationBell === 'function') {
-                updateNotificationBell();
-            }
-        }
-        
+        // ✅ HIDE LOADER IMMEDIATELY
         hideLoader();
         showNotification(`✅ Welcome ${window.currentUser.name}!`, 'success');
         
-        setTimeout(function() {
-            requestNotificationPermissionAfterLogin();
-            setTimeout(function() {
-                startNotificationListener();
-            }, 1000);
-        }, 1500);
-        
-        setTimeout(() => {
-            if (navigator.onLine && supabaseClient && typeof processPendingQueue === 'function') {
-                processPendingQueue();
+        // ============================================
+        // ✅ STEP 8: LOAD DATA IN BACKGROUND (Not Blocking UI)
+        // ============================================
+        setTimeout(async () => {
+            try {
+                // Rebuild cache in background
+                if (typeof rebuildCacheAfterLogin === 'function') {
+                    await rebuildCacheAfterLogin();
+                }
+                
+                // Load notifications in background
+                console.log('🔔 Loading notifications after login...');
+                if (typeof loadNotificationsFromSupabase === 'function') {
+                    await loadNotificationsFromSupabase();
+                    if (typeof updateNotificationBell === 'function') {
+                        updateNotificationBell();
+                    }
+                }
+            } catch(e) {
+                console.warn('⚠️ Background load error:', e);
             }
-            setTimeout(() => {
+        }, 200);
+        
+        // ============================================
+        // ✅ STEP 9: NOTIFICATIONS & SYNC (Background)
+        // ============================================
+        setTimeout(() => {
+            try {
+                if (typeof requestNotificationPermissionAfterLogin === 'function') {
+                    requestNotificationPermissionAfterLogin();
+                }
+                setTimeout(() => {
+                    if (typeof startNotificationListener === 'function') {
+                        startNotificationListener();
+                    }
+                }, 500);
+            } catch(e) {
+                console.warn('⚠️ Notification error:', e);
+            }
+        }, 1000);
+        
+        // ✅ Process pending queue in background
+        setTimeout(() => {
+            try {
+                if (navigator.onLine && typeof processPendingQueue === 'function') {
+                    processPendingQueue();
+                }
+            } catch(e) {
+                console.warn('⚠️ Pending queue error:', e);
+            }
+        }, 2000);
+        
+        // ✅ Refresh notifications in background
+        setTimeout(() => {
+            try {
                 if (typeof loadNotificationsFromSupabase === 'function') {
                     loadNotificationsFromSupabase().then(function() {
                         if (typeof updateNotificationBell === 'function') {
@@ -9693,8 +10026,10 @@ async function login() {
                         }
                     });
                 }
-            }, 2000);
-        }, 2000);
+            } catch(e) {
+                console.warn('⚠️ Notification refresh error:', e);
+            }
+        }, 3000);
         
     } catch (error) {
         console.error('❌ Login error:', error);
@@ -14934,20 +15269,14 @@ window.getFilteredStudentsForCurrentUser = function() {
     
     return [];
 }
-// ======================= SAVE STUDENT (REAL-TIME PHOTO FIX) =======================
-// ======================= SAVE STUDENT (FIXED - CLASS/SECTION ISSUE) =======================
+// ======================= SAVE STUDENT (FIXED - NO HARDCODED 85) =======================
+// ======================= SAVE STUDENT (FIXED - attendance = 0 for new) =======================
 window.saveStudent = async function(editId) {
-    if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) {
-        showNotification('Only administrators and accountants can add/edit students!', 'error');
-        return;
-    }
-    
     console.log('💾 saveStudent called, editId:', editId);
     
-    // Get form values
     const name = document.getElementById('stuName')?.value.trim();
-    const cls = document.getElementById('stuClass')?.value;  // ✅ ONLY class name
-    const sec = document.getElementById('stuSec')?.value;    // ✅ ONLY section
+    const cls = document.getElementById('stuClass')?.value;
+    const sec = document.getElementById('stuSec')?.value;
     const roll = parseInt(document.getElementById('stuRoll')?.value);
     
     if (!name || !cls || !roll) {
@@ -14959,7 +15288,7 @@ window.saveStudent = async function(editId) {
     const studentId = isEdit ? editId : ('S' + Date.now());
     const folderPath = `${studentId}_${name.replace(/\s/g, '_')}`;
     
-    // Upload photo if online and photo data exists
+    // Upload photo if online
     let photoUrl = currentStudentPhotoUrl;
     if (navigator.onLine && currentStudentPhotoData && !photoUrl) {
         showLoader();
@@ -14970,10 +15299,8 @@ window.saveStudent = async function(editId) {
             'image/jpeg'
         );
         hideLoader();
-        console.log('📸 Photo uploaded, URL:', photoUrl);
     }
     
-    // Upload other documents
     let aadharUrl = currentStudentAadharUrl;
     if (navigator.onLine && currentStudentAadharData && !aadharUrl) {
         aadharUrl = await uploadStudentDocumentToSupabase(
@@ -14996,12 +15323,35 @@ window.saveStudent = async function(editId) {
     
     const totalFee = currentStudentTotalFee || 35000;
     
-    // 🔥 CRITICAL FIX: cls should be ONLY class name, sec should be ONLY section
+    // ✅ FIX: New student attendance = 0 (NOT 85)
+    let attendanceValue = 0;
+    
+    // If editing, try to get real attendance from attendance table
+    if (isEdit) {
+        let existingStudent = window.students.find(s => s.id === editId);
+        if (existingStudent && window.attendance && window.attendance.length > 0) {
+            let studentRecords = window.attendance.filter(a => 
+                a && a.student_name && a.student_name === existingStudent.name
+            );
+            if (studentRecords.length > 0) {
+                let present = studentRecords.filter(a => a.status === 'Present').length;
+                attendanceValue = Math.round((present / studentRecords.length) * 100);
+            }
+        }
+        // If no attendance records, keep existing
+        if (attendanceValue === 0 && existingStudent?.attendance) {
+            attendanceValue = existingStudent.attendance;
+        }
+    }
+    
+    console.log(`📊 Attendance for ${name}: ${attendanceValue}% (${isEdit ? 'Edit' : 'New'})`);
+    
+    // Build student object
     const newStudent = {
         id: studentId,
         name: name,
-        cls: cls,                    // ✅ ONLY "Playgroup", "Nursery", "KG1", "KG2"
-        sec: sec || 'A',             // ✅ ONLY "A", "B", "C"
+        cls: cls,
+        sec: sec || 'A',
         roll: roll,
         gender: document.getElementById('stuGender')?.value || 'Male',
         religion: document.getElementById('stuReligion')?.value || '',
@@ -15021,27 +15371,25 @@ window.saveStudent = async function(editId) {
         total_paid_fee: 0,
         fee_due: totalFee,
         fee_paid_status: 'Pending',
-        attendance: 85,
+        // ✅ FIX: attendance = 0 for new students
+        attendance: attendanceValue,
         status: 'Active',
         fee_installment: currentSelectedInstallment || 'annual',
         transport_enabled: document.getElementById('transportEnabled')?.checked || false,
         photo_url: photoUrl,
-        photo_data: currentStudentPhotoData || null,
+        photo_data: currentStudentPhotoData,
         aadhar_url: aadharUrl,
-        aadhar_data: currentStudentAadharData || null,
+        aadhar_data: currentStudentAadharData,
         birth_url: birthUrl,
-        birth_data: currentStudentBirthData || null,
-        other_docs: currentStudentOtherDocs || [],
-        // 🔥 FIX: class_teacher should be based on cls + sec
-        class_teacher: getTeacherForClass(cls, sec),
-        created_at: isEdit ? null : new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        birth_data: currentStudentBirthData,
+        other_docs: currentStudentOtherDocs,
+        class_teacher: getTeacherForClass(cls, sec)
     };
     
     console.log('📤 Saving student:', newStudent);
-    console.log('📚 cls:', newStudent.cls, 'sec:', newStudent.sec);
+    console.log('📊 Attendance:', newStudent.attendance);
     
-    // ✅ Update LocalStorage Cache
+    // Update LocalStorage Cache
     if (isEdit) {
         let index = window.students.findIndex(s => s.id === editId);
         if (index !== -1) {
@@ -15052,17 +15400,17 @@ window.saveStudent = async function(editId) {
     }
     localStorage.setItem('cache_students', JSON.stringify(window.students));
     
-    // ✅ Close modal
+    // Close modal
     let modal = document.querySelector('.modal-overlay');
     if (modal) modal.remove();
     
-    // ✅ Refresh UI
+    // UI Refresh
     renderStudentUI();
     setTimeout(() => refreshStudentCharts(), 100);
     
     showNotification(`✅ ${isEdit ? 'Updated' : 'Added'} "${name}"!`, 'success');
     
-    // ✅ Save to Supabase
+    // Save to Supabase
     showLoader();
     let success = await saveStudentToSupabase(newStudent);
     hideLoader();
@@ -15509,14 +15857,85 @@ window.updateTotalFee = function() {
     currentStudentTotalFee = totalFee;
 }
 
-// ======================= RENDER STUDENT LIST =======================
-window.renderStudentList = function(studentsToRender) {
+// ======================= GET REAL ATTENDANCE =======================
+function getStudentAttendance(studentName) {
+    console.log('📊 getStudentAttendance called for:', studentName);
+    
+    // Check if attendance data exists
+    if (!window.attendance || window.attendance.length === 0) {
+        console.log('📭 No attendance records found');
+        return 0;
+    }
+    
+    // Get all records for this student
+    let studentRecords = window.attendance.filter(a => 
+        a && a.student_name && a.student_name === studentName
+    );
+    
+    if (studentRecords.length === 0) {
+        console.log(`📭 No attendance records for: ${studentName}`);
+        return 0;
+    }
+    
+    // Count present days
+    let present = studentRecords.filter(a => a.status === 'Present').length;
+    let total = studentRecords.length;
+    
+    // Calculate percentage
+    let percentage = Math.round((present / total) * 100);
+    
+    console.log(`📊 ${studentName}: ${present}/${total} = ${percentage}%`);
+    return percentage;
+}
+// ======================= RENDER STUDENT LIST (COMPLETE FIX - NO 85) =======================
+function renderStudentList(studentsToRender) {
+    console.log('🎨 renderStudentList called with', studentsToRender.length, 'students');
+    
     let showEditDeleteButtons = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant'));
+    
+    // ✅ CRITICAL: Check each student's attendance from localStorage
+    let studentsFromCache = [];
+    try {
+        const cached = localStorage.getItem('cache_students');
+        if (cached) {
+            studentsFromCache = JSON.parse(cached);
+            console.log('📦 Students from cache:', studentsFromCache.length);
+        }
+    } catch(e) {
+        console.error('Cache error:', e);
+    }
     
     let html = '';
     for (let s of studentsToRender) {
+        // ✅ FIX: Get LATEST attendance from cache
+        let cachedStudent = studentsFromCache.find(c => c.id === s.id);
+        let latestAttendance = cachedStudent ? cachedStudent.attendance : s.attendance;
+        
+        // ✅ FIX: Calculate REAL attendance from attendance table
+        let realAttendance = 0;
+        if (window.attendance && window.attendance.length > 0) {
+            let studentRecords = window.attendance.filter(a => 
+                a && a.student_name && a.student_name === s.name
+            );
+            if (studentRecords.length > 0) {
+                let present = studentRecords.filter(a => a.status === 'Present').length;
+                realAttendance = Math.round((present / studentRecords.length) * 100);
+                console.log(`📊 ${s.name}: ${present}/${studentRecords.length} = ${realAttendance}%`);
+            }
+        }
+        
+        // ✅ FINAL ATTENDANCE: Use realAttendance if available, else use latestAttendance
+        let finalAttendance = realAttendance > 0 ? realAttendance : (latestAttendance || 0);
+        
+        // ✅ Show correct badge
+        let attendanceBadge = finalAttendance >= 75 ? 'badge-success' : 
+                             finalAttendance >= 50 ? 'badge-warning' : 'badge-danger';
+        let attendanceText = finalAttendance > 0 ? `${finalAttendance}%` : '📊 Not Marked';
+        
+        console.log(`📊 ${s.name}: finalAttendance = ${finalAttendance}, text = ${attendanceText}`);
+        
         let photoSrc = s.photo_url || s.photo_data || (s.gender === 'Male' ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%232563eb'/%3E%3Ctext x='50' y='67' font-size='45' text-anchor='middle' fill='white'%3E👨%3C/text%3E%3C/svg%3E" : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23ec489a'/%3E%3Ctext x='50' y='67' font-size='45' text-anchor='middle' fill='white'%3E👩%3C/text%3E%3C/svg%3E");
-        let attendance = s.attendance || 85;
+        
         let paidAmount = s.total_paid_fee || 0;
         let totalFeeAmount = s.total_fee || 35000;
         let dueAmount = s.fee_due || 0;
@@ -15539,7 +15958,9 @@ window.renderStudentList = function(studentsToRender) {
                     <p style="color:var(--text-secondary); font-size:${isMobileDevice ? '10px' : '11px'}; margin:0;">${escapeHtml(s.cls)} ${escapeHtml(s.sec)} | Roll: ${s.roll}</p>
                 </div>
                 <div style="text-align:right;">
-                    <span class="badge ${attendance>=75?'badge-success':'badge-warning'}" style="font-size:${isMobileDevice ? '10px' : '11px'}; padding:${isMobileDevice ? '3px 8px' : '4px 12px'}; border-radius:20px;">📊 ${attendance}%</span>
+                    <span class="badge ${attendanceBadge}" style="font-size:${isMobileDevice ? '10px' : '11px'}; padding:${isMobileDevice ? '3px 8px' : '4px 12px'}; border-radius:20px;">
+                        📊 ${attendanceText}
+                    </span>
                     <div style="margin-top:5px;"><span class="badge ${dueClass}" style="font-size:${isMobileDevice ? '9px' : '10px'}; padding:${isMobileDevice ? '2px 8px' : '3px 10px'}; border-radius:20px;">${dueText}</span></div>
                     <div style="margin-top:3px;"><span style="background:${statusColor}; color:white; padding:${isMobileDevice ? '1px 8px' : '2px 10px'}; border-radius:20px; font-size:${isMobileDevice ? '8px' : '9px'};">${feeStatus}</span></div>
                 </div>
@@ -15575,43 +15996,398 @@ window.renderStudentList = function(studentsToRender) {
     
     document.getElementById('studentsList').innerHTML = html;
 }
+// ======================= SHOW ADD STUDENT FORM =======================
+function showAddStudentForm(editId = null) {
+    if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) { 
+        showNotification('Only administrators and accountants can add/edit students!', 'error'); 
+        return; 
+    }
+    
+    let isEdit = editId !== null;
+    let studentData = isEdit ? window.students.find(s => s.id === editId) : null;
+    
+    // Load existing data for edit mode
+    currentStudentPhotoData = isEdit ? studentData?.photo_data : null;
+    currentStudentPhotoUrl = isEdit ? studentData?.photo_url : null;
+    currentStudentAadharData = isEdit ? studentData?.aadhar_data : null;
+    currentStudentAadharUrl = isEdit ? studentData?.aadhar_url : null;
+    currentStudentBirthData = isEdit ? studentData?.birth_data : null;
+    currentStudentBirthUrl = isEdit ? studentData?.birth_url : null;
+    currentStudentOtherDocs = isEdit ? (studentData?.other_docs || []) : [];
+    currentStudentTotalFee = isEdit ? studentData?.total_fee : 35000;
+    
+    let feeData = getClassFeeData(isEdit ? studentData?.cls : 'Playgroup A');
+    let isTransportEnabled = isEdit ? studentData?.transport_enabled : false;
+    let totalFeeWithTransport = isTransportEnabled ? feeData.totalFee : feeData.baseFee;
+    let defaultInstallment = isEdit ? (studentData?.fee_installment || 'annual') : 'annual';
+    
+    let classList = getClassList();
+    let classOptionsHtml = classList.map(c => `<option value="${c}" ${isEdit && studentData?.cls === c ? 'selected' : ''}>${c}</option>`).join('');
+    
+    let religionOptions = ['Hindu', 'Muslim', 'Sikh', 'Christian', 'Jain', 'Buddhist', 'Parsi', 'Other'];
+    let religionHtml = religionOptions.map(r => `<option ${isEdit && studentData?.religion === r ? 'selected' : ''}>${r}</option>`).join('');
+    
+    let castCategoryOptions = ['General', 'OBC', 'SC', 'ST', 'EWS', 'Other'];
+    let castCategoryHtml = castCategoryOptions.map(c => `<option ${isEdit && studentData?.cast_category === c ? 'selected' : ''}>${c}</option>`).join('');
+    
+    let isMobileDevice = isMobile();
+    
+    let modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:10000;padding:16px;';
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:${isMobileDevice ? '95%' : '800px'}; width:95%; max-height:90vh; overflow-y:auto; border-radius:28px; padding:0; background:var(--bg-surface);">
+            <div style="background:linear-gradient(135deg,#667eea,#764ba2); padding:${isMobileDevice ? '12px 16px' : '16px 20px'}; border-radius:28px 28px 0 0; position:sticky; top:0; z-index:10;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h2 style="color:white; margin:0; font-size:${isMobileDevice ? '16px' : '18px'};"><i class="fas ${isEdit ? 'fa-edit' : 'fa-user-plus'}"></i> ${isEdit ? 'Edit Student' : 'Add New Student'}</h2>
+                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); color:white; border:none; width:${isMobileDevice ? '30px' : '34px'}; height:${isMobileDevice ? '30px' : '34px'}; border-radius:50%; cursor:pointer; font-size:${isMobileDevice ? '18px' : '20px'};">&times;</button>
+                </div>
+            </div>
+            
+            <div style="padding:${isMobileDevice ? '14px' : '20px'};">
+                <!-- Basic Info -->
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:0 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                    <i class="fas fa-user-circle"></i> Basic Information
+                </h3>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">👤 Full Name *</label>
+                        <input id="stuName" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? escapeHtml(studentData?.name || '') : ''}">
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🎂 Date of Birth</label>
+                        <input type="date" id="stuDob" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.dob || '') : ''}">
+                    </div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">⚥ Gender</label>
+                        <select id="stuGender" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">
+                            <option ${isEdit && studentData?.gender === 'Male' ? 'selected' : ''}>Male</option>
+                            <option ${isEdit && studentData?.gender === 'Female' ? 'selected' : ''}>Female</option>
+                        </select>
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🩸 Blood Group</label>
+                        <select id="stuBlood" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">
+                            <option ${isEdit && studentData?.blood_group === 'O+' ? 'selected' : ''}>O+</option>
+                            <option ${isEdit && studentData?.blood_group === 'O-' ? 'selected' : ''}>O-</option>
+                            <option ${isEdit && studentData?.blood_group === 'A+' ? 'selected' : ''}>A+</option>
+                            <option ${isEdit && studentData?.blood_group === 'A-' ? 'selected' : ''}>A-</option>
+                            <option ${isEdit && studentData?.blood_group === 'B+' ? 'selected' : ''}>B+</option>
+                            <option ${isEdit && studentData?.blood_group === 'B-' ? 'selected' : ''}>B-</option>
+                            <option ${isEdit && studentData?.blood_group === 'AB+' ? 'selected' : ''}>AB+</option>
+                            <option ${isEdit && studentData?.blood_group === 'AB-' ? 'selected' : ''}>AB-</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🆔 Admission No</label>
+                        <input id="stuAdmissionNo" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.admission_no || '') : 'ADM' + Math.floor(1000 + Math.random() * 9000)}">
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🔢 Roll Number *</label>
+                        <input type="number" id="stuRoll" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.roll || '') : window.students.length + 1}">
+                    </div>
+                </div>
+                
+                <!-- Religion & Cast -->
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                    <i class="fas fa-praying-hands"></i> Religion & Caste Details
+                </h3>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(3,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🕉️ Religion</label>
+                        <select id="stuReligion" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">${religionHtml}</select>
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🏷️ Cast Category</label>
+                        <select id="stuCastCategory" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">${castCategoryHtml}</select>
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📜 Cast Name</label>
+                        <input id="stuCastName" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" placeholder="e.g., Sharma, Patel" value="${isEdit ? escapeHtml(studentData?.cast_name || '') : ''}">
+                    </div>
+                </div>
+                
+                <!-- Contact Info -->
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                    <i class="fas fa-address-card"></i> Contact Information
+                </h3>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📞 Mobile</label>
+                        <input id="stuMobile" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.mobile || '') : ''}">
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">✉️ Email</label>
+                        <input id="stuEmail" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.email || '') : ''}">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📍 Address</label>
+                    <textarea id="stuAddress" class="form-control" rows="2" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">${isEdit ? escapeHtml(studentData?.address || '') : ''}</textarea>
+                </div>
+                
+                <!-- Parent Info -->
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                    <i class="fas fa-family"></i> Parent Information
+                </h3>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">👨 Father's Name</label>
+                        <input id="stuFather" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? escapeHtml(studentData?.father_name || '') : ''}">
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📞 Father's Mobile</label>
+                        <input id="stuFatherMobile" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.father_mobile || '') : ''}">
+                    </div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">👩 Mother's Name</label>
+                        <input id="stuMother" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? escapeHtml(studentData?.mother_name || '') : ''}">
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📞 Mother's Mobile</label>
+                        <input id="stuMotherMobile" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.mother_mobile || '') : ''}">
+                    </div>
+                </div>
+                
+                <!-- Academic Info -->
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                    <i class="fas fa-graduation-cap"></i> Academic Information
+                </h3>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🏫 Class *</label>
+                        <select id="stuClass" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" onchange="updateTotalFee()">${classOptionsHtml}</select>
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📚 Section</label>
+                        <select id="stuSec" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">
+                            <option ${isEdit && studentData?.sec === 'A' ? 'selected' : ''}>A</option>
+                            <option ${isEdit && studentData?.sec === 'B' ? 'selected' : ''}>B</option>
+                            <option ${isEdit && studentData?.sec === 'C' ? 'selected' : ''}>C</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Fee Info -->
+                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
+                    <i class="fas fa-rupee-sign"></i> Fee Information
+                </h3>
+                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">💰 Total Fee</label>
+                        <input type="number" id="stuTotalFee" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-body);color:#10b981;font-weight:bold;width:100%;" value="${totalFeeWithTransport}" readonly>
+                    </div>
+                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📅 Installment Plan</label>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:5px;">
+                            <button type="button" class="installment-btn" data-installment="annual" onclick="selectInstallment('annual')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📅 Annual</button>
+                            <button type="button" class="installment-btn" data-installment="half_yearly" onclick="selectInstallment('half_yearly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📆 Half-Yearly</button>
+                            <button type="button" class="installment-btn" data-installment="quarterly" onclick="selectInstallment('quarterly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">🗓️ Quarterly</button>
+                            <button type="button" class="installment-btn" data-installment="monthly" onclick="selectInstallment('monthly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📅 Monthly</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">
+                        <input type="checkbox" id="transportEnabled" ${isTransportEnabled ? 'checked' : ''} onchange="updateTotalFee()"> 🚌 Enable Transport Facility
+                    </label>
+                </div>
+                
+                <!-- Documents -->
+                <div style="background:var(--bg-body); border-radius:16px; padding:${isMobileDevice ? '12px' : '16px'}; margin:16px 0;">
+                    <h4 style="color:var(--text-primary); font-size:${isMobileDevice ? '13px' : '14px'};"><i class="fas fa-cloud-upload-alt"></i> Documents</h4>
+                    <div style="display:grid; grid-template-columns:${isMobileDevice ? 'repeat(2,1fr)' : 'repeat(4,1fr)'}; gap:${isMobileDevice ? '8px' : '10px'};">
+                        <div id="studentPhotoUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);">
+                            <i class="fas fa-camera" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">📸 Photo
+                        </div>
+                        <div id="studentAadharUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);">
+                            <i class="fas fa-id-card" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">🆔 Aadhar
+                        </div>
+                        <div id="studentBirthUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);">
+                            <i class="fas fa-birthday-cake" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">🎂 Birth
+                        </div>
+                        <div id="studentOtherUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);">
+                            <i class="fas fa-paperclip" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">📎 Other
+                        </div>
+                    </div>
+                    <div id="otherDocsList" style="margin-top:10px;"></div>
+                </div>
+                
+                <!-- Buttons -->
+                <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid var(--border-light); flex-wrap:wrap;">
+                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding:${isMobileDevice ? '10px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:#ef4444; color:white;"><i class="fas fa-times"></i> Cancel</button>
+                    <button class="btn btn-primary" onclick="saveStudent('${isEdit ? editId : ''}')" style="padding:${isMobileDevice ? '10px 16px' : '10px 25px'}; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; font-size:${isMobileDevice ? '13px' : '14px'};">
+                        <i class="fas fa-save"></i> ${isEdit ? 'Update Student' : 'Save Student'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Setup upload handlers
+    document.getElementById('studentPhotoUpload').onclick = () => {
+        openStudentPhotoCapture(async (croppedData) => {
+            showLoader();
+            currentStudentPhotoData = croppedData;
+            currentStudentPhotoUrl = null;
+            document.getElementById('studentPhotoUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Photo';
+            document.getElementById('studentPhotoUpload').style.borderColor = '#10b981';
+            
+            // Show preview immediately
+            let previewDiv = document.getElementById('photoPreview');
+            if (!previewDiv) {
+                previewDiv = document.createElement('div');
+                previewDiv.id = 'photoPreview';
+                previewDiv.style.marginTop = '10px';
+                previewDiv.style.textAlign = 'center';
+                document.querySelector('.modal-content > div:last-child').insertBefore(
+                    previewDiv,
+                    document.querySelector('.modal-content > div:last-child').lastElementChild
+                );
+            }
+            previewDiv.innerHTML = `
+                <div style="text-align:center; margin-top:10px;">
+                    <img src="${croppedData}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid #10b981;">
+                    <p style="font-size:11px; margin-top:5px; color:#10b981;">📸 New Photo (Click Save to update)</p>
+                </div>
+            `;
+            
+            hideLoader();
+            showNotification('📸 Photo captured! Click Save to update.', 'success');
+        });
+    };
+    
+    document.getElementById('studentAadharUpload').onclick = () => {
+        openDocumentUpload((data, filename) => {
+            currentStudentAadharData = data;
+            currentStudentAadharUrl = null;
+            document.getElementById('studentAadharUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Aadhar';
+            document.getElementById('studentAadharUpload').style.borderColor = '#10b981';
+            showNotification('✅ Aadhar uploaded!', 'success');
+        });
+    };
+    
+    document.getElementById('studentBirthUpload').onclick = () => {
+        openDocumentUpload((data, filename) => {
+            currentStudentBirthData = data;
+            currentStudentBirthUrl = null;
+            document.getElementById('studentBirthUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Birth';
+            document.getElementById('studentBirthUpload').style.borderColor = '#10b981';
+            showNotification('✅ Birth certificate uploaded!', 'success');
+        });
+    };
+    
+    document.getElementById('studentOtherUpload').onclick = () => {
+        openDocumentUpload((data, filename) => {
+            currentStudentOtherDocs.push({ name: filename, data: data });
+            document.getElementById('otherDocsList').innerHTML = currentStudentOtherDocs.map((d,i) => `
+                <div style="background:#f0fdf4; padding:5px 10px; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                    📄 ${d.name} 
+                    <button onclick="removeOtherDoc(${i})" style="background:#ef4444; color:white; border:none; border-radius:20px; padding:2px 8px; cursor:pointer;">✖</button>
+                </div>
+            `).join('');
+            showNotification('✅ Document uploaded!', 'success');
+        });
+    };
+    
+    // Mark existing uploaded documents
+    if (isEdit) {
+        if (currentStudentPhotoData || currentStudentPhotoUrl) {
+            document.getElementById('studentPhotoUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Photo';
+            document.getElementById('studentPhotoUpload').style.borderColor = '#10b981';
+        }
+        if (currentStudentAadharData || currentStudentAadharUrl) {
+            document.getElementById('studentAadharUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Aadhar';
+            document.getElementById('studentAadharUpload').style.borderColor = '#10b981';
+        }
+        if (currentStudentBirthData || currentStudentBirthUrl) {
+            document.getElementById('studentBirthUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Birth';
+            document.getElementById('studentBirthUpload').style.borderColor = '#10b981';
+        }
+        if (currentStudentOtherDocs.length > 0) {
+            document.getElementById('otherDocsList').innerHTML = currentStudentOtherDocs.map((d,i) => `
+                <div style="background:#f0fdf4; padding:5px 10px; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                    📄 ${d.name} 
+                    <button onclick="removeOtherDoc(${i})" style="background:#ef4444; color:white; border:none; border-radius:20px; padding:2px 8px; cursor:pointer;">✖</button>
+                </div>
+            `).join('');
+        }
+    }
+    
+    setTimeout(() => selectInstallment(defaultInstallment), 50);
+}
 
 // ======================= VIEW STUDENT DETAILS =======================
+// ======================= VIEW STUDENT DETAILS (FIXED - REAL ATTENDANCE) =======================
 window.viewStudentDetails = function(id) {
     let s = window.students.find(s => s.id === id);
-    if (!s) return;
+    if (!s) {
+        showNotification('Student not found!', 'error');
+        return;
+    }
+    
+    // ✅ FIX: Calculate REAL attendance from attendance table
+    let attendance = 0;
+    if (window.attendance && window.attendance.length > 0) {
+        let studentRecords = window.attendance.filter(a => 
+            a && a.student_name && a.student_name === s.name
+        );
+        if (studentRecords.length > 0) {
+            let present = studentRecords.filter(a => a.status === 'Present').length;
+            attendance = Math.round((present / studentRecords.length) * 100);
+        }
+    }
+    
+    // ✅ If no attendance records, use s.attendance (0 for new students)
+    let finalAttendance = attendance > 0 ? attendance : (s.attendance || 0);
+    let attendanceText = finalAttendance > 0 ? `${finalAttendance}%` : '📊 Not Marked';
     
     let paidAmount = s.total_paid_fee || 0;
     let dueAmount = s.fee_due || 0;
     
+    // ✅ Escape HTML for safety
+    function safe(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // Photo
+    let photoHtml = '';
+    if (s.photo_url || s.photo_data) {
+        photoHtml = `<img src="${s.photo_url || s.photo_data}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`;
+    } else {
+        photoHtml = '<i class="fas fa-user-graduate" style="font-size:60px;"></i>';
+    }
+    
     Swal.fire({
-        title: `Student Profile - ${s.name}`,
+        title: `Student Profile - ${safe(s.name)}`,
         html: `
             <div style="text-align:center">
-                ${s.photo_url || s.photo_data ? `<img src="${s.photo_url || s.photo_data}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : '<i class="fas fa-user-graduate" style="font-size:60px;"></i>'}
-                <h3>${s.name}</h3>
-                <p>${s.cls} ${s.sec} | Roll: ${s.roll}</p>
+                ${photoHtml}
+                <h3>${safe(s.name)}</h3>
+                <p>${safe(s.cls)} ${safe(s.sec)} | Roll: ${s.roll}</p>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left; margin-top:10px;">
                 <div><strong>ID:</strong> ${s.id}</div>
-                <div><strong>Admission:</strong> ${s.admission_no || 'N/A'}</div>
-                <div><strong>Gender:</strong> ${s.gender || 'N/A'}</div>
-                <div><strong>DOB:</strong> ${s.dob || 'N/A'}</div>
-                <div><strong>Blood:</strong> ${s.blood_group || 'O+'}</div>
-                <div><strong>Religion:</strong> ${s.religion || 'N/A'}</div>
-                <div><strong>Cast:</strong> ${s.cast_name || s.cast_category || 'N/A'}</div>
+                <div><strong>Admission:</strong> ${safe(s.admission_no || 'N/A')}</div>
+                <div><strong>Gender:</strong> ${safe(s.gender || 'N/A')}</div>
+                <div><strong>DOB:</strong> ${safe(s.dob || 'N/A')}</div>
+                <div><strong>Blood:</strong> ${safe(s.blood_group || 'O+')}</div>
+                <div><strong>Religion:</strong> ${safe(s.religion || 'N/A')}</div>
+                <div><strong>Cast:</strong> ${safe(s.cast_name || s.cast_category || 'N/A')}</div>
                 <div><strong>Total Fee:</strong> ${formatFullCurrency(s.total_fee || 0)}</div>
                 <div><strong>Paid:</strong> ${formatFullCurrency(paidAmount)}</div>
                 <div><strong>Due:</strong> ${formatFullCurrency(dueAmount)}</div>
-                <div><strong>Status:</strong> ${s.fee_paid_status || 'Pending'}</div>
-                <div><strong>Attendance:</strong> ${s.attendance || 85}%</div>
+                <div><strong>Status:</strong> ${safe(s.fee_paid_status || 'Pending')}</div>
+                <div><strong>Attendance:</strong> ${attendanceText}</div>
+                <div><strong>Class Teacher:</strong> ${safe(s.class_teacher || 'N/A')}</div>
+                <div><strong>Father:</strong> ${safe(s.father_name || 'N/A')}</div>
+                <div><strong>Mobile:</strong> ${safe(s.mobile || 'N/A')}</div>
             </div>
         `,
         width: window.innerWidth <= 480 ? '95%' : '500px',
         confirmButtonText: 'Close'
     });
 }
-
 // ======================= SHARE STUDENT =======================
 window.shareStudent = function(id) {
     let s = window.students.find(s => s.id === id);
@@ -15929,11 +16705,11 @@ window.refreshStudentCharts = function() {
     } catch(e) { console.error('Chart error:', e); }
 }
 
-// ======================= RENDER STUDENT UI (WITH REAL-TIME SYNC) =======================
+// ======================= RENDER STUDENT UI (WITH CACHE CLEAR) =======================
 window.renderStudentUI = function() {
     console.log('🎨 renderStudentUI called - REAL-TIME SYNC ENABLED');
     
-    // ✅ CRITICAL: Sync with localStorage cache
+    // ✅ CRITICAL: Sync with localStorage cache AND clear old attendance
     const cached = localStorage.getItem('cache_students');
     if (cached) {
         try {
@@ -15941,9 +16717,31 @@ window.renderStudentUI = function() {
             if (parsed.length > 0) {
                 window.students.length = 0;
                 for (let stu of parsed) {
+                    // ✅ FIX: Ensure attendance is not 85 for new students
+                    // If student has no attendance records, set to 0
+                    if (!stu.attendance || stu.attendance === 85) {
+                        // Check if this student has attendance records
+                        let hasAttendance = false;
+                        if (window.attendance && window.attendance.length > 0) {
+                            let records = window.attendance.filter(a => 
+                                a && a.student_name && a.student_name === stu.name
+                            );
+                            if (records.length > 0) {
+                                hasAttendance = true;
+                                let present = records.filter(a => a.status === 'Present').length;
+                                stu.attendance = Math.round((present / records.length) * 100);
+                            }
+                        }
+                        // If no attendance records, set to 0
+                        if (!hasAttendance) {
+                            stu.attendance = 0;
+                        }
+                    }
                     window.students.push(stu);
                 }
-                console.log(`📦 Real-time sync: ${window.students.length} students from cache`);
+                // Save back to cache with corrected attendance
+                localStorage.setItem('cache_students', JSON.stringify(window.students));
+                console.log(`📦 Real-time sync: ${window.students.length} students from cache (attendance corrected)`);
             }
         } catch(e) {
             console.error('Cache parse error:', e);
@@ -16098,8 +16896,7 @@ window.renderStudentUI = function() {
     renderStudentList(paginatedStudents);
     setTimeout(() => refreshStudentCharts(), 300);
 }
-
-// ======================= MAIN LOAD FUNCTION =======================
+// ======================= MAIN LOAD FUNCTION (FIXED - CLEAR OLD ATTENDANCE) =======================
 window.loadStudentManagement = async function() {
     console.log('📚 loadStudentManagement called');
     
@@ -16144,9 +16941,38 @@ window.loadStudentManagement = async function() {
     
     try {
         if (navigator.onLine) {
+            // ✅ FIX: Load attendance FIRST
+            if (typeof loadAttendanceFromSupabase === 'function') {
+                await loadAttendanceFromSupabase();
+                console.log('✅ Attendance loaded, records:', window.attendance?.length || 0);
+            }
             await loadStudentsFromSupabase();
             await processPendingStudentsQueue();
         }
+        
+        // ✅ FIX: Clear old attendance values from cache
+        let students = window.students || [];
+        for (let s of students) {
+            // If student has attendance 85 but no actual attendance records, set to 0
+            if (s.attendance === 85 || s.attendance === undefined) {
+                let hasAttendance = false;
+                if (window.attendance && window.attendance.length > 0) {
+                    let records = window.attendance.filter(a => 
+                        a && a.student_name && a.student_name === s.name
+                    );
+                    if (records.length > 0) {
+                        hasAttendance = true;
+                        let present = records.filter(a => a.status === 'Present').length;
+                        s.attendance = Math.round((present / records.length) * 100);
+                    }
+                }
+                if (!hasAttendance) {
+                    s.attendance = 0;
+                }
+            }
+        }
+        localStorage.setItem('cache_students', JSON.stringify(students));
+        
         renderStudentUI();
     } catch(error) {
         console.error('Error:', error);
@@ -16155,7 +16981,6 @@ window.loadStudentManagement = async function() {
     
     isStudentLoading = false;
 }
-
 // ======================= PAGINATION =======================
 window.previousStudentPage = function() { 
     if (studentCurrentPage > 1) { 
