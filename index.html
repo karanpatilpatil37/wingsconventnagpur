@@ -54290,51 +54290,46 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
 // ======================= PART 25 ENDS HERE ===================================================================
 //===============================================================================================================
 // ============================================
-// CHROME NOTIFICATION - ALL PLATFORMS
+// CHROME - IN-WINDOW POPUP (DESKTOP + MOBILE)
 // ============================================
 
 (function() {
-    console.log('🌐 Chrome notification fix...');
+    console.log('🔥 Chrome in-window popup - DESKTOP + MOBILE...');
     
-    // Check if Chrome (Desktop or Mobile)
+    // Check if Chrome
     const isChrome = navigator.userAgent.includes('Chrome') && 
                      !navigator.userAgent.includes('Edg');
     
     if (!isChrome) {
-        console.log('❌ Not Chrome - No fix needed');
+        console.log('❌ Not Chrome');
         return;
     }
     
     const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
     console.log(`🌐 Chrome detected - Mobile: ${isMobile}`);
     
-    // ====== SOUND FUNCTION ======
-    function playNotificationSound() {
+    // ====== SOUND ======
+    function playSound() {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
-            
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-            
-            oscillator.frequency.value = 800;
+            oscillator.frequency.value = isMobile ? 800 : 600;
             oscillator.type = 'sine';
-            
-            gainNode.gain.value = 0.1;
+            gainNode.gain.value = isMobile ? 0.1 : 0.08;
             oscillator.start();
             setTimeout(() => {
                 oscillator.stop();
                 audioCtx.close();
-            }, 200);
-        } catch(e) {
-            console.log('⚠️ Sound not available:', e);
-        }
+            }, isMobile ? 200 : 150);
+        } catch(e) {}
     }
     
-    // ====== CUSTOM POPUP ======
-    function showChromePopup(title, message, type = 'success') {
-        console.log(`💬 Chrome Popup: ${title}`);
+    // ====== IN-WINDOW POPUP (Desktop + Mobile Optimized) ======
+    window.showInWindowPopup = function(title, message, type = 'success') {
+        console.log(`💬 Popup: ${title}`);
         
         const colors = {
             success: '#10b981',
@@ -54350,75 +54345,102 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         };
         
         // Remove existing
-        const existing = document.getElementById('chromePopup');
+        const existing = document.getElementById('inWindowPopup');
         if (existing) existing.remove();
         
+        // Mobile vs Desktop optimization
+        const isMobileDevice = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+        
         const popup = document.createElement('div');
-        popup.id = 'chromePopup';
-        
-        // Responsive position - mobile vs desktop
-        const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
-        const positionStyle = isMobile ? 
-            `top: 10px; left: 50%; transform: translateX(-50%);` : 
-            `top: 20px; right: 20px;`;
-        
+        popup.id = 'inWindowPopup';
         popup.style.cssText = `
             position: fixed;
-            ${positionStyle}
+            top: ${isMobileDevice ? '10px' : '20px'};
+            left: 50%;
+            transform: translateX(-50%);
             background: white;
-            border-radius: ${isMobile ? '12px' : '16px'};
+            border-radius: ${isMobileDevice ? '16px' : '16px'};
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             z-index: 999999;
-            max-width: ${isMobile ? '90%' : '380px'};
-            width: ${isMobile ? '340px' : 'auto'};
+            max-width: ${isMobileDevice ? '92%' : '450px'};
+            width: ${isMobileDevice ? '340px' : 'auto'};
+            min-width: ${isMobileDevice ? 'auto' : '300px'};
             animation: slideDown 0.5s ease;
-            border-top: 4px solid ${colors[type] || '#2563eb'};
+            border-left: 5px solid ${colors[type] || '#2563eb'};
             overflow: hidden;
             font-family: 'Segoe UI', Arial, sans-serif;
         `;
         
-        // Add styles
-        if (!document.getElementById('chromePopupStyle')) {
+        if (!document.getElementById('inWindowPopupStyle')) {
             const style = document.createElement('style');
-            style.id = 'chromePopupStyle';
+            style.id = 'inWindowPopupStyle';
             style.textContent = `
                 @keyframes slideDown {
-                    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                    from { opacity: 0; transform: translateX(-50%) translateY(-30px); }
                     to { opacity: 1; transform: translateX(-50%) translateY(0); }
                 }
                 @keyframes slideUp {
                     from { opacity: 1; transform: translateX(-50%) translateY(0); }
-                    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                    to { opacity: 0; transform: translateX(-50%) translateY(-30px); }
                 }
-                .chrome-popup-content {
-                    padding: 14px 16px;
+                .iw-popup-content {
+                    padding: ${isMobileDevice ? '14px 16px' : '16px 20px'};
+                    display: flex;
+                    align-items: flex-start;
+                    gap: ${isMobileDevice ? '12px' : '14px'};
+                }
+                .iw-popup-icon {
+                    font-size: ${isMobileDevice ? '24px' : '28px'};
+                    flex-shrink: 0;
+                    margin-top: 2px;
+                    width: ${isMobileDevice ? '40px' : '44px'};
+                    height: ${isMobileDevice ? '40px' : '44px'};
+                    border-radius: 50%;
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    justify-content: center;
+                    background: ${colors[type] || '#2563eb'}15;
                 }
-                .chrome-popup-icon { font-size: 24px; flex-shrink: 0; }
-                .chrome-popup-text { flex: 1; }
-                .chrome-popup-title {
+                .iw-popup-text { flex: 1; }
+                .iw-popup-title {
                     font-weight: 700;
-                    font-size: 14px;
+                    font-size: ${isMobileDevice ? '14px' : '15px'};
                     color: #1e293b;
-                    margin-bottom: 2px;
+                    margin-bottom: ${isMobileDevice ? '2px' : '4px'};
                 }
-                .chrome-popup-message {
-                    font-size: 12px;
+                .iw-popup-message {
+                    font-size: ${isMobileDevice ? '12px' : '13px'};
                     color: #64748b;
-                    line-height: 1.3;
+                    line-height: ${isMobileDevice ? '1.3' : '1.4'};
                 }
-                .chrome-popup-close {
+                .iw-popup-close {
                     background: none;
                     border: none;
                     color: #94a3b8;
                     cursor: pointer;
-                    font-size: 16px;
-                    padding: 4px;
+                    font-size: ${isMobileDevice ? '18px' : '18px'};
+                    padding: 4px 8px;
+                    border-radius: 50%;
+                    transition: background 0.2s;
+                    flex-shrink: 0;
                 }
-                .chrome-popup-progress {
-                    height: 3px;
+                .iw-popup-close:hover {
+                    background: #f1f5f9;
+                    color: #1e293b;
+                }
+                .iw-popup-footer {
+                    padding: ${isMobileDevice ? '6px 16px 10px 16px' : '8px 20px 12px 20px'};
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-top: 1px solid #f1f5f9;
+                }
+                .iw-popup-time {
+                    font-size: ${isMobileDevice ? '9px' : '10px'};
+                    color: #94a3b8;
+                }
+                .iw-popup-progress {
+                    height: ${isMobileDevice ? '3px' : '3px'};
                     width: 100%;
                     animation: progressBar 4s linear forwards;
                 }
@@ -54430,38 +54452,46 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
             document.head.appendChild(style);
         }
         
-        // Progress color
         const progressStyle = document.createElement('style');
         progressStyle.textContent = `
-            .chrome-popup-progress { background: ${colors[type] || '#2563eb'} !important; }
+            .iw-popup-progress { background: ${colors[type] || '#2563eb'} !important; }
         `;
-        progressStyle.id = 'chromeProgressStyle';
-        const oldProgress = document.getElementById('chromeProgressStyle');
+        progressStyle.id = 'iwProgressStyle';
+        const oldProgress = document.getElementById('iwProgressStyle');
         if (oldProgress) oldProgress.remove();
         document.head.appendChild(progressStyle);
         
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
         popup.innerHTML = `
-            <div class="chrome-popup-content">
-                <div class="chrome-popup-icon">${icons[type] || 'ℹ️'}</div>
-                <div class="chrome-popup-text">
-                    <div class="chrome-popup-title">${title}</div>
-                    <div class="chrome-popup-message">${message}</div>
+            <div class="iw-popup-content">
+                <div class="iw-popup-icon">
+                    <span style="font-size: ${isMobileDevice ? '20px' : '24px'};">${icons[type] || 'ℹ️'}</span>
                 </div>
-                <button class="chrome-popup-close" onclick="this.closest('#chromePopup').remove()">✕</button>
+                <div class="iw-popup-text">
+                    <div class="iw-popup-title">${title}</div>
+                    <div class="iw-popup-message">${message}</div>
+                </div>
+                <button class="iw-popup-close" onclick="this.closest('#inWindowPopup').remove()">✕</button>
             </div>
-            <div class="chrome-popup-progress"></div>
+            <div class="iw-popup-footer">
+                <span class="iw-popup-time">🕐 ${timeStr}</span>
+                <span style="font-size: ${isMobileDevice ? '9px' : '10px'}; color: #94a3b8;">🔔 Notification</span>
+            </div>
+            <div class="iw-popup-progress"></div>
         `;
         
         document.body.appendChild(popup);
         
         // ====== VIBRATION (Mobile only) ======
-        if (isMobile && navigator.vibrate) {
+        if (isMobileDevice && navigator.vibrate) {
             navigator.vibrate([100, 50, 100]);
             console.log('📳 Vibration triggered');
         }
         
         // ====== SOUND ======
-        playNotificationSound();
+        playSound();
         
         // Auto remove after 4 seconds
         setTimeout(() => {
@@ -54474,67 +54504,119 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         }, 4000);
         
         return true;
-    }
+    };
     
     // ====== OVERRIDE: showNotification ======
-    const originalShowNotif = window.showNotification;
+    const origNotif = window.showNotification;
     window.showNotification = function(msg, type) {
-        if (typeof originalShowNotif === 'function') {
-            originalShowNotif(msg, type);
+        if (typeof origNotif === 'function') {
+            origNotif(msg, type);
         }
-        
-        const title = type === 'success' ? '✅ Success' : 
-                      type === 'warning' ? '⚠️ Warning' : 
-                      type === 'error' ? '❌ Error' : 'ℹ️ Info';
-        
-        setTimeout(() => {
-            showChromePopup(title, msg, type || 'success');
-        }, 100);
+        if (window.currentUser && window.currentUser.name) {
+            const title = type === 'success' ? '✅ Success' : 
+                          type === 'warning' ? '⚠️ Warning' : 
+                          type === 'error' ? '❌ Error' : 'ℹ️ Info';
+            setTimeout(() => {
+                window.showInWindowPopup(title, msg, type || 'success');
+            }, 100);
+        }
     };
     
     // ====== OVERRIDE: sendEventNotification ======
-    const originalSendEvent = window.sendEventNotification;
+    const origSend = window.sendEventNotification;
     window.sendEventNotification = function(title, message, type) {
-        if (typeof originalSendEvent === 'function') {
-            originalSendEvent(title, message, type);
+        if (typeof origSend === 'function') {
+            origSend(title, message, type);
         }
-        
-        setTimeout(() => {
-            showChromePopup(title, message, type || 'success');
-        }, 100);
+        if (window.currentUser && window.currentUser.name) {
+            setTimeout(() => {
+                window.showInWindowPopup(title, message, type || 'success');
+            }, 100);
+        }
     };
     
     // ====== OVERRIDE: loginSuccess ======
-    const originalLogin = window.loginSuccess;
+    const origLogin = window.loginSuccess;
     window.loginSuccess = function(user) {
-        if (typeof originalLogin === 'function') {
-            originalLogin(user);
+        if (typeof origLogin === 'function') {
+            origLogin(user);
         }
-        
         if (user && user.name) {
             setTimeout(() => {
-                showChromePopup(
+                window.showInWindowPopup(
                     `👋 Welcome ${user.name}!`,
-                    'Notifications are enabled. You will receive pop-ups.',
+                    'Notifications are enabled. You will receive in-window popups.',
                     'success'
                 );
             }, 1500);
         }
     };
     
-    // ====== TEST: On Page Load ======
-    if (window.currentUser && window.currentUser.name) {
-        setTimeout(() => {
-            showChromePopup(
-                `👋 Welcome ${window.currentUser.name}!`,
-                'Notifications are enabled. You will receive pop-ups.',
-                'success'
-            );
-        }, 2000);
+    // ====== SHOW ON PAGE LOAD ======
+    function showOnLoad() {
+        console.log('👋 Checking user on page load...');
+        
+        if (window.currentUser && window.currentUser.name) {
+            setTimeout(() => {
+                window.showInWindowPopup(
+                    `👋 Welcome ${window.currentUser.name}!`,
+                    'Notifications are enabled. You will receive in-window popups.',
+                    'success'
+                );
+            }, 2000);
+            return;
+        }
+        
+        try {
+            const saved = localStorage.getItem('currentUser');
+            if (saved) {
+                const user = JSON.parse(saved);
+                if (user && user.name) {
+                    window.currentUser = user;
+                    setTimeout(() => {
+                        window.showInWindowPopup(
+                            `👋 Welcome ${user.name}!`,
+                            'Notifications are enabled. You will receive in-window popups.',
+                            'success'
+                        );
+                    }, 2500);
+                    return;
+                }
+            }
+        } catch(e) {}
+        
+        // Wait for login
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            if (window.currentUser && window.currentUser.name) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    window.showInWindowPopup(
+                        `👋 Welcome ${window.currentUser.name}!`,
+                        'Notifications are enabled. You will receive in-window popups.',
+                        'success'
+                    );
+                }, 1500);
+            }
+            if (attempts > 20) {
+                clearInterval(interval);
+            }
+        }, 500);
     }
     
-    console.log('✅ Chrome notification fix complete!');
-    console.log('📱 Works on both Desktop and Mobile Chrome.');
+    // ====== RUN ======
+    console.log('🚀 Initializing...');
+    showOnLoad();
+    
+    // Also on DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(showOnLoad, 500);
+    });
+    
+    console.log('✅ Chrome in-window popup permanently added!');
+    console.log(`📱 ${isMobile ? 'Mobile' : 'Desktop'} Chrome optimized.`);
+    console.log('📋 Popup will appear automatically on page load/login.');
     
 })();
 //===============================================================================================================
