@@ -54290,61 +54290,51 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
 // ======================= PART 25 ENDS HERE ===================================================================
 //===============================================================================================================
 // ============================================
-// MOBILE CHROME NOTIFICATION - FIX
+// CHROME NOTIFICATION - ALL PLATFORMS
 // ============================================
 
 (function() {
-    console.log('📱 Mobile Chrome notification fix...');
+    console.log('🌐 Chrome notification fix...');
     
-    // Check if Mobile Chrome
-    const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
-    const isChrome = navigator.userAgent.includes('Chrome');
-    const isFirefox = navigator.userAgent.includes('Firefox');
+    // Check if Chrome (Desktop or Mobile)
+    const isChrome = navigator.userAgent.includes('Chrome') && 
+                     !navigator.userAgent.includes('Edg');
     
-    console.log(`📱 Mobile: ${isMobile}, Chrome: ${isChrome}, Firefox: ${isFirefox}`);
-    
-    // ONLY for Chrome Mobile
-    if (!isMobile || !isChrome) {
-        console.log('❌ Not Chrome Mobile - No fix needed');
+    if (!isChrome) {
+        console.log('❌ Not Chrome - No fix needed');
         return;
     }
     
-    console.log('🌐 Chrome Mobile detected - Applying fix...');
+    const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+    console.log(`🌐 Chrome detected - Mobile: ${isMobile}`);
     
-    // ============================================================
-    // METHOD 1: Toast Notification (Always Works)
-    // ============================================================
-    function showMobileToast(title, message, type = 'success') {
-        console.log(`📱 Mobile Toast: ${title}`);
-        
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: type,
-                title: title,
-                text: message,
-                showConfirmButton: false,
-                timer: 5000,
-                customClass: {
-                    popup: 'mobile-swal-popup'
-                },
-                width: '90%',
-                padding: '12px'
-            });
-            return true;
+    // ====== SOUND FUNCTION ======
+    function playNotificationSound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.value = 0.1;
+            oscillator.start();
+            setTimeout(() => {
+                oscillator.stop();
+                audioCtx.close();
+            }, 200);
+        } catch(e) {
+            console.log('⚠️ Sound not available:', e);
         }
-        
-        // Fallback
-        showNotification(`${title}: ${message}`, type);
-        return false;
     }
     
-    // ============================================================
-    // METHOD 2: Custom Mobile Popup (Works on Chrome Mobile)
-    // ============================================================
-    function showMobilePopup(title, message, type = 'success') {
-        console.log(`📱 Mobile Popup: ${title}`);
+    // ====== CUSTOM POPUP ======
+    function showChromePopup(title, message, type = 'success') {
+        console.log(`💬 Chrome Popup: ${title}`);
         
         const colors = {
             success: '#10b981',
@@ -54359,23 +54349,28 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
             info: 'ℹ️'
         };
         
-        // Remove existing popup
-        const existing = document.getElementById('mobilePopup');
+        // Remove existing
+        const existing = document.getElementById('chromePopup');
         if (existing) existing.remove();
         
         const popup = document.createElement('div');
-        popup.id = 'mobilePopup';
+        popup.id = 'chromePopup';
+        
+        // Responsive position - mobile vs desktop
+        const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+        const positionStyle = isMobile ? 
+            `top: 10px; left: 50%; transform: translateX(-50%);` : 
+            `top: 20px; right: 20px;`;
+        
         popup.style.cssText = `
             position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
+            ${positionStyle}
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border-radius: ${isMobile ? '12px' : '16px'};
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             z-index: 999999;
-            max-width: 90%;
-            width: 340px;
+            max-width: ${isMobile ? '90%' : '380px'};
+            width: ${isMobile ? '340px' : 'auto'};
             animation: slideDown 0.5s ease;
             border-top: 4px solid ${colors[type] || '#2563eb'};
             overflow: hidden;
@@ -54383,9 +54378,9 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         `;
         
         // Add styles
-        if (!document.getElementById('mobilePopupStyle')) {
+        if (!document.getElementById('chromePopupStyle')) {
             const style = document.createElement('style');
-            style.id = 'mobilePopupStyle';
+            style.id = 'chromePopupStyle';
             style.textContent = `
                 @keyframes slideDown {
                     from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
@@ -54395,26 +54390,26 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
                     from { opacity: 1; transform: translateX(-50%) translateY(0); }
                     to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
                 }
-                .mobile-popup-content {
+                .chrome-popup-content {
                     padding: 14px 16px;
                     display: flex;
                     align-items: center;
                     gap: 12px;
                 }
-                .mobile-popup-icon { font-size: 24px; flex-shrink: 0; }
-                .mobile-popup-text { flex: 1; }
-                .mobile-popup-title {
+                .chrome-popup-icon { font-size: 24px; flex-shrink: 0; }
+                .chrome-popup-text { flex: 1; }
+                .chrome-popup-title {
                     font-weight: 700;
                     font-size: 14px;
                     color: #1e293b;
                     margin-bottom: 2px;
                 }
-                .mobile-popup-message {
+                .chrome-popup-message {
                     font-size: 12px;
                     color: #64748b;
                     line-height: 1.3;
                 }
-                .mobile-popup-close {
+                .chrome-popup-close {
                     background: none;
                     border: none;
                     color: #94a3b8;
@@ -54422,7 +54417,7 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
                     font-size: 16px;
                     padding: 4px;
                 }
-                .mobile-popup-progress {
+                .chrome-popup-progress {
                     height: 3px;
                     width: 100%;
                     animation: progressBar 4s linear forwards;
@@ -54438,26 +54433,35 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         // Progress color
         const progressStyle = document.createElement('style');
         progressStyle.textContent = `
-            .mobile-popup-progress { background: ${colors[type] || '#2563eb'} !important; }
+            .chrome-popup-progress { background: ${colors[type] || '#2563eb'} !important; }
         `;
-        progressStyle.id = 'mobileProgressStyle';
-        const oldProgress = document.getElementById('mobileProgressStyle');
+        progressStyle.id = 'chromeProgressStyle';
+        const oldProgress = document.getElementById('chromeProgressStyle');
         if (oldProgress) oldProgress.remove();
         document.head.appendChild(progressStyle);
         
         popup.innerHTML = `
-            <div class="mobile-popup-content">
-                <div class="mobile-popup-icon">${icons[type] || 'ℹ️'}</div>
-                <div class="mobile-popup-text">
-                    <div class="mobile-popup-title">${title}</div>
-                    <div class="mobile-popup-message">${message}</div>
+            <div class="chrome-popup-content">
+                <div class="chrome-popup-icon">${icons[type] || 'ℹ️'}</div>
+                <div class="chrome-popup-text">
+                    <div class="chrome-popup-title">${title}</div>
+                    <div class="chrome-popup-message">${message}</div>
                 </div>
-                <button class="mobile-popup-close" onclick="this.closest('#mobilePopup').remove()">✕</button>
+                <button class="chrome-popup-close" onclick="this.closest('#chromePopup').remove()">✕</button>
             </div>
-            <div class="mobile-popup-progress"></div>
+            <div class="chrome-popup-progress"></div>
         `;
         
         document.body.appendChild(popup);
+        
+        // ====== VIBRATION (Mobile only) ======
+        if (isMobile && navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+            console.log('📳 Vibration triggered');
+        }
+        
+        // ====== SOUND ======
+        playNotificationSound();
         
         // Auto remove after 4 seconds
         setTimeout(() => {
@@ -54472,44 +54476,35 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         return true;
     }
     
-    // ============================================================
-    // OVERRIDE: showNotification for Mobile Chrome
-    // ============================================================
+    // ====== OVERRIDE: showNotification ======
     const originalShowNotif = window.showNotification;
     window.showNotification = function(msg, type) {
-        // Call original
         if (typeof originalShowNotif === 'function') {
             originalShowNotif(msg, type);
         }
         
-        // ✅ Show mobile popup (always works)
         const title = type === 'success' ? '✅ Success' : 
                       type === 'warning' ? '⚠️ Warning' : 
                       type === 'error' ? '❌ Error' : 'ℹ️ Info';
         
         setTimeout(() => {
-            showMobilePopup(title, msg, type || 'success');
+            showChromePopup(title, msg, type || 'success');
         }, 100);
     };
     
-    // ============================================================
-    // OVERRIDE: sendEventNotification for Mobile Chrome
-    // ============================================================
+    // ====== OVERRIDE: sendEventNotification ======
     const originalSendEvent = window.sendEventNotification;
     window.sendEventNotification = function(title, message, type) {
         if (typeof originalSendEvent === 'function') {
             originalSendEvent(title, message, type);
         }
         
-        // ✅ Show mobile popup
         setTimeout(() => {
-            showMobilePopup(title, message, type || 'success');
+            showChromePopup(title, message, type || 'success');
         }, 100);
     };
     
-    // ============================================================
-    // OVERRIDE: loginSuccess for Mobile Chrome
-    // ============================================================
+    // ====== OVERRIDE: loginSuccess ======
     const originalLogin = window.loginSuccess;
     window.loginSuccess = function(user) {
         if (typeof originalLogin === 'function') {
@@ -54518,7 +54513,7 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         
         if (user && user.name) {
             setTimeout(() => {
-                showMobilePopup(
+                showChromePopup(
                     `👋 Welcome ${user.name}!`,
                     'Notifications are enabled. You will receive pop-ups.',
                     'success'
@@ -54527,12 +54522,10 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         }
     };
     
-    // ============================================================
-    // TEST: On Page Load (if user already logged in)
-    // ============================================================
+    // ====== TEST: On Page Load ======
     if (window.currentUser && window.currentUser.name) {
         setTimeout(() => {
-            showMobilePopup(
+            showChromePopup(
                 `👋 Welcome ${window.currentUser.name}!`,
                 'Notifications are enabled. You will receive pop-ups.',
                 'success'
@@ -54540,8 +54533,8 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         }, 2000);
     }
     
-    console.log('✅ Mobile Chrome notification fix complete!');
-    console.log('📱 Popups will appear as custom mobile popups.');
+    console.log('✅ Chrome notification fix complete!');
+    console.log('📱 Works on both Desktop and Mobile Chrome.');
     
 })();
 //===============================================================================================================
