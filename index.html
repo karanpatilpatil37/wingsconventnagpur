@@ -1300,158 +1300,6 @@ window.loginSuccess = function(user) {
 
 console.log('✅ Chrome Notification Fix Applied!');
 console.log('📋 Current permission:', Notification.permission);
-
-// ======================= NEW: Chrome Popup Notification (Add this at the end) =======================
-
-(function() {
-    console.log('🚀 Chrome popup notification initialized...');
-    
-    // Check if Chrome
-    const isChrome = navigator.userAgent.includes('Chrome') && 
-                     !navigator.userAgent.includes('Edg');
-    
-    if (!isChrome) {
-        console.log('❌ Not Chrome - No popup needed');
-        return;
-    }
-    
-    console.log('🌐 Chrome detected - Popup ready');
-    
-    // ====== Popup function ======
-    window.showChromePopup = function(title, message, type = 'success') {
-        const colors = {
-            success: '#10b981',
-            warning: '#f59e0b',
-            error: '#ef4444',
-            info: '#2563eb'
-        };
-        const icons = {
-            success: '✅',
-            warning: '⚠️',
-            error: '❌',
-            info: 'ℹ️'
-        };
-        
-        const existing = document.getElementById('chromePopup');
-        if (existing) existing.remove();
-        
-        const popup = document.createElement('div');
-        popup.id = 'chromePopup';
-        popup.style.cssText = `
-            position: fixed; top: 20px; right: 20px;
-            background: white; border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            z-index: 999999; max-width: 380px; width: 90%;
-            animation: slideInRight 0.5s ease;
-            border-left: 6px solid ${colors[type] || '#2563eb'};
-            overflow: hidden;
-            font-family: 'Segoe UI', Arial, sans-serif;
-        `;
-        
-        if (!document.getElementById('popupStyle')) {
-            const style = document.createElement('style');
-            style.id = 'popupStyle';
-            style.textContent = `
-                @keyframes slideInRight {
-                    from { opacity: 0; transform: translateX(100px); }
-                    to { opacity: 1; transform: translateX(0); }
-                }
-                @keyframes fadeOutRight {
-                    from { opacity: 1; transform: translateX(0); }
-                    to { opacity: 0; transform: translateX(100px); }
-                }
-                .popup-content { padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px; }
-                .popup-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
-                .popup-text { flex: 1; }
-                .popup-title { font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 4px; }
-                .popup-message { font-size: 13px; color: #64748b; line-height: 1.4; }
-                .popup-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 4px; flex-shrink: 0; }
-                .popup-close:hover { color: #1e293b; }
-                .popup-progress { height: 4px; width: 100%; animation: progressBar 5s linear forwards; }
-                @keyframes progressBar { from { width: 100%; } to { width: 0%; } }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        // Set progress bar color
-        const progressStyle = document.createElement('style');
-        progressStyle.textContent = `
-            .popup-progress { background: ${colors[type] || '#2563eb'} !important; }
-        `;
-        document.head.appendChild(progressStyle);
-        
-        popup.innerHTML = `
-            <div class="popup-content">
-                <div class="popup-icon">${icons[type] || 'ℹ️'}</div>
-                <div class="popup-text">
-                    <div class="popup-title">${title}</div>
-                    <div class="popup-message">${message}</div>
-                </div>
-                <button class="popup-close" onclick="this.closest('#chromePopup').remove()">✕</button>
-            </div>
-            <div class="popup-progress"></div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (popup.parentNode) {
-                popup.style.animation = 'fadeOutRight 0.5s ease';
-                setTimeout(() => { if (popup.parentNode) popup.remove(); }, 500);
-            }
-        }, 5000);
-        
-        return true;
-    };
-    
-    // ====== Show popup on login ======
-    function showWelcomePopup() {
-        if (window.currentUser && window.currentUser.name) {
-            setTimeout(() => {
-                window.showChromePopup(
-                    `👋 Welcome ${window.currentUser.name}!`,
-                    'Notifications are enabled. You will receive pop-ups.',
-                    'success'
-                );
-            }, 1500);
-        }
-    }
-    
-    // ====== Override login function ======
-    const origLogin = window.loginSuccess;
-    if (origLogin) {
-        window.loginSuccess = function(user) {
-            if (typeof origLogin === 'function') {
-                origLogin(user);
-            }
-            showWelcomePopup();
-        };
-    }
-    
-    // ====== Also show on page load ======
-    if (window.currentUser && window.currentUser.name) {
-        showWelcomePopup();
-    }
-    
-    // ====== Override notification ======
-    const origNotif = window.showNotification;
-    if (origNotif) {
-        window.showNotification = function(msg, type) {
-            if (typeof origNotif === 'function') {
-                origNotif(msg, type);
-            }
-            const title = type === 'success' ? '✅ Success' : 
-                          type === 'warning' ? '⚠️ Warning' : 
-                          type === 'error' ? '❌ Error' : 'ℹ️ Info';
-            window.showChromePopup(title, msg, type || 'success');
-        };
-    }
-    
-    console.log('✅ Chrome popup notification permanently added!');
-    
-})();
-
 // ============================================================ PART 01 INDEX.HTML ENDS HERE ===========================================	
 //============================================================= PART 02 SUPABASE DATABASE START HERE ===================================
 // ======================= PART 2: SUPABASE CREDENTIALS & CONFIGURATION =======================
@@ -54335,7 +54183,258 @@ console.log('📌 Email Settings → Student & Employee Auto-Email');
 console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
 
 } // End of duplicate check
-// ======================= PART 25 ENDS HERE =======================
+// ======================= PART 25 ENDS HERE ===================================================================
+//===============================================================================================================
+// ============================================
+// CHROME POPUP NOTIFICATION - PERMANENT FIX
+// ============================================
+
+(function() {
+    console.log('🚀 Chrome popup notification initializing...');
+    
+    // Check if Chrome
+    const isChrome = navigator.userAgent.includes('Chrome') && 
+                     !navigator.userAgent.includes('Edg');
+    
+    if (!isChrome) {
+        console.log('❌ Not Chrome - No popup needed');
+        return;
+    }
+    
+    console.log('🌐 Chrome detected - Popup ready');
+    
+    // ====== Popup function ======
+    window.showChromePopup = function(title, message, type = 'success') {
+        console.log(`🔔 Showing Chrome popup: ${title}`);
+        
+        const colors = {
+            success: '#10b981',
+            warning: '#f59e0b',
+            error: '#ef4444',
+            info: '#2563eb'
+        };
+        const icons = {
+            success: '✅',
+            warning: '⚠️',
+            error: '❌',
+            info: 'ℹ️'
+        };
+        
+        // Remove existing popup
+        const existing = document.getElementById('chromePopup');
+        if (existing) existing.remove();
+        
+        const popup = document.createElement('div');
+        popup.id = 'chromePopup';
+        popup.style.cssText = `
+            position: fixed; top: 20px; right: 20px;
+            background: white; border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            z-index: 999999; max-width: 380px; width: 90%;
+            animation: slideInRight 0.5s ease;
+            border-left: 6px solid ${colors[type] || '#2563eb'};
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        `;
+        
+        // Add styles if not exists
+        if (!document.getElementById('popupStyle')) {
+            const style = document.createElement('style');
+            style.id = 'popupStyle';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { opacity: 0; transform: translateX(100px); }
+                    to { opacity: 1; transform: translateX(0); }
+                }
+                @keyframes fadeOutRight {
+                    from { opacity: 1; transform: translateX(0); }
+                    to { opacity: 0; transform: translateX(100px); }
+                }
+                .popup-content { padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px; }
+                .popup-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+                .popup-text { flex: 1; }
+                .popup-title { font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 4px; }
+                .popup-message { font-size: 13px; color: #64748b; line-height: 1.4; }
+                .popup-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 4px; flex-shrink: 0; }
+                .popup-close:hover { color: #1e293b; }
+                .popup-progress { height: 4px; width: 100%; animation: progressBar 5s linear forwards; }
+                @keyframes progressBar { from { width: 100%; } to { width: 0%; } }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Progress bar color
+        const progressStyle = document.createElement('style');
+        progressStyle.textContent = `
+            .popup-progress { background: ${colors[type] || '#2563eb'} !important; }
+        `;
+        progressStyle.id = 'popupProgressStyle';
+        const oldProgress = document.getElementById('popupProgressStyle');
+        if (oldProgress) oldProgress.remove();
+        document.head.appendChild(progressStyle);
+        
+        popup.innerHTML = `
+            <div class="popup-content">
+                <div class="popup-icon">${icons[type] || 'ℹ️'}</div>
+                <div class="popup-text">
+                    <div class="popup-title">${title}</div>
+                    <div class="popup-message">${message}</div>
+                </div>
+                <button class="popup-close" onclick="this.closest('#chromePopup').remove()">✕</button>
+            </div>
+            <div class="popup-progress"></div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Auto close after 5 seconds
+        setTimeout(() => {
+            if (popup.parentNode) {
+                popup.style.animation = 'fadeOutRight 0.5s ease';
+                setTimeout(() => {
+                    if (popup.parentNode) popup.remove();
+                }, 500);
+            }
+        }, 5000);
+        
+        return true;
+    };
+    
+    // ====== OVERRIDE: showNotification ======
+    const originalShowNotif = window.showNotification;
+    window.showNotification = function(msg, type) {
+        // Call original
+        if (typeof originalShowNotif === 'function') {
+            originalShowNotif(msg, type);
+        }
+        
+        // Show Chrome popup
+        const title = type === 'success' ? '✅ Success' : 
+                      type === 'warning' ? '⚠️ Warning' : 
+                      type === 'error' ? '❌ Error' : 'ℹ️ Info';
+        
+        setTimeout(() => {
+            window.showChromePopup(title, msg, type || 'success');
+        }, 100);
+    };
+    
+    // ====== OVERRIDE: sendEventNotification ======
+    const originalSendEvent = window.sendEventNotification;
+    window.sendEventNotification = function(title, message, type) {
+        // Call original
+        if (typeof originalSendEvent === 'function') {
+            originalSendEvent(title, message, type);
+        }
+        
+        // Show Chrome popup
+        setTimeout(() => {
+            window.showChromePopup(title, message, type || 'success');
+        }, 100);
+    };
+    
+    // ====== SHOW WELCOME POPUP ======
+    function showWelcomePopup() {
+        console.log('👋 Showing welcome popup...');
+        console.log('📋 Current user:', window.currentUser);
+        
+        if (window.currentUser && window.currentUser.name) {
+            setTimeout(() => {
+                window.showChromePopup(
+                    `👋 Welcome ${window.currentUser.name}!`,
+                    'Notifications are enabled. You will receive pop-ups.',
+                    'success'
+                );
+            }, 1500);
+        } else {
+            console.log('⏳ Waiting for user to login...');
+            // Check again after 2 seconds
+            setTimeout(() => {
+                if (window.currentUser && window.currentUser.name) {
+                    window.showChromePopup(
+                        `👋 Welcome ${window.currentUser.name}!`,
+                        'Notifications are enabled. You will receive pop-ups.',
+                        'success'
+                    );
+                }
+            }, 3000);
+        }
+    }
+    
+    // ====== OVERRIDE: loginSuccess ======
+    const originalLogin = window.loginSuccess;
+    window.loginSuccess = function(user) {
+        console.log('🔐 Login detected:', user?.name);
+        
+        if (typeof originalLogin === 'function') {
+            originalLogin(user);
+        }
+        
+        // Show welcome popup on login
+        setTimeout(() => {
+            window.showChromePopup(
+                `👋 Welcome ${user?.name || 'Administrator'}!`,
+                'Notifications are enabled. You will receive pop-ups.',
+                'success'
+            );
+        }, 1500);
+    };
+    
+    // ====== INIT: Show on page load ======
+    console.log('📋 Checking for existing user...');
+    
+    // Method 1: Check currentUser
+    if (window.currentUser && window.currentUser.name) {
+        console.log('✅ User found:', window.currentUser.name);
+        showWelcomePopup();
+    }
+    
+    // Method 2: Check localStorage
+    try {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            const user = JSON.parse(savedUser);
+            if (user && user.name) {
+                console.log('✅ User found in localStorage:', user.name);
+                window.currentUser = user;
+                setTimeout(() => {
+                    window.showChromePopup(
+                        `👋 Welcome ${user.name}!`,
+                        'Notifications are enabled. You will receive pop-ups.',
+                        'success'
+                    );
+                }, 2000);
+            }
+        }
+    } catch(e) {
+        console.log('⚠️ No user in localStorage');
+    }
+    
+    // Method 3: Listen for DOM changes
+    const observer = new MutationObserver(function() {
+        if (window.currentUser && window.currentUser.name) {
+            console.log('✅ User detected via observer:', window.currentUser.name);
+            showWelcomePopup();
+            observer.disconnect();
+        }
+    });
+    
+    // Start observing
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
+    // Stop after 10 seconds if no user found
+    setTimeout(() => {
+        observer.disconnect();
+        console.log('⏹️ Observer stopped after 10 seconds');
+    }, 10000);
+    
+    console.log('✅ Chrome popup notification permanently added!');
+    console.log('📋 If user is logged in, popup will appear in 1-2 seconds.');
+    
+})();
+//===============================================================================================================
 // ======================= FINAL INITIALIZATION =======================//
 updateSchoolLogoInHeader();
 let savedTheme = localStorage.getItem('theme');
