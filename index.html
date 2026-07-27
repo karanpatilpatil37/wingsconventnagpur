@@ -1300,6 +1300,110 @@ window.loginSuccess = function(user) {
 
 console.log('✅ Chrome Notification Fix Applied!');
 console.log('📋 Current permission:', Notification.permission);
+
+// ============================================
+// CHROME MOBILE - SERVICE WORKER FIX
+// ============================================
+
+(function() {
+    console.log('📱 Checking Chrome Mobile...');
+    
+    // Check if Chrome Mobile
+    const isChromeMobile = /Android/.test(navigator.userAgent) && 
+                           navigator.userAgent.includes('Chrome');
+    
+    if (!isChromeMobile) {
+        console.log('❌ Not Chrome Mobile - No fix needed');
+        return;
+    }
+    
+    console.log('📱 Chrome Mobile detected - Registering Service Worker...');
+    
+    // ====== 1. REGISTER SERVICE WORKER ======
+    if ('serviceWorker' in navigator) {
+        // Create inline service worker (since sw.js may not exist)
+        try {
+            const swCode = `
+                self.addEventListener('install', function(e) {
+                    console.log('✅ SW installed');
+                    e.waitUntil(self.skipWaiting());
+                });
+                self.addEventListener('activate', function(e) {
+                    console.log('✅ SW activated');
+                    e.waitUntil(self.clients.claim());
+                });
+                self.addEventListener('push', function(e) {
+                    const data = e.data ? e.data.json() : {};
+                    e.waitUntil(
+                        self.registration.showNotification(
+                            data.title || '🔔 Notification',
+                            { 
+                                body: data.body || 'You have a new notification.',
+                                icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232563eb"/%3E%3Ctext x="50" y="67" font-size="40" text-anchor="middle" fill="white"%3E🏫%3C/text%3E%3C/svg%3E',
+                                vibrate: [200, 100, 200],
+                                requireInteraction: true
+                            }
+                        )
+                    );
+                });
+                self.addEventListener('notificationclick', function(e) {
+                    e.notification.close();
+                    e.waitUntil(
+                        clients.matchAll({ type: 'window' }).then(function(clientList) {
+                            if (clientList.length > 0) {
+                                return clientList[0].focus();
+                            }
+                            return clients.openWindow('/');
+                        })
+                    );
+                });
+            `;
+            
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            
+            navigator.serviceWorker.register(url, { scope: '/' })
+                .then(registration => {
+                    console.log('✅ Service Worker registered successfully!');
+                    console.log('📋 Scope:', registration.scope);
+                    URL.revokeObjectURL(url);
+                    
+                    // Check if push is supported
+                    if ('PushManager' in window) {
+                        console.log('✅ Push API is supported!');
+                    }
+                })
+                .catch(error => {
+                    console.log('❌ Service Worker registration failed:', error);
+                    console.log('📱 Using toast notifications as fallback');
+                });
+        } catch(e) {
+            console.log('❌ Service Worker creation error:', e);
+        }
+    } else {
+        console.log('❌ Service Workers not supported');
+        console.log('📱 Using toast notifications as fallback');
+    }
+    
+    // ====== 2. REQUEST PERMISSION ON CLICK ======
+    document.addEventListener('click', function requestPermission() {
+        if ('Notification' in window) {
+            if (Notification.permission === 'default') {
+                console.log('📋 Requesting notification permission...');
+                Notification.requestPermission().then(permission => {
+                    console.log('📋 Permission:', permission);
+                    if (permission === 'granted') {
+                        console.log('✅ Notifications enabled!');
+                        showNotification('✅ Notifications enabled on Chrome Mobile!', 'success');
+                    }
+                });
+            }
+        }
+    }, { once: false });
+    
+    console.log('✅ Chrome Mobile Service Worker fix complete!');
+    console.log('📱 Tap anywhere to enable notifications.');
+})();
 // ============================================================ PART 01 INDEX.HTML ENDS HERE ===========================================	
 //============================================================= PART 02 SUPABASE DATABASE START HERE ===================================
 // ======================= PART 2: SUPABASE CREDENTIALS & CONFIGURATION =======================
@@ -54186,26 +54290,61 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
 // ======================= PART 25 ENDS HERE ===================================================================
 //===============================================================================================================
 // ============================================
-// CHROME POPUP NOTIFICATION - PERMANENT FIX
+// MOBILE CHROME NOTIFICATION - FIX
 // ============================================
 
 (function() {
-    console.log('🚀 Chrome popup notification initializing...');
+    console.log('📱 Mobile Chrome notification fix...');
     
-    // Check if Chrome
-    const isChrome = navigator.userAgent.includes('Chrome') && 
-                     !navigator.userAgent.includes('Edg');
+    // Check if Mobile Chrome
+    const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isChrome = navigator.userAgent.includes('Chrome');
+    const isFirefox = navigator.userAgent.includes('Firefox');
     
-    if (!isChrome) {
-        console.log('❌ Not Chrome - No popup needed');
+    console.log(`📱 Mobile: ${isMobile}, Chrome: ${isChrome}, Firefox: ${isFirefox}`);
+    
+    // ONLY for Chrome Mobile
+    if (!isMobile || !isChrome) {
+        console.log('❌ Not Chrome Mobile - No fix needed');
         return;
     }
     
-    console.log('🌐 Chrome detected - Popup ready');
+    console.log('🌐 Chrome Mobile detected - Applying fix...');
     
-    // ====== Popup function ======
-    window.showChromePopup = function(title, message, type = 'success') {
-        console.log(`🔔 Showing Chrome popup: ${title}`);
+    // ============================================================
+    // METHOD 1: Toast Notification (Always Works)
+    // ============================================================
+    function showMobileToast(title, message, type = 'success') {
+        console.log(`📱 Mobile Toast: ${title}`);
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type,
+                title: title,
+                text: message,
+                showConfirmButton: false,
+                timer: 5000,
+                customClass: {
+                    popup: 'mobile-swal-popup'
+                },
+                width: '90%',
+                padding: '12px'
+            });
+            return true;
+        }
+        
+        // Fallback
+        showNotification(`${title}: ${message}`, type);
+        return false;
+    }
+    
+    // ============================================================
+    // METHOD 2: Custom Mobile Popup (Works on Chrome Mobile)
+    // ============================================================
+    function showMobilePopup(title, message, type = 'success') {
+        console.log(`📱 Mobile Popup: ${title}`);
         
         const colors = {
             success: '#10b981',
@@ -54221,86 +54360,121 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         };
         
         // Remove existing popup
-        const existing = document.getElementById('chromePopup');
+        const existing = document.getElementById('mobilePopup');
         if (existing) existing.remove();
         
         const popup = document.createElement('div');
-        popup.id = 'chromePopup';
+        popup.id = 'mobilePopup';
         popup.style.cssText = `
-            position: fixed; top: 20px; right: 20px;
-            background: white; border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            z-index: 999999; max-width: 380px; width: 90%;
-            animation: slideInRight 0.5s ease;
-            border-left: 6px solid ${colors[type] || '#2563eb'};
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 999999;
+            max-width: 90%;
+            width: 340px;
+            animation: slideDown 0.5s ease;
+            border-top: 4px solid ${colors[type] || '#2563eb'};
             overflow: hidden;
             font-family: 'Segoe UI', Arial, sans-serif;
         `;
         
-        // Add styles if not exists
-        if (!document.getElementById('popupStyle')) {
+        // Add styles
+        if (!document.getElementById('mobilePopupStyle')) {
             const style = document.createElement('style');
-            style.id = 'popupStyle';
+            style.id = 'mobilePopupStyle';
             style.textContent = `
-                @keyframes slideInRight {
-                    from { opacity: 0; transform: translateX(100px); }
-                    to { opacity: 1; transform: translateX(0); }
+                @keyframes slideDown {
+                    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
                 }
-                @keyframes fadeOutRight {
-                    from { opacity: 1; transform: translateX(0); }
-                    to { opacity: 0; transform: translateX(100px); }
+                @keyframes slideUp {
+                    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
                 }
-                .popup-content { padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px; }
-                .popup-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
-                .popup-text { flex: 1; }
-                .popup-title { font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 4px; }
-                .popup-message { font-size: 13px; color: #64748b; line-height: 1.4; }
-                .popup-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 4px; flex-shrink: 0; }
-                .popup-close:hover { color: #1e293b; }
-                .popup-progress { height: 4px; width: 100%; animation: progressBar 5s linear forwards; }
-                @keyframes progressBar { from { width: 100%; } to { width: 0%; } }
+                .mobile-popup-content {
+                    padding: 14px 16px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                .mobile-popup-icon { font-size: 24px; flex-shrink: 0; }
+                .mobile-popup-text { flex: 1; }
+                .mobile-popup-title {
+                    font-weight: 700;
+                    font-size: 14px;
+                    color: #1e293b;
+                    margin-bottom: 2px;
+                }
+                .mobile-popup-message {
+                    font-size: 12px;
+                    color: #64748b;
+                    line-height: 1.3;
+                }
+                .mobile-popup-close {
+                    background: none;
+                    border: none;
+                    color: #94a3b8;
+                    cursor: pointer;
+                    font-size: 16px;
+                    padding: 4px;
+                }
+                .mobile-popup-progress {
+                    height: 3px;
+                    width: 100%;
+                    animation: progressBar 4s linear forwards;
+                }
+                @keyframes progressBar {
+                    from { width: 100%; }
+                    to { width: 0%; }
+                }
             `;
             document.head.appendChild(style);
         }
         
-        // Progress bar color
+        // Progress color
         const progressStyle = document.createElement('style');
         progressStyle.textContent = `
-            .popup-progress { background: ${colors[type] || '#2563eb'} !important; }
+            .mobile-popup-progress { background: ${colors[type] || '#2563eb'} !important; }
         `;
-        progressStyle.id = 'popupProgressStyle';
-        const oldProgress = document.getElementById('popupProgressStyle');
+        progressStyle.id = 'mobileProgressStyle';
+        const oldProgress = document.getElementById('mobileProgressStyle');
         if (oldProgress) oldProgress.remove();
         document.head.appendChild(progressStyle);
         
         popup.innerHTML = `
-            <div class="popup-content">
-                <div class="popup-icon">${icons[type] || 'ℹ️'}</div>
-                <div class="popup-text">
-                    <div class="popup-title">${title}</div>
-                    <div class="popup-message">${message}</div>
+            <div class="mobile-popup-content">
+                <div class="mobile-popup-icon">${icons[type] || 'ℹ️'}</div>
+                <div class="mobile-popup-text">
+                    <div class="mobile-popup-title">${title}</div>
+                    <div class="mobile-popup-message">${message}</div>
                 </div>
-                <button class="popup-close" onclick="this.closest('#chromePopup').remove()">✕</button>
+                <button class="mobile-popup-close" onclick="this.closest('#mobilePopup').remove()">✕</button>
             </div>
-            <div class="popup-progress"></div>
+            <div class="mobile-popup-progress"></div>
         `;
         
         document.body.appendChild(popup);
         
-        // Auto close after 5 seconds
+        // Auto remove after 4 seconds
         setTimeout(() => {
             if (popup.parentNode) {
-                popup.style.animation = 'fadeOutRight 0.5s ease';
+                popup.style.animation = 'slideUp 0.4s ease';
                 setTimeout(() => {
                     if (popup.parentNode) popup.remove();
-                }, 500);
+                }, 400);
             }
-        }, 5000);
+        }, 4000);
         
         return true;
-    };
+    }
     
-    // ====== OVERRIDE: showNotification ======
+    // ============================================================
+    // OVERRIDE: showNotification for Mobile Chrome
+    // ============================================================
     const originalShowNotif = window.showNotification;
     window.showNotification = function(msg, type) {
         // Call original
@@ -54308,130 +54482,66 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
             originalShowNotif(msg, type);
         }
         
-        // Show Chrome popup
+        // ✅ Show mobile popup (always works)
         const title = type === 'success' ? '✅ Success' : 
                       type === 'warning' ? '⚠️ Warning' : 
                       type === 'error' ? '❌ Error' : 'ℹ️ Info';
         
         setTimeout(() => {
-            window.showChromePopup(title, msg, type || 'success');
+            showMobilePopup(title, msg, type || 'success');
         }, 100);
     };
     
-    // ====== OVERRIDE: sendEventNotification ======
+    // ============================================================
+    // OVERRIDE: sendEventNotification for Mobile Chrome
+    // ============================================================
     const originalSendEvent = window.sendEventNotification;
     window.sendEventNotification = function(title, message, type) {
-        // Call original
         if (typeof originalSendEvent === 'function') {
             originalSendEvent(title, message, type);
         }
         
-        // Show Chrome popup
+        // ✅ Show mobile popup
         setTimeout(() => {
-            window.showChromePopup(title, message, type || 'success');
+            showMobilePopup(title, message, type || 'success');
         }, 100);
     };
     
-    // ====== SHOW WELCOME POPUP ======
-    function showWelcomePopup() {
-        console.log('👋 Showing welcome popup...');
-        console.log('📋 Current user:', window.currentUser);
-        
-        if (window.currentUser && window.currentUser.name) {
-            setTimeout(() => {
-                window.showChromePopup(
-                    `👋 Welcome ${window.currentUser.name}!`,
-                    'Notifications are enabled. You will receive pop-ups.',
-                    'success'
-                );
-            }, 1500);
-        } else {
-            console.log('⏳ Waiting for user to login...');
-            // Check again after 2 seconds
-            setTimeout(() => {
-                if (window.currentUser && window.currentUser.name) {
-                    window.showChromePopup(
-                        `👋 Welcome ${window.currentUser.name}!`,
-                        'Notifications are enabled. You will receive pop-ups.',
-                        'success'
-                    );
-                }
-            }, 3000);
-        }
-    }
-    
-    // ====== OVERRIDE: loginSuccess ======
+    // ============================================================
+    // OVERRIDE: loginSuccess for Mobile Chrome
+    // ============================================================
     const originalLogin = window.loginSuccess;
     window.loginSuccess = function(user) {
-        console.log('🔐 Login detected:', user?.name);
-        
         if (typeof originalLogin === 'function') {
             originalLogin(user);
         }
         
-        // Show welcome popup on login
+        if (user && user.name) {
+            setTimeout(() => {
+                showMobilePopup(
+                    `👋 Welcome ${user.name}!`,
+                    'Notifications are enabled. You will receive pop-ups.',
+                    'success'
+                );
+            }, 1500);
+        }
+    };
+    
+    // ============================================================
+    // TEST: On Page Load (if user already logged in)
+    // ============================================================
+    if (window.currentUser && window.currentUser.name) {
         setTimeout(() => {
-            window.showChromePopup(
-                `👋 Welcome ${user?.name || 'Administrator'}!`,
+            showMobilePopup(
+                `👋 Welcome ${window.currentUser.name}!`,
                 'Notifications are enabled. You will receive pop-ups.',
                 'success'
             );
-        }, 1500);
-    };
-    
-    // ====== INIT: Show on page load ======
-    console.log('📋 Checking for existing user...');
-    
-    // Method 1: Check currentUser
-    if (window.currentUser && window.currentUser.name) {
-        console.log('✅ User found:', window.currentUser.name);
-        showWelcomePopup();
+        }, 2000);
     }
     
-    // Method 2: Check localStorage
-    try {
-        const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-            const user = JSON.parse(savedUser);
-            if (user && user.name) {
-                console.log('✅ User found in localStorage:', user.name);
-                window.currentUser = user;
-                setTimeout(() => {
-                    window.showChromePopup(
-                        `👋 Welcome ${user.name}!`,
-                        'Notifications are enabled. You will receive pop-ups.',
-                        'success'
-                    );
-                }, 2000);
-            }
-        }
-    } catch(e) {
-        console.log('⚠️ No user in localStorage');
-    }
-    
-    // Method 3: Listen for DOM changes
-    const observer = new MutationObserver(function() {
-        if (window.currentUser && window.currentUser.name) {
-            console.log('✅ User detected via observer:', window.currentUser.name);
-            showWelcomePopup();
-            observer.disconnect();
-        }
-    });
-    
-    // Start observing
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-    
-    // Stop after 10 seconds if no user found
-    setTimeout(() => {
-        observer.disconnect();
-        console.log('⏹️ Observer stopped after 10 seconds');
-    }, 10000);
-    
-    console.log('✅ Chrome popup notification permanently added!');
-    console.log('📋 If user is logged in, popup will appear in 1-2 seconds.');
+    console.log('✅ Mobile Chrome notification fix complete!');
+    console.log('📱 Popups will appear as custom mobile popups.');
     
 })();
 //===============================================================================================================
