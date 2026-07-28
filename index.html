@@ -35310,13 +35310,55 @@ function getSupabaseClientClasses() {
     return null;
 }
 
+// ======================= NORMALIZE CLASS NAME =======================
+function normalizeClassName(className) {
+    if (!className) return '';
+    let normalized = className.trim();
+    let variations = {
+        'playgroup': 'Playgroup', 'play group': 'Playgroup', 'pg': 'Playgroup', 'p.g.': 'Playgroup',
+        'nursery': 'Nursery', 'nur': 'Nursery',
+        'kg1': 'KG1', 'kg 1': 'KG1', 'k.g.1': 'KG1', 'lkg': 'KG1', 'l.k.g.': 'KG1',
+        'kg2': 'KG2', 'kg 2': 'KG2', 'k.g.2': 'KG2', 'ukg': 'KG2', 'u.k.g.': 'KG2',
+        'class 1': 'Class 1', 'std 1': 'Class 1', '1st': 'Class 1',
+        'class 2': 'Class 2', 'std 2': 'Class 2', '2nd': 'Class 2',
+        'class 3': 'Class 3', 'std 3': 'Class 3', '3rd': 'Class 3',
+        'class 4': 'Class 4', 'std 4': 'Class 4', '4th': 'Class 4',
+        'class 5': 'Class 5', 'std 5': 'Class 5', '5th': 'Class 5',
+        'class 6': 'Class 6', 'std 6': 'Class 6', '6th': 'Class 6',
+        'class 7': 'Class 7', 'std 7': 'Class 7', '7th': 'Class 7',
+        'class 8': 'Class 8', 'std 8': 'Class 8', '8th': 'Class 8',
+        'class 9': 'Class 9', 'std 9': 'Class 9', '9th': 'Class 9',
+        'class 10': 'Class 10', 'std 10': 'Class 10', '10th': 'Class 10'
+    };
+    let lower = normalized.toLowerCase();
+    if (variations[lower]) return variations[lower];
+    let parts = normalized.split(' ');
+    if (parts.length >= 2) {
+        let mainClass = parts.slice(0, -1).join(' ');
+        let section = parts[parts.length - 1];
+        if (/^[A-Da-d]$/.test(section)) {
+            let normalizedMain = normalizeClassName(mainClass);
+            if (normalizedMain) return normalizedMain + ' ' + section.toUpperCase();
+        }
+    }
+    return normalized;
+}
+
+function getClassBaseName(className) {
+    if (!className) return '';
+    let parts = className.trim().split(' ');
+    if (parts.length >= 2) {
+        let lastPart = parts[parts.length - 1];
+        if (/^[A-Da-d]$/.test(lastPart)) return parts.slice(0, -1).join(' ');
+    }
+    return className.trim();
+}
+
 // ======================= LOAD CLASSES FROM SUPABASE =======================
 async function loadClassesFromSupabase() {
     console.log('📋 [CLASSES] loadClassesFromSupabase called...');
-    
     const supabase = getSupabaseClientClasses();
     
-    // OFFLINE: Load from cache
     if (!supabase || !navigator.onLine) {
         console.log('📴 [CLASSES] Offline - Loading from cache');
         const cached = localStorage.getItem('cache_classes');
@@ -35324,357 +35366,287 @@ async function loadClassesFromSupabase() {
             try {
                 const parsed = JSON.parse(cached);
                 window.classes.length = 0;
-                for (let item of parsed) {
-                    window.classes.push(item);
-                }
+                for (let item of parsed) window.classes.push(item);
                 console.log(`📦 [CLASSES] Loaded ${window.classes.length} classes from cache`);
                 return true;
-            } catch(e) {
-                console.error('Cache parse error:', e);
-                window.classes = [];
-                return false;
-            }
+            } catch(e) { console.error('Cache parse error:', e); }
         }
         window.classes = [];
         return false;
     }
     
-    // ONLINE: Load from Supabase
     try {
-        console.log('🔄 [CLASSES] Loading from Supabase classes table...');
-        const { data, error } = await supabase
+        const { data: classData, error: classError } = await supabase
             .from('classes')
             .select('*')
             .order('name', { ascending: true });
+        if (classError) throw classError;
+        console.log(`📊 [CLASSES] Supabase returned ${classData ? classData.length : 0} class records`);
         
-        if (error) {
-            console.error('❌ [CLASSES] Supabase error:', error);
-            throw error;
+        const { data: studentData, error: studentError } = await supabase
+            .from('students')
+            .select('id, cls, sec');
+        if (studentError) console.error('Students fetch error:', studentError);
+        
+        let classStudentCount = {};
+        if (studentData && studentData.length > 0) {
+            for (let student of studentData) {
+                if (student.cls) {
+                    let studentClass = student.cls.trim();
+                    let studentSec = student.sec || '';
+                    let fullClass = studentClass + (studentSec ? ' ' + studentSec : '');
+                    let matchedClass = null;
+                    if (classData && classData.length > 0) {
+                        for (let cls of classData) {
+                            if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) {
+                                matchedClass = cls.name; break;
+                            }
+                            if (getClassBaseName(cls.name) === getClassBaseName(fullClass)) {
+                                matchedClass = cls.name; break;
+                            }
+                        }
+                    }
+                    if (!matchedClass) matchedClass = fullClass;
+                    classStudentCount[matchedClass] = (classStudentCount[matchedClass] || 0) + 1;
+                }
+            }
         }
         
-        console.log(`📊 [CLASSES] Supabase returned ${data ? data.length : 0} records`);
-        
         window.classes.length = 0;
-        
-        if (data && data.length > 0) {
-            for (let item of data) {
+        if (classData && classData.length > 0) {
+            for (let item of classData) {
+                let studentCount = classStudentCount[item.name] || 0;
+                if (studentCount === 0) {
+                    let normalized = normalizeClassName(item.name);
+                    for (let [key, value] of Object.entries(classStudentCount)) {
+                        if (normalizeClassName(key) === normalized) { studentCount = value; break; }
+                    }
+                }
                 window.classes.push({
                     id: item.id,
                     name: item.name,
                     teacher: item.teacher || 'Not Assigned',
                     room: item.room || 'N/A',
-                    strength: item.strength || 0,
-                    students: item.students_count || item.students || 0,
-                    studentsCount: item.students_count || item.students || 0,
+                    strength: item.strength || 35,
+                    students: studentCount,
+                    studentsCount: studentCount,
                     created_at: item.created_at
                 });
             }
             localStorage.setItem('cache_classes', JSON.stringify(window.classes));
-            console.log(`✅ [CLASSES] Loaded ${window.classes.length} classes from Supabase`);
-            return true;
-        } else {
-            console.log('📭 [CLASSES] No classes found in Supabase');
-            
-            // Check cache
-            const cached = localStorage.getItem('cache_classes');
-            if (cached) {
+            for (let item of window.classes) {
                 try {
-                    const parsed = JSON.parse(cached);
-                    if (parsed && parsed.length > 0) {
-                        window.classes.length = 0;
-                        for (let item of parsed) {
-                            window.classes.push(item);
-                        }
-                        console.log(`📦 [CLASSES] Loaded ${window.classes.length} classes from cache (fallback)`);
-                        return true;
-                    }
-                } catch(e) {
-                    console.error('Cache parse error:', e);
-                }
-            }
-            
-            // ✅ Generate default classes
-            console.log('🔄 [CLASSES] Generating default classes...');
-            const defaultClasses = [
-                { id: 'CLS001', name: 'Playgroup A', teacher: 'Priya Sharma', room: '101', strength: 35, students: 0 },
-                { id: 'CLS002', name: 'Playgroup B', teacher: 'Neha Gupta', room: '102', strength: 35, students: 0 },
-                { id: 'CLS003', name: 'Nursery A', teacher: 'Rajesh Singh', room: '103', strength: 35, students: 0 },
-                { id: 'CLS004', name: 'Nursery B', teacher: 'Sneha Sharma', room: '104', strength: 35, students: 0 },
-                { id: 'CLS005', name: 'KG1 A', teacher: 'Anjali Kapoor', room: '105', strength: 35, students: 0 },
-                { id: 'CLS006', name: 'KG1 B', teacher: 'Vikram Joshi', room: '106', strength: 35, students: 0 },
-                { id: 'CLS007', name: 'KG2 A', teacher: 'Meera Nair', room: '107', strength: 35, students: 0 },
-                { id: 'CLS008', name: 'KG2 B', teacher: 'Rahul Mehta', room: '108', strength: 35, students: 0 }
-            ];
-            
-            for (let item of defaultClasses) {
-                window.classes.push(item);
-            }
-            localStorage.setItem('cache_classes', JSON.stringify(window.classes));
-            console.log(`📦 [CLASSES] Generated ${window.classes.length} default classes`);
-            
-            // Try to save to Supabase
-            for (let item of defaultClasses) {
-                try {
-                    await supabase.from('classes').upsert({
-                        id: item.id,
-                        name: item.name,
-                        teacher: item.teacher,
-                        room: item.room,
-                        strength: item.strength,
+                    await supabase.from('classes').update({
                         students_count: item.students,
                         updated_at: new Date().toISOString()
-                    }, { onConflict: 'id' });
-                } catch(e) {
-                    console.error('Error saving default class:', e);
-                }
+                    }).eq('id', item.id);
+                } catch(e) { console.error('Error updating class student count:', e); }
             }
-            
+            return true;
+        } else {
+            const defaultClassNames = ['Playgroup A', 'Playgroup B', 'Nursery A', 'Nursery B', 'KG1 A', 'KG1 B', 'KG2 A', 'KG2 B'];
+            for (let name of defaultClassNames) {
+                let studentCount = classStudentCount[name] || 0;
+                if (studentCount === 0) {
+                    let normalized = normalizeClassName(name);
+                    for (let [key, value] of Object.entries(classStudentCount)) {
+                        if (normalizeClassName(key) === normalized) { studentCount = value; break; }
+                    }
+                }
+                window.classes.push({
+                    id: 'CLS' + String(window.classes.length + 1).padStart(3, '0'),
+                    name: name, teacher: 'Not Assigned', room: 'N/A',
+                    strength: 35, students: studentCount, studentsCount: studentCount
+                });
+            }
+            localStorage.setItem('cache_classes', JSON.stringify(window.classes));
+            for (let item of window.classes) {
+                try {
+                    await supabase.from('classes').upsert({
+                        id: item.id, name: item.name, teacher: item.teacher,
+                        room: item.room, strength: item.strength,
+                        students_count: item.students, updated_at: new Date().toISOString()
+                    }, { onConflict: 'id' });
+                } catch(e) { console.error('Error saving default class:', e); }
+            }
             return true;
         }
     } catch(e) {
-        console.error('❌ [CLASSES] Error loading from Supabase:', e);
-        
-        // Fallback to cache
+        console.error('❌ [CLASSES] Error loading:', e);
         const cached = localStorage.getItem('cache_classes');
         if (cached) {
-            try {
-                const parsed = JSON.parse(cached);
-                if (parsed && parsed.length > 0) {
-                    window.classes.length = 0;
-                    for (let item of parsed) {
-                        window.classes.push(item);
-                    }
-                    console.log(`📦 [CLASSES] Loaded ${window.classes.length} classes from cache (error fallback)`);
-                    return true;
-                }
-            } catch(err) {
-                console.error('Cache parse error:', err);
-            }
+            try { window.classes = JSON.parse(cached); return true; } catch(err) {}
         }
         window.classes = [];
         return false;
+    }
+}
+
+// ======================= SYNC STUDENT COUNTS =======================
+async function syncStudentCountsToClasses() {
+    console.log('🔄 [CLASSES] Syncing student counts...');
+    const supabase = getSupabaseClientClasses();
+    if (!supabase || !navigator.onLine) {
+        showNotification('📴 Offline - Cannot sync student counts', 'warning');
+        return;
+    }
+    showLoader();
+    showNotification('🔄 Syncing student counts...', 'info');
+    try {
+        const { data: students, error: studentError } = await supabase.from('students').select('cls, sec');
+        if (studentError) throw studentError;
+        const { data: classesData, error: classError } = await supabase.from('classes').select('id, name');
+        if (classError) throw classError;
+        let classCounts = {};
+        for (let student of students || []) {
+            if (student.cls) {
+                let fullClass = student.cls.trim() + (student.sec ? ' ' + student.sec : '');
+                let matchedClass = null;
+                for (let cls of classesData || []) {
+                    if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) { matchedClass = cls.name; break; }
+                    if (getClassBaseName(cls.name) === getClassBaseName(fullClass)) { matchedClass = cls.name; break; }
+                }
+                if (!matchedClass) matchedClass = fullClass;
+                classCounts[matchedClass] = (classCounts[matchedClass] || 0) + 1;
+            }
+        }
+        let updatedCount = 0, totalStudents = 0;
+        for (let cls of classesData || []) {
+            let count = classCounts[cls.name] || 0;
+            if (count === 0) {
+                let normalized = normalizeClassName(cls.name);
+                for (let [key, value] of Object.entries(classCounts)) {
+                    if (normalizeClassName(key) === normalized) { count = value; break; }
+                }
+            }
+            totalStudents += count;
+            await supabase.from('classes').update({
+                students_count: count,
+                updated_at: new Date().toISOString()
+            }).eq('id', cls.id);
+            updatedCount++;
+        }
+        await loadClassesFromSupabase();
+        hideLoader();
+        showNotification(`✅ Synced ${updatedCount} classes with ${totalStudents} students!`, 'success');
+        renderClassManagement();
+    } catch(e) {
+        console.error('Sync error:', e);
+        hideLoader();
+        showNotification('⚠️ Error syncing: ' + e.message, 'error');
     }
 }
 
 // ======================= SAVE CLASS TO SUPABASE =======================
 async function saveClassToSupabase(classData) {
     console.log('📤 [CLASSES] saveClassToSupabase called for:', classData.name);
-    
     const supabase = getSupabaseClientClasses();
-    
     if (!supabase || !navigator.onLine) {
-        console.log('📴 [CLASSES] Offline - Adding to pending queue');
         addToPendingQueue('classes', 'upsert', classData);
-        showNotification('📴 Offline: Class saved locally. Will sync when online.', 'warning');
+        showNotification('📴 Offline: Class saved locally.', 'warning');
         return false;
     }
-    
     try {
         const dbData = {
-            id: classData.id,
-            name: classData.name,
-            teacher: classData.teacher || 'Not Assigned',
-            room: classData.room || 'N/A',
-            strength: classData.strength || 0,
-            students_count: classData.students || 0,
-            updated_at: new Date().toISOString()
+            id: classData.id, name: classData.name, teacher: classData.teacher || 'Not Assigned',
+            room: classData.room || 'N/A', strength: classData.strength || 35,
+            students_count: classData.students || 0, updated_at: new Date().toISOString()
         };
-        
-        console.log('📤 [CLASSES] Saving to Supabase:', dbData);
-        
-        const { error } = await supabase
-            .from('classes')
-            .upsert(dbData, { onConflict: 'id' });
-        
-        if (error) {
-            console.error('❌ [CLASSES] Supabase upsert error:', error);
-            throw error;
-        }
-        
-        console.log(`✅ [CLASSES] Class "${classData.name}" saved to Supabase`);
-        showNotification('✅ Class saved to Database!', 'success');
-        
-        // Update cache
+        const { error } = await supabase.from('classes').upsert(dbData, { onConflict: 'id' });
+        if (error) throw error;
+        showNotification('✅ Class saved!', 'success');
         let cached = JSON.parse(localStorage.getItem('cache_classes') || '[]');
         let index = cached.findIndex(c => c.id === classData.id);
-        if (index !== -1) {
-            cached[index] = classData;
-        } else {
-            cached.push(classData);
-        }
+        if (index !== -1) cached[index] = { ...cached[index], ...classData };
+        else cached.push(classData);
         localStorage.setItem('cache_classes', JSON.stringify(cached));
-        
         return true;
-        
     } catch(e) {
-        console.error('❌ [CLASSES] Save error:', e);
+        console.error('Save error:', e);
         addToPendingQueue('classes', 'upsert', classData);
-        showNotification('⚠️ Failed to save to cloud. Added to pending queue.', 'warning');
+        showNotification('⚠️ Failed to save to cloud.', 'warning');
         return false;
     }
 }
 
-// ======================= DELETE CLASS FROM SUPABASE =======================
+// ======================= DELETE CLASS =======================
 async function deleteClassFromSupabase(classId) {
     console.log('🗑️ [CLASSES] deleteClassFromSupabase called for:', classId);
-    
     const supabase = getSupabaseClientClasses();
-    
     if (!supabase || !navigator.onLine) {
         addToPendingQueue('classes', 'delete', { id: classId });
         showNotification('📴 Offline: Deletion will sync when online.', 'warning');
         return false;
     }
-    
     try {
-        const { error } = await supabase
-            .from('classes')
-            .delete()
-            .eq('id', classId);
-        
+        const { error } = await supabase.from('classes').delete().eq('id', classId);
         if (error) throw error;
-        
-        console.log(`✅ [CLASSES] Class ${classId} deleted from Supabase`);
         showNotification('✅ Class deleted from Database!', 'success');
-        
         let cached = JSON.parse(localStorage.getItem('cache_classes') || '[]');
         cached = cached.filter(c => c.id !== classId);
         localStorage.setItem('cache_classes', JSON.stringify(cached));
-        
         return true;
-        
     } catch(e) {
-        console.error('❌ [CLASSES] Delete error:', e);
+        console.error('Delete error:', e);
         addToPendingQueue('classes', 'delete', { id: classId });
-        showNotification('⚠️ Failed to delete from cloud. Added to pending queue.', 'warning');
+        showNotification('⚠️ Failed to delete from cloud.', 'warning');
         return false;
     }
 }
 
-// ======================= PROCESS PENDING CLASSES QUEUE =======================
+// ======================= PENDING QUEUE =======================
 async function processPendingClassesQueue() {
-    if (!navigator.onLine) {
-        console.log('📴 [CLASSES] Offline - Cannot process queue');
-        return;
-    }
-    
+    if (!navigator.onLine) return;
     const supabase = getSupabaseClientClasses();
-    if (!supabase) {
-        console.log('❌ [CLASSES] No Supabase client');
-        return;
-    }
-    
+    if (!supabase) return;
     let allPending = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
     let pendingItems = allPending.filter(item => item.table === 'classes');
-    
-    if (pendingItems.length === 0) {
-        console.log('📭 [CLASSES] No pending items');
-        return;
-    }
-    
-    console.log(`🔄 [CLASSES] Processing ${pendingItems.length} pending operations...`);
-    let completedIds = [];
-    let successCount = 0;
-    
+    if (pendingItems.length === 0) return;
+    let completedIds = [], successCount = 0;
     for (const item of pendingItems) {
         try {
             if (item.operation === 'upsert') {
-                const dbData = {
-                    id: item.data.id,
-                    name: item.data.name,
-                    teacher: item.data.teacher || 'Not Assigned',
-                    room: item.data.room || 'N/A',
-                    strength: item.data.strength || 0,
-                    students_count: item.data.students || 0
-                };
+                const dbData = { id: item.data.id, name: item.data.name, teacher: item.data.teacher || 'Not Assigned',
+                    room: item.data.room || 'N/A', strength: item.data.strength || 0, students_count: item.data.students || 0 };
                 const { error } = await supabase.from('classes').upsert(dbData, { onConflict: 'id' });
-                if (!error) {
-                    completedIds.push(item.id);
-                    successCount++;
-                    console.log(`✅ [CLASSES] Synced: ${item.data.name}`);
-                }
-            }
-            else if (item.operation === 'delete') {
+                if (!error) { completedIds.push(item.id); successCount++; }
+            } else if (item.operation === 'delete') {
                 const { error } = await supabase.from('classes').delete().eq('id', item.data.id);
-                if (!error) {
-                    completedIds.push(item.id);
-                    successCount++;
-                    console.log(`✅ [CLASSES] Deleted: ${item.data.id}`);
-                }
+                if (!error) { completedIds.push(item.id); successCount++; }
             }
-        } catch(err) {
-            console.error('❌ [CLASSES] Pending error:', err);
-        }
+        } catch(err) { console.error('Pending error:', err); }
         await new Promise(r => setTimeout(r, 100));
     }
-    
     allPending = allPending.filter(item => !completedIds.includes(item.id));
     localStorage.setItem('pendingSyncQueue', JSON.stringify(allPending));
-    
-    if (successCount > 0) {
-        showNotification(`✅ ${successCount} class records synced to Database!`, 'success');
-    }
+    if (successCount > 0) showNotification(`✅ ${successCount} class records synced!`, 'success');
 }
 
 function addToPendingQueue(table, operation, data) {
     let queue = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
-    queue.push({
-        id: Date.now().toString(),
-        table: table,
-        operation: operation,
-        data: data,
-        timestamp: new Date().toISOString()
-    });
+    queue.push({ id: Date.now().toString(), table: table, operation: operation, data: data, timestamp: new Date().toISOString() });
     localStorage.setItem('pendingSyncQueue', JSON.stringify(queue));
 }
 
 // ======================= GET TEACHER'S CLASS =======================
 function getTeacherClassName() {
-    console.log('🔍 getTeacherClassName called for:', currentUser?.name);
-    
-    if (!currentUser) return null;
-    if (currentUser.role !== 'teacher') return null;
-    
-    // ✅ Check if currentUser has class_teacher
-    if (currentUser.class_teacher) {
-        console.log('✅ Class from currentUser.class_teacher:', currentUser.class_teacher);
-        return currentUser.class_teacher;
-    }
-    
-    // ✅ Check in employees array
+    if (!currentUser || currentUser.role !== 'teacher') return null;
+    if (currentUser.class_teacher) return currentUser.class_teacher;
     if (window.employees && window.employees.length > 0) {
         for (let emp of window.employees) {
             if (emp && emp.name === currentUser.name) {
-                if (emp.class_teacher) {
-                    console.log('✅ Class from employees.class_teacher:', emp.class_teacher);
-                    return emp.class_teacher;
-                }
-                if (emp.classTeacher) {
-                    console.log('✅ Class from employees.classTeacher:', emp.classTeacher);
-                    return emp.classTeacher;
-                }
+                if (emp.class_teacher) return emp.class_teacher;
+                if (emp.classTeacher) return emp.classTeacher;
             }
         }
     }
-    
-    // ✅ Check in classes array
     if (window.classes && window.classes.length > 0) {
         for (let cls of window.classes) {
-            if (cls && cls.teacher === currentUser.name) {
-                console.log('✅ Class from classes.teacher:', cls.name);
-                return cls.name;
-            }
+            if (cls && cls.teacher === currentUser.name) return cls.name;
         }
     }
-    
-    // ✅ Check localStorage
     let savedClass = localStorage.getItem('teacherClass');
-    if (savedClass) {
-        console.log('✅ Class from localStorage:', savedClass);
-        return savedClass;
-    }
-    
-    console.log('⚠️ No class found for teacher:', currentUser.name);
+    if (savedClass) return savedClass;
     return null;
 }
 
@@ -35690,126 +35662,54 @@ function canTeacherAccessClass(className) {
 // ======================= MAIN LOAD FUNCTION =======================
 async function loadClassManagement() {
     console.log('📋 [CLASSES] loadClassManagement called');
-    
-    // Prevent multiple simultaneous loads
-    if (isClassesLoading) {
-        console.log('⚠️ [CLASSES] Already loading, skipping...');
-        return;
-    }
-    
-    // Check if user is logged in
+    if (isClassesLoading) { console.log('⚠️ Already loading...'); return; }
     if (!currentUser) {
-        document.getElementById('moduleContent').innerHTML = `
-            <div class="profile-card" style="text-align:center; padding:40px;">
-                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
-                <h3>Please Login First</h3>
-                <button class="btn btn-primary btn-sm" onclick="showDashboard()">Back to Dashboard</button>
-            </div>
-        `;
+        document.getElementById('moduleContent').innerHTML = `<div class="profile-card" style="text-align:center; padding:40px;">
+            <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
+            <h3>Please Login First</h3>
+            <button class="btn btn-primary btn-sm" onclick="showDashboard()">Back to Dashboard</button></div>`;
         return;
     }
-    
-    // Role-based access - TEACHER allowed
     if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
-        document.getElementById('moduleContent').innerHTML = `
-            <div class="profile-card" style="text-align:center; padding:40px;">
-                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
-                <h3>⛔ Access Denied</h3>
-                <p>Only administrators and teachers can access this module.</p>
-                <button class="btn btn-primary btn-sm" onclick="showDashboard()">Back to Dashboard</button>
-            </div>
-        `;
+        document.getElementById('moduleContent').innerHTML = `<div class="profile-card" style="text-align:center; padding:40px;">
+            <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
+            <h3>⛔ Access Denied</h3>
+            <p>Only administrators and teachers can access this module.</p>
+            <button class="btn btn-primary btn-sm" onclick="showDashboard()">Back to Dashboard</button></div>`;
         return;
     }
-    
     isClassesLoading = true;
     showLoader();
-    
-    // Show loading indicator
-    document.getElementById('moduleContent').innerHTML = `
-        <div style="text-align:center; padding:60px;">
-            <i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--primary);"></i>
-            <h3 style="margin-top:20px;">Loading Classes...</h3>
-            <p style="color:var(--text-secondary);">Fetching data from Supabase cloud</p>
-        </div>
-    `;
-    
+    document.getElementById('moduleContent').innerHTML = `<div style="text-align:center; padding:60px;">
+        <i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--primary);"></i>
+        <h3 style="margin-top:20px;">Loading Classes...</h3>
+        <p style="color:var(--text-secondary);">Fetching data from Supabase cloud</p></div>`;
     try {
-        // Load from Supabase
-        let loaded = false;
         if (navigator.onLine) {
-            loaded = await loadClassesFromSupabase();
-            if (loaded) {
-                console.log('✅ [CLASSES] Loaded successfully online');
-            } else {
-                console.log('⚠️ [CLASSES] No data from Supabase, checking cache...');
-                const cached = localStorage.getItem('cache_classes');
-                if (cached) {
-                    try {
-                        window.classes = JSON.parse(cached);
-                        console.log(`📦 [CLASSES] Loaded ${window.classes.length} classes from cache (fallback)`);
-                    } catch(e) {}
-                }
-            }
+            await loadClassesFromSupabase();
+            await syncStudentCountsToClasses();
         } else {
-            // Offline - use cache
             const cached = localStorage.getItem('cache_classes');
-            if (cached) {
-                try {
-                    window.classes = JSON.parse(cached);
-                    console.log(`📦 [CLASSES] Loaded ${window.classes.length} classes from cache (offline)`);
-                } catch(e) {
-                    console.error('Cache parse error:', e);
-                }
-            }
+            if (cached) { try { window.classes = JSON.parse(cached); } catch(e) {} }
         }
-        
-        // ✅ If no classes, generate default classes
         if (window.classes.length === 0) {
-            console.log('🔄 [CLASSES] No classes found, generating default classes...');
-            const defaultClasses = [
-                { id: 'CLS001', name: 'Playgroup A', teacher: 'Priya Sharma', room: '101', strength: 35, students: 0 },
-                { id: 'CLS002', name: 'Playgroup B', teacher: 'Neha Gupta', room: '102', strength: 35, students: 0 },
-                { id: 'CLS003', name: 'Nursery A', teacher: 'Rajesh Singh', room: '103', strength: 35, students: 0 },
-                { id: 'CLS004', name: 'Nursery B', teacher: 'Sneha Sharma', room: '104', strength: 35, students: 0 },
-                { id: 'CLS005', name: 'KG1 A', teacher: 'Anjali Kapoor', room: '105', strength: 35, students: 0 },
-                { id: 'CLS006', name: 'KG1 B', teacher: 'Vikram Joshi', room: '106', strength: 35, students: 0 },
-                { id: 'CLS007', name: 'KG2 A', teacher: 'Meera Nair', room: '107', strength: 35, students: 0 },
-                { id: 'CLS008', name: 'KG2 B', teacher: 'Rahul Mehta', room: '108', strength: 35, students: 0 }
-            ];
-            for (let item of defaultClasses) {
-                window.classes.push(item);
+            const defaultClassNames = ['Playgroup A', 'Playgroup B', 'Nursery A', 'Nursery B', 'KG1 A', 'KG1 B', 'KG2 A', 'KG2 B'];
+            for (let name of defaultClassNames) {
+                window.classes.push({ id: 'CLS' + String(window.classes.length + 1).padStart(3, '0'),
+                    name: name, teacher: 'Not Assigned', room: 'N/A', strength: 35, students: 0, studentsCount: 0 });
             }
             localStorage.setItem('cache_classes', JSON.stringify(window.classes));
-            console.log(`📦 [CLASSES] Generated ${window.classes.length} default classes`);
         }
-        
-        // ✅ For teacher, ensure class is detected
-        if (currentUser.role === 'teacher') {
-            let myClass = getTeacherClassName();
-            console.log('👨‍🏫 Teacher class detected:', myClass);
-            
-            if (!myClass) {
-                console.log('⚠️ Teacher has no assigned class, showing all classes (view only)');
-            }
-        }
-        
-        // Render the module
         renderClassManagement();
         hideLoader();
         isClassesLoading = false;
-        console.log('✅ [CLASSES] Module rendered successfully');
-        
     } catch (error) {
-        console.error('❌ [CLASSES] Error loading module:', error);
-        document.getElementById('moduleContent').innerHTML = `
-            <div class="profile-card" style="text-align:center; padding:40px;">
-                <i class="fas fa-exclamation-triangle" style="font-size:48px; color:#ef4444;"></i>
-                <h3>Error Loading Classes</h3>
-                <p>${error.message || 'Unknown error occurred'}</p>
-                <button class="btn btn-primary btn-sm" onclick="loadClassManagement()">Retry</button>
-            </div>
-        `;
+        console.error('Error loading module:', error);
+        document.getElementById('moduleContent').innerHTML = `<div class="profile-card" style="text-align:center; padding:40px;">
+            <i class="fas fa-exclamation-triangle" style="font-size:48px; color:#ef4444;"></i>
+            <h3>Error Loading Classes</h3>
+            <p>${error.message || 'Unknown error'}</p>
+            <button class="btn btn-primary btn-sm" onclick="loadClassManagement()">Retry</button></div>`;
         hideLoader();
         isClassesLoading = false;
     }
@@ -35818,109 +35718,63 @@ async function loadClassManagement() {
 // ======================= RENDER CLASS MANAGEMENT =======================
 function renderClassManagement() {
     console.log('🎨 [CLASSES] renderClassManagement called - classes count:', window.classes.length);
-    
-    // If no classes, show empty state
     if (window.classes.length === 0) {
         let addButton = (currentUser.role === 'admin') 
-            ? `<button class="btn btn-primary btn-sm" onclick="showAddClassForm()" style="margin-top:10px;"><i class="fas fa-plus"></i> Add First Class</button>` 
-            : '';
-        document.getElementById('moduleContent').innerHTML = `
-            <div style="text-align:center; padding:60px; background:var(--bg-surface); border-radius:20px;">
-                <i class="fas fa-chalkboard" style="font-size:48px; color:#94a3b8;"></i>
-                <h3 style="margin-top:16px;">No Classes Found</h3>
-                <p style="color:var(--text-secondary);">${navigator.onLine ? 'No class data found.' : 'You are offline. Connect to internet to load data.'}</p>
-                ${addButton}
-                <button class="btn btn-success btn-sm" onclick="refreshClassesData()" style="margin-left:10px; margin-top:10px;"><i class="fas fa-sync-alt"></i> Sync from Cloud</button>
-            </div>
-        `;
+            ? `<button class="btn btn-primary btn-sm" onclick="showAddClassForm()" style="margin-top:10px;"><i class="fas fa-plus"></i> Add First Class</button>` : '';
+        document.getElementById('moduleContent').innerHTML = `<div style="text-align:center; padding:60px; background:var(--bg-surface); border-radius:20px;">
+            <i class="fas fa-chalkboard" style="font-size:48px; color:#94a3b8;"></i>
+            <h3 style="margin-top:16px;">No Classes Found</h3>
+            <p style="color:var(--text-secondary);">${navigator.onLine ? 'No class data found.' : 'You are offline. Connect to internet to load data.'}</p>
+            ${addButton}
+            <button class="btn btn-success btn-sm" onclick="refreshClassesData()" style="margin-left:10px; margin-top:10px;"><i class="fas fa-sync-alt"></i> Sync from Cloud</button>
+            <button class="btn btn-info btn-sm" onclick="syncStudentCountsToClasses()" style="margin-left:10px; margin-top:10px;"><i class="fas fa-users"></i> Sync Student Counts</button></div>`;
         return;
     }
     
     let filteredClasses = [];
     let classesData = window.classes || [];
-    
-    // Filter based on role
     if (currentUser.role === 'admin') {
-        for (let i = 0; i < classesData.length; i++) {
-            let c = classesData[i];
-            let matchesSearch = classFilterText === '' || 
-                (c.name && c.name.toLowerCase().includes(classFilterText.toLowerCase())) || 
-                (c.teacher && c.teacher.toLowerCase().includes(classFilterText.toLowerCase()));
-            if (matchesSearch) {
-                filteredClasses.push(c);
-            }
+        for (let c of classesData) {
+            if (classFilterText === '' || c.name.toLowerCase().includes(classFilterText.toLowerCase()) || 
+                c.teacher.toLowerCase().includes(classFilterText.toLowerCase())) filteredClasses.push(c);
         }
     } else if (currentUser.role === 'teacher') {
         let myClass = getTeacherClassName();
-        console.log('👨‍🏫 Teacher class for filter:', myClass);
-        
-        // ✅ If teacher has no class, show ALL classes (view only)
         if (!myClass) {
-            console.log('👨‍🏫 Teacher has no assigned class - showing all classes (view only)');
-            for (let i = 0; i < classesData.length; i++) {
-                let c = classesData[i];
-                let matchesSearch = classFilterText === '' || 
-                    (c.name && c.name.toLowerCase().includes(classFilterText.toLowerCase())) || 
-                    (c.teacher && c.teacher.toLowerCase().includes(classFilterText.toLowerCase()));
-                if (matchesSearch) {
+            for (let c of classesData) {
+                if (classFilterText === '' || c.name.toLowerCase().includes(classFilterText.toLowerCase()) || 
+                    c.teacher.toLowerCase().includes(classFilterText.toLowerCase())) filteredClasses.push(c);
+            }
+        } else {
+            for (let c of classesData) {
+                if (c.name === myClass && (classFilterText === '' || c.name.toLowerCase().includes(classFilterText.toLowerCase()))) {
                     filteredClasses.push(c);
                 }
             }
-        } else {
-            // ✅ Show only teacher's class
-            for (let i = 0; i < classesData.length; i++) {
-                if (classesData[i].name === myClass) {
-                    let matchesSearch = classFilterText === '' || 
-                        (classesData[i].name && classesData[i].name.toLowerCase().includes(classFilterText.toLowerCase()));
-                    if (matchesSearch) {
-                        filteredClasses.push(classesData[i]);
-                    }
-                }
-            }
         }
     }
     
-    // Calculate stats
     let totalClasses = filteredClasses.length;
     let totalStudents = 0;
-    for (let i = 0; i < filteredClasses.length; i++) {
-        totalStudents += (filteredClasses[i].students || 0);
-    }
+    for (let c of filteredClasses) totalStudents += (c.students || 0);
     let avgStudents = totalClasses > 0 ? Math.round(totalStudents / totalClasses) : 0;
     let capacityAlert = 0;
-    for (let i = 0; i < filteredClasses.length; i++) {
-        if ((filteredClasses[i].students || 0) >= (filteredClasses[i].strength || 35) * 0.9) {
-            capacityAlert++;
-        }
+    for (let c of filteredClasses) {
+        if ((c.students || 0) >= (c.strength || 35) * 0.9) capacityAlert++;
     }
     
-    // Class strength for chart
     let classStrength = {};
-    for (let i = 0; i < filteredClasses.length; i++) {
-        classStrength[filteredClasses[i].name] = filteredClasses[i].students || 0;
-    }
+    for (let c of filteredClasses) classStrength[c.name] = c.students || 0;
     
-    // Pagination
     classesTotalPages = Math.ceil(filteredClasses.length / classesPerPage);
     if (classesCurrentPage > classesTotalPages) classesCurrentPage = Math.max(1, classesTotalPages);
     let start = (classesCurrentPage - 1) * classesPerPage;
     let paginatedClasses = filteredClasses.slice(start, start + classesPerPage);
     
     let canAddClass = (currentUser.role === 'admin');
-    let canEditDelete = (currentUser.role === 'admin');
-    
-    // Check pending items
-    let pendingCount = 0;
-    let allPending = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
-    pendingCount = allPending.filter(item => item.table === 'classes').length;
+    let pendingCount = (JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]')).filter(item => item.table === 'classes').length;
     let pendingBadge = pendingCount > 0 ? `<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-left: 8px;"><i class="fas fa-clock"></i> ${pendingCount} Pending Sync</span>` : '';
-    
-    // Teacher class display
-    let teacherClassDisplay = '';
-    if (currentUser.role === 'teacher') {
-        let myClass = getTeacherClassName();
-        teacherClassDisplay = myClass ? ` | Your Class: <strong>${myClass}</strong>` : ' | <span style="color:#f59e0b;">No class assigned</span>';
-    }
+    let teacherClassDisplay = (currentUser.role === 'teacher') ? (getTeacherClassName() ? ` | Your Class: <strong>${getTeacherClassName()}</strong>` : ' | <span style="color:#f59e0b;">No class assigned</span>') : '';
     
     let content = `
     <style>
@@ -35933,7 +35787,6 @@ function renderClassManagement() {
             #classCardsGrid { grid-template-columns: 1fr !important; }
             .class-card-header { flex-direction: column; text-align: center; }
             .class-card-actions { justify-content: center; }
-            .info-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
         }
         @media (max-width: 480px) {
             .summary-cards { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
@@ -35944,40 +35797,14 @@ function renderClassManagement() {
             .class-card-body { padding: 10px 14px !important; }
             .class-card-footer { padding: 8px 12px !important; gap: 4px !important; }
             .class-action-btn { font-size: 10px !important; padding: 4px 10px !important; min-height: 32px !important; }
-            .class-card-title h3 { font-size: 15px !important; }
         }
         .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .offline-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .role-badge { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; }
-        .class-card {
-            background: var(--bg-surface);
-            border-radius: 20px;
-            margin-bottom: 16px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border: 1px solid var(--border-light);
-            transition: transform 0.2s ease;
-        }
+        .class-card { background: var(--bg-surface); border-radius: 20px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border-light); transition: transform 0.2s ease; }
         .class-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .class-card-header {
-            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-            padding: 16px 20px;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-        .class-card-icon {
-            width: 50px;
-            height: 50px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
+        .class-card-header { background: linear-gradient(135deg, #8b5cf6, #6d28d9); padding: 16px 20px; color: white; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .class-card-icon { width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
         .class-card-title { flex: 1; min-width: 120px; }
         .class-card-title h3 { margin: 0; font-size: 18px; font-weight: 700; }
         .class-card-title p { margin: 4px 0 0; font-size: 12px; opacity: 0.85; }
@@ -35986,28 +35813,8 @@ function renderClassManagement() {
         .class-stat-item { text-align: center; background: var(--bg-surface); padding: 10px; border-radius: 12px; }
         .class-stat-value { font-size: 20px; font-weight: 700; }
         .class-stat-label { font-size: 11px; color: var(--text-secondary); }
-        .class-card-footer {
-            padding: 12px 20px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            border-top: 1px solid var(--border-light);
-            background: var(--bg-surface);
-        }
-        .class-action-btn {
-            background: var(--bg-body);
-            border: 1px solid var(--border-light);
-            padding: 6px 14px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 11px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-            color: var(--text-primary);
-            touch-action: manipulation;
-        }
+        .class-card-footer { padding: 12px 20px; display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border-light); background: var(--bg-surface); }
+        .class-action-btn { background: var(--bg-body); border: 1px solid var(--border-light); padding: 6px 14px; border-radius: 30px; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; color: var(--text-primary); touch-action: manipulation; }
         .class-action-btn:hover { background: #8b5cf6; color: white; border-color: #8b5cf6; }
         .class-action-btn.danger:hover { background: #ef4444; border-color: #ef4444; }
         .progress-container { width: 100%; height: 6px; background: var(--border-light); overflow: hidden; border-radius: 10px; margin-top: 8px; }
@@ -36042,33 +35849,19 @@ function renderClassManagement() {
         <button class="btn btn-secondary btn-sm" onclick="window.print()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: #64748b; color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-print"></i> Print</button>
         <button class="btn btn-success btn-sm" onclick="refreshClassesData()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-sync-alt"></i> Refresh</button>
         ${canAddClass ? `<button class="btn btn-primary btn-sm" onclick="showAddClassForm()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: linear-gradient(135deg, #2563eb, #1e40af); color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-plus"></i> Add Class</button>` : ''}
+        <button class="btn btn-info btn-sm" onclick="syncStudentCountsToClasses()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: #8b5cf6; color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-users"></i> Sync Counts</button>
         <button class="btn btn-secondary btn-sm" onclick="exportClassesCSV()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: #6c757d; color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-file-csv"></i> Export CSV</button>
     </div>
     
     <div class="summary-cards">
-        <div class="summary-item">
-            <div class="summary-value">${totalClasses}</div>
-            <div style="font-size: 12px; color: var(--text-secondary);">📚 Total Classes</div>
-        </div>
-        <div class="summary-item">
-            <div class="summary-value">${totalStudents}</div>
-            <div style="font-size: 12px; color: var(--text-secondary);">👨‍🎓 Total Students</div>
-        </div>
-        <div class="summary-item">
-            <div class="summary-value">${avgStudents}</div>
-            <div style="font-size: 12px; color: var(--text-secondary);">📊 Avg/Class</div>
-        </div>
-        <div class="summary-item">
-            <div class="summary-value" style="color: ${capacityAlert > 0 ? '#ef4444' : '#10b981'};">${capacityAlert}</div>
-            <div style="font-size: 12px; color: var(--text-secondary);">⚠️ Capacity Alert</div>
-        </div>
+        <div class="summary-item"><div class="summary-value">${totalClasses}</div><div style="font-size: 12px; color: var(--text-secondary);">📚 Total Classes</div></div>
+        <div class="summary-item"><div class="summary-value">${totalStudents}</div><div style="font-size: 12px; color: var(--text-secondary);">👨‍🎓 Total Students</div></div>
+        <div class="summary-item"><div class="summary-value">${avgStudents}</div><div style="font-size: 12px; color: var(--text-secondary);">📊 Avg/Class</div></div>
+        <div class="summary-item"><div class="summary-value" style="color: ${capacityAlert > 0 ? '#ef4444' : '#10b981'};">${capacityAlert}</div><div style="font-size: 12px; color: var(--text-secondary);">⚠️ Capacity Alert</div></div>
     </div>
     
     <div class="chart-container">
-        <div class="chart-card">
-            <h3>📊 Class-wise Strength</h3>
-            <canvas id="classStrengthChart" style="max-height: 250px; width: 100%;"></canvas>
-        </div>
+        <div class="chart-card"><h3>📊 Class-wise Strength</h3><canvas id="classStrengthChart" style="max-height: 250px; width: 100%;"></canvas></div>
     </div>
     
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 15px 0; padding: 12px 16px; background: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border-light);">
@@ -36085,89 +35878,40 @@ function renderClassManagement() {
     document.getElementById('moduleContent').innerHTML = content;
     renderClassCards(paginatedClasses);
     
-    // Destroy existing chart instance
-    if (classChartInstance) {
-        try {
-            classChartInstance.destroy();
-            classChartInstance = null;
-            console.log('✅ Chart instance destroyed');
-        } catch(e) {
-            console.log('⚠️ Error destroying chart:', e);
-        }
-    }
-    
-    // Create new chart
+    if (classChartInstance) { try { classChartInstance.destroy(); classChartInstance = null; } catch(e) {} }
     setTimeout(() => {
         try {
             let strengthCtx = document.getElementById('classStrengthChart')?.getContext('2d');
-            if (strengthCtx && Object.keys(classStrength).length > 0) {
+            if (strengthCtx && Object.keys(classStrength).length > 0 && typeof Chart !== 'undefined') {
                 classChartInstance = new Chart(strengthCtx, { 
                     type: 'bar', 
-                    data: { 
-                        labels: Object.keys(classStrength), 
-                        datasets: [{ 
-                            label: 'Students', 
-                            data: Object.values(classStrength), 
-                            backgroundColor: '#2563eb', 
-                            borderRadius: 6 
-                        }] 
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: { position: 'top' }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: { stepSize: 1 }
-                            }
-                        }
-                    } 
+                    data: { labels: Object.keys(classStrength), datasets: [{ label: 'Students', data: Object.values(classStrength), backgroundColor: '#2563eb', borderRadius: 6 }] },
+                    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } 
                 });
-                console.log('✅ Chart created successfully');
             }
-        } catch(e) {
-            console.error('❌ Error creating chart:', e);
-        }
+        } catch(e) { console.error('Chart error:', e); }
     }, 200);
 }
 
-// ======================= PAGINATION FUNCTIONS =======================
-function previousClassesPage() { 
-    if (classesCurrentPage > 1) { 
-        classesCurrentPage--; 
-        loadClassManagement(); 
-    } 
-}
-
-function nextClassesPage() { 
-    if (classesCurrentPage < classesTotalPages) { 
-        classesCurrentPage++; 
-        loadClassManagement(); 
-    } 
-}
+// ======================= PAGINATION =======================
+function previousClassesPage() { if (classesCurrentPage > 1) { classesCurrentPage--; loadClassManagement(); } }
+function nextClassesPage() { if (classesCurrentPage < classesTotalPages) { classesCurrentPage++; loadClassManagement(); } }
 
 // ======================= RENDER CLASS CARDS =======================
 function renderClassCards(classesToRender) {
     let grid = document.getElementById('classCardsGrid');
     if (!grid) return;
-    
     if (classesToRender.length === 0) {
         grid.innerHTML = '<div style="text-align:center; padding:40px; background: var(--bg-surface); border-radius: 20px; border:1px solid var(--border-light);"><i class="fas fa-chalkboard" style="font-size: 48px; color: #94a3b8;"></i><p style="margin-top: 10px; color:var(--text-secondary);">No classes found matching your criteria.</p></div>';
         return;
     }
-    
     let canEditDelete = (currentUser.role === 'admin');
     let html = '';
-    
     for (let c of classesToRender) {
         let capacityPercentage = ((c.students || 0) / (c.strength || 35)) * 100;
         let capacityColor = capacityPercentage > 90 ? '#ef4444' : capacityPercentage > 75 ? '#f59e0b' : '#10b981';
         let capacityText = capacityPercentage > 90 ? '⚠️ Full' : capacityPercentage > 75 ? '🟡 Almost Full' : '✅ Available';
         let availableSeats = (c.strength || 35) - (c.students || 0);
-        
         html += `
         <div class="class-card">
             <div class="class-card-header">
@@ -36176,28 +35920,15 @@ function renderClassCards(classesToRender) {
                     <h3>${escapeHtml(c.name)}</h3>
                     <p><i class="fas fa-chalkboard-teacher"></i> Teacher: ${escapeHtml(c.teacher || 'Not Assigned')}</p>
                 </div>
-                <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 30px; font-size: 11px;">
-                    🪑 ${c.room || 'N/A'}
-                </span>
+                <span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 30px; font-size: 11px;">🪑 ${c.room || 'N/A'}</span>
             </div>
             <div class="class-card-body">
                 <div class="class-stat-grid">
-                    <div class="class-stat-item">
-                        <div class="class-stat-value">${c.students || 0}</div>
-                        <div class="class-stat-label">👨‍🎓 Students</div>
-                    </div>
-                    <div class="class-stat-item">
-                        <div class="class-stat-value">${c.strength || 0}</div>
-                        <div class="class-stat-label">📊 Capacity</div>
-                    </div>
-                    <div class="class-stat-item">
-                        <div class="class-stat-value" style="color: ${capacityColor};">${capacityPercentage.toFixed(1)}%</div>
-                        <div class="class-stat-label">📈 Utilization</div>
-                    </div>
+                    <div class="class-stat-item"><div class="class-stat-value" style="color: #2563eb;">${c.students || 0}</div><div class="class-stat-label">👨‍🎓 Students</div></div>
+                    <div class="class-stat-item"><div class="class-stat-value" style="color: #64748b;">${c.strength || 0}</div><div class="class-stat-label">📊 Capacity</div></div>
+                    <div class="class-stat-item"><div class="class-stat-value" style="color: ${capacityColor};">${capacityPercentage.toFixed(1)}%</div><div class="class-stat-label">📈 Utilization</div></div>
                 </div>
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: ${Math.min(100, capacityPercentage)}%; background: ${capacityColor};"></div>
-                </div>
+                <div class="progress-container"><div class="progress-bar" style="width: ${Math.min(100, capacityPercentage)}%; background: ${capacityColor};"></div></div>
                 <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px; color: ${capacityColor};">
                     <span>${capacityText}</span>
                     <span>${availableSeats} seats available</span>
@@ -36213,121 +35944,243 @@ function renderClassCards(classesToRender) {
             </div>
         </div>`;
     }
-    
     grid.innerHTML = html;
 }
 
-// ======================= VIEW CLASS DETAILS =======================
-function viewClassDetails(id) {
-    let c = window.classes.find(cls => cls.id === id);
-    if (!c) { 
-        showNotification('Class not found!', 'error'); 
-        return; 
-    }
-    
-    if (currentUser.role === 'teacher' && !canTeacherAccessClass(c.name)) {
-        showNotification('You can only view your own class', 'error');
-        return;
-    }
-    
-    let classStudents = [];
-    if (window.students) {
-        for (let s of window.students) {
-            if (s.cls && s.cls === c.name) {
-                classStudents.push(s);
+// ======================= ✅ FIXED: VIEW CLASS DETAILS =======================
+async function viewClassDetails(id) {
+    try {
+        let c = window.classes.find(cls => cls.id === id);
+        if (!c) { showNotification('Class not found!', 'error'); return; }
+        
+        if (currentUser.role === 'teacher' && !canTeacherAccessClass(c.name)) {
+            showNotification('You can only view your own class', 'error');
+            return;
+        }
+        
+        showLoader();
+        showNotification('🔄 Loading class details...', 'info');
+        
+        const supabase = getSupabaseClientClasses();
+        let classStudents = [];
+        
+        if (supabase && navigator.onLine) {
+            try {
+                const { data: students, error } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('cls', c.name);
+                if (!error && students) {
+                    classStudents = students;
+                } else {
+                    let parts = c.name.split(' ');
+                    if (parts.length >= 2) {
+                        let className = parts.slice(0, -1).join(' ');
+                        let section = parts[parts.length - 1];
+                        const { data: students2, error: error2 } = await supabase
+                            .from('students')
+                            .select('*')
+                            .eq('cls', className)
+                            .eq('sec', section);
+                        if (!error2 && students2) classStudents = students2;
+                    }
+                }
+            } catch(e) { console.error('Error fetching students:', e); }
+        }
+        
+        if (classStudents.length === 0 && window.students && window.students.length > 0) {
+            for (let s of window.students) {
+                if (s.cls === c.name) classStudents.push(s);
             }
         }
-    }
-    
-    let capacityPercentage = ((c.students || 0) / (c.strength || 35)) * 100;
-    let capacityColor = capacityPercentage > 90 ? '#ef4444' : capacityPercentage > 75 ? '#f59e0b' : '#10b981';
-    
-    let studentListHtml = '';
-    if (classStudents.length === 0) {
-        studentListHtml = '<p style="color:#94a3b8;">No students enrolled in this class</p>';
-    } else {
-        studentListHtml = '<ul style="list-style:none; padding:0; max-height:200px; overflow-y:auto;">';
-        for (let s of classStudents) {
-            studentListHtml += `<li style="padding:6px 0; border-bottom:1px solid #f1f5f9;">${escapeHtml(s.name)} (Roll: ${s.roll})</li>`;
+        
+        hideLoader();
+        
+        let capacityPercentage = ((c.students || 0) / (c.strength || 35)) * 100;
+        let capacityColor = capacityPercentage > 90 ? '#ef4444' : capacityPercentage > 75 ? '#f59e0b' : '#10b981';
+        
+        let studentListHtml = '';
+        if (classStudents.length === 0) {
+            studentListHtml = '<p style="color:#94a3b8; text-align:center; padding:10px;">No students enrolled in this class</p>';
+        } else {
+            studentListHtml = '<ul style="list-style:none; padding:0; max-height:200px; overflow-y:auto;">';
+            for (let s of classStudents) {
+                studentListHtml += `<li style="padding:6px 0; border-bottom:1px solid #f1f5f9; display: flex; justify-content: space-between;">
+                    <span>${escapeHtml(s.name)}</span>
+                    <span style="color: #64748b; font-size: 12px;">Roll: ${s.roll || 'N/A'}</span>
+                </li>`;
+            }
+            studentListHtml += '</ul>';
         }
-        studentListHtml += '</ul>';
-    }
-    
-    Swal.fire({
-        title: `📚 ${escapeHtml(c.name)}`,
-        html: `
-            <div style="text-align: left;">
-                <div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); padding: 12px; border-radius: 12px; color: white; margin-bottom: 16px;">
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
-                        <div><div style="font-size: 10px; opacity: 0.8;">Students</div><div style="font-size: 18px; font-weight: bold;">${c.students || 0}</div></div>
-                        <div><div style="font-size: 10px; opacity: 0.8;">Capacity</div><div style="font-size: 18px; font-weight: bold;">${c.strength || 0}</div></div>
-                        <div><div style="font-size: 10px; opacity: 0.8;">Utilization</div><div style="font-size: 16px; font-weight: bold; color: ${capacityColor};">${capacityPercentage.toFixed(1)}%</div></div>
+        
+        Swal.fire({
+            title: `📚 ${escapeHtml(c.name)}`,
+            html: `
+                <div style="text-align: left;">
+                    <div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); padding: 12px; border-radius: 12px; color: white; margin-bottom: 16px;">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                            <div><div style="font-size: 10px; opacity: 0.8;">Students</div><div style="font-size: 18px; font-weight: bold;">${classStudents.length}</div></div>
+                            <div><div style="font-size: 10px; opacity: 0.8;">Capacity</div><div style="font-size: 18px; font-weight: bold;">${c.strength || 0}</div></div>
+                            <div><div style="font-size: 10px; opacity: 0.8;">Utilization</div><div style="font-size: 16px; font-weight: bold; color: ${capacityColor};">${capacityPercentage.toFixed(1)}%</div></div>
+                        </div>
                     </div>
+                    <p><strong><i class="fas fa-chalkboard-teacher"></i> Teacher:</strong> ${escapeHtml(c.teacher || 'Not Assigned')}</p>
+                    <p><strong><i class="fas fa-door-open"></i> Room:</strong> ${c.room || 'N/A'}</p>
+                    <hr>
+                    <h4>👨‍🎓 Enrolled Students (${classStudents.length})</h4>
+                    ${studentListHtml}
                 </div>
-                <p><strong><i class="fas fa-chalkboard-teacher"></i> Teacher:</strong> ${escapeHtml(c.teacher || 'Not Assigned')}</p>
-                <p><strong><i class="fas fa-door-open"></i> Room:</strong> ${c.room || 'N/A'}</p>
-                <hr>
-                <h4>👨‍🎓 Enrolled Students</h4>
-                ${studentListHtml}
-            </div>
-        `,
-        confirmButtonText: 'Close',
-        width: window.innerWidth <= 480 ? '95%' : '500px'
-    });
+            `,
+            confirmButtonText: 'Close',
+            width: window.innerWidth <= 480 ? '95%' : '500px',
+            customClass: { popup: 'mobile-swal-popup' }
+        });
+        
+    } catch(e) {
+        console.error('Error viewing class details:', e);
+        hideLoader();
+        showNotification('Error loading class details: ' + e.message, 'error');
+    }
 }
 
-// ======================= VIEW CLASS STUDENTS =======================
-function viewClassStudents(id) {
-    let c = window.classes.find(cls => cls.id === id);
-    if (!c) return;
-    
-    if (currentUser.role === 'teacher' && !canTeacherAccessClass(c.name)) {
-        showNotification('You can only view students of your own class', 'error');
-        return;
-    }
-    
-    let classStudents = [];
-    if (window.students) {
-        for (let s of window.students) {
-            if (s.cls && s.cls === c.name) {
-                classStudents.push(s);
-            }
+// ======================= ✅ FIXED: VIEW CLASS STUDENTS =======================
+async function viewClassStudents(id) {
+    try {
+        let c = window.classes.find(cls => cls.id === id);
+        if (!c) {
+            showNotification('Class not found!', 'error');
+            return;
         }
+        
+        if (currentUser.role === 'teacher' && !canTeacherAccessClass(c.name)) {
+            showNotification('You can only view students of your own class', 'error');
+            return;
+        }
+        
+        showLoader();
+        showNotification('🔄 Loading students...', 'info');
+        
+        const supabase = getSupabaseClientClasses();
+        let classStudents = [];
+        
+        if (supabase && navigator.onLine) {
+            try {
+                const { data: students, error } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('cls', c.name);
+                
+                if (error) {
+                    console.error('Error fetching students:', error);
+                    throw error;
+                }
+                
+                if (students && students.length > 0) {
+                    classStudents = students;
+                    console.log(`✅ Found ${students.length} students in ${c.name}`);
+                } else {
+                    let parts = c.name.split(' ');
+                    if (parts.length >= 2) {
+                        let className = parts.slice(0, -1).join(' ');
+                        let section = parts[parts.length - 1];
+                        const { data: students2, error: error2 } = await supabase
+                            .from('students')
+                            .select('*')
+                            .eq('cls', className)
+                            .eq('sec', section);
+                        if (!error2 && students2 && students2.length > 0) {
+                            classStudents = students2;
+                            console.log(`✅ Found ${students2.length} students in ${className} ${section}`);
+                        }
+                    }
+                }
+            } catch(e) { console.error('Error fetching students:', e); }
+        }
+        
+        if (classStudents.length === 0 && window.students && window.students.length > 0) {
+            for (let s of window.students) {
+                if (s.cls === c.name) classStudents.push(s);
+            }
+            console.log(`📦 Found ${classStudents.length} students from window.students`);
+        }
+        
+        hideLoader();
+        
+        if (classStudents.length === 0) {
+            showNotification('No students enrolled in this class', 'info');
+            return;
+        }
+        
+        let studentHtml = '';
+        for (let s of classStudents) {
+            let photoSrc = s.photo_url || s.photoUrl || s.photo_data || null;
+            let photoHtml = photoSrc 
+                ? `<img src="${photoSrc}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; margin-right: 10px;" onerror="this.style.display='none';">` 
+                : `<i class="fas fa-user-graduate" style="font-size: 20px; color: #2563eb; margin-right: 10px;"></i>`;
+            
+            studentHtml += `
+                <div style="padding: 10px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        ${photoHtml}
+                        <div>
+                            <strong>${escapeHtml(s.name)}</strong>
+                            <br>
+                            <small style="color: #64748b;">Roll: ${s.roll || 'N/A'} | ${s.admission_no || s.admissionNo || 'N/A'}</small>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <span style="background: #dbeafe; padding: 2px 10px; border-radius: 20px; font-size: 10px; color: #1e40af;">📞 ${s.mobile || s.father_mobile || 'N/A'}</span>
+                        <span style="background: #fef3c7; padding: 2px 10px; border-radius: 20px; font-size: 10px; color: #92400e;">${s.gender || 'N/A'}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        let totalFee = 0, totalPaid = 0, totalDue = 0;
+        for (let s of classStudents) {
+            totalFee += (s.total_fee || s.totalFee || 0);
+            totalPaid += (s.total_paid_fee || s.totalPaidFee || 0);
+            totalDue += (s.fee_due || s.feeDue || 0);
+        }
+        
+        Swal.fire({
+            title: `👨‍🎓 Students of ${escapeHtml(c.name)}`,
+            html: `
+                <div style="max-height: 450px; overflow-y: auto; text-align: left;">
+                    <div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); padding: 12px; border-radius: 12px; color: white; margin-bottom: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                        <div><div style="font-size: 10px; opacity: 0.8;">Total Students</div><div style="font-size: 20px; font-weight: bold;">${classStudents.length}</div></div>
+                        <div><div style="font-size: 10px; opacity: 0.8;">Total Fee</div><div style="font-size: 16px; font-weight: bold;">₹${totalFee.toLocaleString()}</div></div>
+                        <div><div style="font-size: 10px; opacity: 0.8;">Due</div><div style="font-size: 16px; font-weight: bold; color: #fcd34d;">₹${totalDue.toLocaleString()}</div></div>
+                    </div>
+                    ${studentHtml}
+                </div>
+                <p style="margin-top: 10px; text-align: center; font-size: 11px; color: #64748b;">
+                    <i class="fas fa-info-circle"></i> Total ${classStudents.length} Students | 
+                    <span style="color: #10b981;">Paid: ₹${totalPaid.toLocaleString()}</span> | 
+                    <span style="color: #ef4444;">Due: ₹${totalDue.toLocaleString()}</span>
+                </p>
+            `,
+            confirmButtonText: 'Close',
+            confirmButtonColor: '#8b5cf6',
+            width: window.innerWidth <= 480 ? '95%' : '550px',
+            customClass: { popup: 'mobile-swal-popup' }
+        });
+        
+    } catch(e) {
+        console.error('Error viewing students:', e);
+        hideLoader();
+        showNotification('Error loading students: ' + e.message, 'error');
     }
-    
-    if (classStudents.length === 0) {
-        showNotification('No students enrolled in this class', 'info');
-        return;
-    }
-    
-    let studentHtml = '';
-    for (let s of classStudents) {
-        studentHtml += `
-            <div style="padding:10px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; flex-wrap:wrap;">
-                <div><strong>${escapeHtml(s.name)}</strong><br><small>Roll: ${s.roll}</small></div>
-                <div>${escapeHtml(s.father_name || s.fatherName || 'N/A')}<br><small>${escapeHtml(s.mobile || 'N/A')}</small></div>
-            </div>
-        `;
-    }
-    
-    Swal.fire({
-        title: `👨‍🎓 Students of ${escapeHtml(c.name)}`,
-        html: `<div style="max-height:400px; overflow-y:auto;">${studentHtml}</div><p style="margin-top:10px; text-align:center;"><strong>Total: ${classStudents.length} Students</strong></p>`,
-        confirmButtonText: 'Close',
-        width: window.innerWidth <= 480 ? '95%' : '500px'
-    });
 }
 
 // ======================= SHARE CLASS =======================
 function shareClass(id) {
     let c = window.classes.find(cls => cls.id === id);
     if (!c) return;
-    
     if (currentUser.role === 'teacher' && !canTeacherAccessClass(c.name)) {
         showNotification('You can only share your own class', 'error');
         return;
     }
-    
     let message = `📚 *${c.name}*\n\nTeacher: ${c.teacher || 'Not Assigned'}\nRoom: ${c.room || 'N/A'}\nStudents: ${c.students || 0}\nCapacity: ${c.strength || 0}\n\n🏫 ${getSchoolNameSetting()}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
 }
@@ -36336,24 +36189,18 @@ function shareClass(id) {
 function printClassDetails(id) {
     let c = window.classes.find(cls => cls.id === id);
     if (!c) return;
-    
     if (currentUser.role === 'teacher' && !canTeacherAccessClass(c.name)) {
         showNotification('You can only print your own class', 'error');
         return;
     }
-    
     let classStudents = [];
     if (window.students) {
         for (let s of window.students) {
-            if (s.cls && s.cls === c.name) {
-                classStudents.push(s);
-            }
+            if (s.cls && s.cls === c.name) classStudents.push(s);
         }
     }
-    
     let win = window.open('', '_blank');
-    win.document.write(`
-        <html><head><title>${c.name} - Class Details</title>
+    win.document.write(`<html><head><title>${c.name} - Class Details</title>
         <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; border-bottom: 2px solid #8b5cf6; padding-bottom: 15px; }
@@ -36389,17 +36236,12 @@ function printClassDetails(id) {
             <tbody>
                 ${classStudents.length > 0 ? classStudents.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${s.roll}</td><td>${escapeHtml(s.father_name || s.fatherName || '')}</td><td>${escapeHtml(s.mobile || '')}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center; color:#94a3b8;">No students enrolled</td></tr>'}
             </tbody>
-            <tfoot>
-                <tr><td colspan="4" style="text-align:right; font-weight:bold;">Total Students: ${classStudents.length}</td></tr>
-            </tfoot>
+            <tfoot><tr><td colspan="4" style="text-align:right; font-weight:bold;">Total Students: ${classStudents.length}</td></tr></tfoot>
         </table>
-        <div class="footer">
-            <p>Generated: ${new Date().toLocaleDateString()} | ${getSchoolPhoneSetting()}</p>
-            <p>${getSchoolNameSetting()} - Empowering Education</p>
-        </div>
+        <div class="footer"><p>Generated: ${new Date().toLocaleDateString()} | ${getSchoolPhoneSetting()}</p>
+        <p>${getSchoolNameSetting()} - Empowering Education</p></div>
         <script>window.print(); setTimeout(() => window.close(), 500);<\/script>
-        </body></html>
-    `);
+        </body></html>`);
     win.document.close();
 }
 
@@ -36409,23 +36251,19 @@ function showAddClassForm(editId = null) {
         showNotification('Only administrators can add/edit classes', 'error');
         return;
     }
-    
     let isEdit = editId !== null;
     let classData = isEdit ? window.classes.find(c => c.id === editId) : null;
-    
     let teacherOptions = '<option value="Not Assigned">Not Assigned</option>';
     if (window.employees) {
-        for (let i = 0; i < window.employees.length; i++) {
-            if (window.employees[i].department === 'Teaching' || window.employees[i].designation.includes('Teacher')) {
-                teacherOptions += `<option value="${window.employees[i].name}" ${isEdit && classData?.teacher === window.employees[i].name ? 'selected' : ''}>${window.employees[i].name} (${window.employees[i].designation})</option>`;
+        for (let emp of window.employees) {
+            if (emp.department === 'Teaching' || emp.designation.includes('Teacher')) {
+                teacherOptions += `<option value="${emp.name}" ${isEdit && classData?.teacher === emp.name ? 'selected' : ''}>${emp.name} (${emp.designation})</option>`;
             }
         }
     }
-    
     let modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10000; overflow-y:auto;';
-    
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 28px; padding: 0; background: var(--bg-surface); box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
             <div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); padding: 16px 20px; border-radius: 28px 28px 0 0; position: sticky; top: 0; z-index: 10;">
@@ -36435,7 +36273,6 @@ function showAddClassForm(editId = null) {
                 </div>
                 <p style="margin: 8px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.85);">Fill the details below</p>
             </div>
-            
             <div style="padding: 20px;">
                 <div class="form-group" style="margin-bottom:16px;">
                     <label style="font-size:13px; font-weight:600; display:block; margin-bottom:4px;"><i class="fas fa-chalkboard"></i> Class Name *</label>
@@ -36443,9 +36280,7 @@ function showAddClassForm(editId = null) {
                 </div>
                 <div class="form-group" style="margin-bottom:16px;">
                     <label style="font-size:13px; font-weight:600; display:block; margin-bottom:4px;"><i class="fas fa-chalkboard-teacher"></i> Teacher Name</label>
-                    <select id="classTeacherInput" class="form-control" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary); font-size:14px; min-height:44px;">
-                        ${teacherOptions}
-                    </select>
+                    <select id="classTeacherInput" class="form-control" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary); font-size:14px; min-height:44px;">${teacherOptions}</select>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom:16px;">
                     <div class="form-group">
@@ -36457,7 +36292,6 @@ function showAddClassForm(editId = null) {
                         <input type="number" id="classStrengthInput" class="form-control" placeholder="e.g., 35" value="${isEdit ? (classData?.strength || '') : ''}" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-light); background:var(--bg-surface); color:var(--text-primary); font-size:14px; min-height:44px;">
                     </div>
                 </div>
-                
                 <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap;">
                     <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size:14px; min-height:44px; border:none; cursor:pointer; background:#ef4444; color:white; font-weight:600;"><i class="fas fa-times"></i> Cancel</button>
                     <button class="btn btn-primary" onclick="saveClassData('${editId || ''}')" style="padding: 10px 24px; border-radius: 30px; font-size:14px; min-height:44px; border:none; cursor:pointer; background:linear-gradient(135deg,#2563eb,#1e40af); color:white; font-weight:600;"><i class="fas fa-save"></i> ${isEdit ? 'Update Class' : 'Save Class'}</button>
@@ -36471,14 +36305,9 @@ function showAddClassForm(editId = null) {
 // ======================= SAVE CLASS DATA =======================
 window.saveClassData = async function(editId) {
     let name = document.getElementById('classNameInput').value.trim();
-    if (!name) {
-        showNotification('Class name is required!', 'error');
-        return;
-    }
-    
+    if (!name) { showNotification('Class name is required!', 'error'); return; }
     let isEdit = editId !== null;
     let classData = isEdit ? window.classes.find(c => c.id === editId) : null;
-    
     let classObj = {
         id: editId || ('CLS' + Date.now()),
         name: name,
@@ -36487,7 +36316,6 @@ window.saveClassData = async function(editId) {
         strength: parseInt(document.getElementById('classStrengthInput').value) || 35,
         students: isEdit ? (classData?.students || 0) : 0
     };
-    
     if (isEdit) {
         let idx = window.classes.findIndex(c => c.id === editId);
         if (idx !== -1) window.classes[idx] = { ...window.classes[idx], ...classObj };
@@ -36496,19 +36324,12 @@ window.saveClassData = async function(editId) {
         window.classes.push(classObj);
         showNotification('✅ Class added!', 'success');
         if (typeof recentActivities !== 'undefined') {
-            recentActivities.unshift({
-                id: 'ACT' + Date.now(),
-                action: 'New Class Added',
-                details: name,
-                time: new Date().toLocaleTimeString(),
-                icon: '🏫'
-            });
+            recentActivities.unshift({ id: 'ACT' + Date.now(), action: 'New Class Added', details: name, time: new Date().toLocaleTimeString(), icon: '🏫' });
         }
     }
-    
     localStorage.setItem('cache_classes', JSON.stringify(window.classes));
     await saveClassToSupabase(classObj);
-    
+    await syncStudentCountsToClasses();
     document.querySelector('.modal-overlay')?.remove();
     loadClassManagement();
 };
@@ -36517,12 +36338,10 @@ window.saveClassData = async function(editId) {
 async function deleteClass(id) {
     let c = window.classes.find(cls => cls.id === id);
     if (!c) return;
-    
     if (currentUser.role !== 'admin') {
         showNotification('Only administrators can delete classes', 'error');
         return;
     }
-    
     Swal.fire({
         title: 'Delete Class?',
         text: `Are you sure you want to delete "${c.name}"? This action cannot be undone!`,
@@ -36535,12 +36354,9 @@ async function deleteClass(id) {
     }).then(async (result) => {
         if (result.isConfirmed) {
             showLoader();
-            
             window.classes = window.classes.filter(cls => cls.id !== id);
             localStorage.setItem('cache_classes', JSON.stringify(window.classes));
-            
             await deleteClassFromSupabase(id);
-            
             hideLoader();
             loadClassManagement();
             showNotification('Class deleted successfully!', 'success');
@@ -36554,6 +36370,7 @@ async function refreshClassesData() {
     showNotification('🔄 Syncing classes from cloud...', 'info');
     await loadClassesFromSupabase();
     await processPendingClassesQueue();
+    await syncStudentCountsToClasses();
     loadClassManagement();
     hideLoader();
     showNotification(`✅ ${window.classes.length} classes loaded from Database!`, 'success');
@@ -36570,9 +36387,7 @@ function filterClassesList() {
 function clearClassFilter() {
     classFilterText = '';
     classesCurrentPage = 1;
-    if (document.getElementById('classSearchBox')) {
-        document.getElementById('classSearchBox').value = '';
-    }
+    if (document.getElementById('classSearchBox')) document.getElementById('classSearchBox').value = '';
     loadClassManagement();
     showNotification('Filter cleared', 'info');
 }
@@ -36580,11 +36395,7 @@ function clearClassFilter() {
 // ======================= EXPORT CSV =======================
 function exportClassesCSV() {
     let classesData = window.classes || [];
-    if (classesData.length === 0) {
-        showNotification('No classes to export!', 'warning');
-        return;
-    }
-    
+    if (classesData.length === 0) { showNotification('No classes to export!', 'warning'); return; }
     let csv = "Class Name,Teacher,Room Number,Total Students,Max Capacity,Available Seats,Utilization (%)\n";
     for (let c of classesData) {
         let available = (c.strength || 35) - (c.students || 0);
@@ -36605,6 +36416,7 @@ window.addEventListener('online', async () => {
     showNotification('🟢 Back online! Syncing class data...', 'success');
     await loadClassesFromSupabase();
     await processPendingClassesQueue();
+    await syncStudentCountsToClasses();
     loadClassManagement();
 });
 
@@ -36613,18 +36425,13 @@ window.addEventListener('offline', () => {
     showNotification('🔴 Offline mode - Class data will sync when online', 'warning');
 });
 
-// ======================= AUTO-LOAD WHEN MODULE OPENS =======================
+// ======================= AUTO-LOAD =======================
 const origOpenModuleClasses = window.openModule;
 if (origOpenModuleClasses) {
     window.openModule = function(id) {
         origOpenModuleClasses(id);
         if (id === 12) {
-            console.log('📋 [CLASSES] Module 12 opened - loading classes...');
-            setTimeout(() => {
-                if (typeof loadClassManagement === 'function') {
-                    loadClassManagement();
-                }
-            }, 200);
+            setTimeout(() => { if (typeof loadClassManagement === 'function') loadClassManagement(); }, 200);
         }
     };
 }
@@ -36632,12 +36439,11 @@ if (origOpenModuleClasses) {
 setTimeout(() => {
     const moduleTitle = document.getElementById('moduleTitle');
     if (moduleTitle && moduleTitle.innerText && moduleTitle.innerText.toUpperCase().includes('CLASSES')) {
-        console.log('📋 [CLASSES] Module already open, loading classes...');
         loadClassManagement();
     }
 }, 500);
 
-// ======================= EXPOSE FUNCTIONS GLOBALLY =======================
+// ======================= EXPOSE FUNCTIONS =======================
 window.loadClassManagement = loadClassManagement;
 window.showAddClassForm = showAddClassForm;
 window.viewClassDetails = viewClassDetails;
@@ -36649,13 +36455,21 @@ window.filterClassesList = filterClassesList;
 window.clearClassFilter = clearClassFilter;
 window.refreshClassesData = refreshClassesData;
 window.exportClassesCSV = exportClassesCSV;
+window.syncStudentCountsToClasses = syncStudentCountsToClasses;
+window.saveClassToSupabase = saveClassToSupabase;
+window.loadClassesFromSupabase = loadClassesFromSupabase;
+window.normalizeClassName = normalizeClassName;
+window.getClassBaseName = getClassBaseName;
 
-console.log('✅ PART 15 COMPLETE - Classes Module with Pure Supabase CRUD!');
-console.log('📌 NO SAMPLE DATA - Only shows data from Supabase classes table');
-console.log('📌 Operations: Fetch, Create, Update, Delete (CRUD)');
-console.log('📌 Offline Support with Pending Queue');
-console.log('📌 Role-based Access: Admin (Full), Teacher (Own Class Only)');
-console.log('📌 Teacher Login - Fixed: Shows all classes if no class assigned');
+console.log('✅ PART 15 COMPLETE - Classes Module with ALL Functions!');
+console.log('📌 Functions Added:');
+console.log('   ✅ viewClassDetails() - View class details with students');
+console.log('   ✅ viewClassStudents() - View all students in class');
+console.log('   ✅ shareClass() - Share class via WhatsApp');
+console.log('   ✅ printClassDetails() - Print class details');
+console.log('   ✅ showAddClassForm() - Add/Edit class');
+console.log('   ✅ deleteClass() - Delete class');
+console.log('   ✅ syncStudentCountsToClasses() - Sync student counts');
 
 } // End of duplicate check
 // ======================= PART 15 ENDS HERE =======================
