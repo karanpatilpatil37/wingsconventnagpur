@@ -35217,7 +35217,7 @@ console.log('📥 [LEAVE] Download button working for documents');
 // ======================= PART 14 ENDS HERE =======================
 // ======================= PART 14 ENDS HERE =======================
 // ======================= PART 15: CLASS MANAGEMENT MODULE (FIXED) =======================
-// ======================= PART 15: CLASS MANAGEMENT MODULE (COMPLETE FIXED) =======================
+// ======================= PART 15: CLASS MANAGEMENT MODULE (FIXED - STUDENT COUNT WITH SECTION) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.classModuleLoaded === 'undefined') {
     window.classModuleLoaded = true;
@@ -35310,7 +35310,7 @@ function getSupabaseClientClasses() {
     return null;
 }
 
-// ======================= NORMALIZE CLASS NAME =======================
+// ======================= ✅ FIXED: NORMALIZE CLASS NAME =======================
 function normalizeClassName(className) {
     if (!className) return '';
     let normalized = className.trim();
@@ -35354,7 +35354,7 @@ function getClassBaseName(className) {
     return className.trim();
 }
 
-// ======================= LOAD CLASSES FROM SUPABASE =======================
+// ======================= ✅ FIXED: LOAD CLASSES WITH STUDENT COUNT (WITH SECTION) =======================
 async function loadClassesFromSupabase() {
     console.log('📋 [CLASSES] loadClassesFromSupabase called...');
     const supabase = getSupabaseClientClasses();
@@ -35383,45 +35383,81 @@ async function loadClassesFromSupabase() {
         if (classError) throw classError;
         console.log(`📊 [CLASSES] Supabase returned ${classData ? classData.length : 0} class records`);
         
+        // ✅ Load students with both cls and sec
         const { data: studentData, error: studentError } = await supabase
             .from('students')
             .select('id, cls, sec');
         if (studentError) console.error('Students fetch error:', studentError);
         
+        // ✅ Build class-wise student count - FIXED: Combine cls + sec
         let classStudentCount = {};
         if (studentData && studentData.length > 0) {
             for (let student of studentData) {
                 if (student.cls) {
+                    // ✅ Combine cls and sec to match class name
                     let studentClass = student.cls.trim();
                     let studentSec = student.sec || '';
                     let fullClass = studentClass + (studentSec ? ' ' + studentSec : '');
+                    
+                    // Try to match with existing class
                     let matchedClass = null;
                     if (classData && classData.length > 0) {
                         for (let cls of classData) {
-                            if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) {
-                                matchedClass = cls.name; break;
+                            // Exact match
+                            if (cls.name === fullClass) {
+                                matchedClass = cls.name;
+                                break;
                             }
+                            // Normalized match
+                            if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) {
+                                matchedClass = cls.name;
+                                break;
+                            }
+                            // Base name match (without section)
                             if (getClassBaseName(cls.name) === getClassBaseName(fullClass)) {
-                                matchedClass = cls.name; break;
+                                // Check if section matches
+                                let clsParts = cls.name.split(' ');
+                                let studentParts = fullClass.split(' ');
+                                if (clsParts.length >= 2 && studentParts.length >= 2) {
+                                    if (clsParts[clsParts.length - 1] === studentParts[studentParts.length - 1]) {
+                                        matchedClass = cls.name;
+                                        break;
+                                    }
+                                }
+                                // If no section match, still use it
+                                if (!matchedClass) {
+                                    matchedClass = cls.name;
+                                }
                             }
                         }
                     }
-                    if (!matchedClass) matchedClass = fullClass;
+                    
+                    if (!matchedClass) {
+                        matchedClass = fullClass;
+                    }
+                    
                     classStudentCount[matchedClass] = (classStudentCount[matchedClass] || 0) + 1;
                 }
             }
+            console.log('📊 [CLASSES] Class-wise student counts:', classStudentCount);
         }
         
         window.classes.length = 0;
         if (classData && classData.length > 0) {
             for (let item of classData) {
                 let studentCount = classStudentCount[item.name] || 0;
+                
+                // If no match, try normalized matching
                 if (studentCount === 0) {
                     let normalized = normalizeClassName(item.name);
                     for (let [key, value] of Object.entries(classStudentCount)) {
-                        if (normalizeClassName(key) === normalized) { studentCount = value; break; }
+                        if (normalizeClassName(key) === normalized) {
+                            studentCount = value;
+                            break;
+                        }
                     }
                 }
+                
                 window.classes.push({
                     id: item.id,
                     name: item.name,
@@ -35433,7 +35469,10 @@ async function loadClassesFromSupabase() {
                     created_at: item.created_at
                 });
             }
+            
             localStorage.setItem('cache_classes', JSON.stringify(window.classes));
+            
+            // ✅ Update Supabase classes table with correct student counts
             for (let item of window.classes) {
                 try {
                     await supabase.from('classes').update({
@@ -35444,28 +35483,49 @@ async function loadClassesFromSupabase() {
             }
             return true;
         } else {
-            const defaultClassNames = ['Playgroup A', 'Playgroup B', 'Nursery A', 'Nursery B', 'KG1 A', 'KG1 B', 'KG2 A', 'KG2 B'];
+            // ✅ Generate default classes with correct names
+            console.log('🔄 [CLASSES] Generating default classes...');
+            const defaultClassNames = [
+                'Playgroup A', 'Playgroup B',
+                'Nursery A', 'Nursery B',
+                'KG1 A', 'KG1 B',
+                'KG2 A', 'KG2 B'
+            ];
+            
             for (let name of defaultClassNames) {
                 let studentCount = classStudentCount[name] || 0;
                 if (studentCount === 0) {
                     let normalized = normalizeClassName(name);
                     for (let [key, value] of Object.entries(classStudentCount)) {
-                        if (normalizeClassName(key) === normalized) { studentCount = value; break; }
+                        if (normalizeClassName(key) === normalized) {
+                            studentCount = value;
+                            break;
+                        }
                     }
                 }
+                let classId = 'CLS' + String(window.classes.length + 1).padStart(3, '0');
                 window.classes.push({
-                    id: 'CLS' + String(window.classes.length + 1).padStart(3, '0'),
-                    name: name, teacher: 'Not Assigned', room: 'N/A',
-                    strength: 35, students: studentCount, studentsCount: studentCount
+                    id: classId,
+                    name: name,
+                    teacher: 'Not Assigned',
+                    room: 'N/A',
+                    strength: 35,
+                    students: studentCount,
+                    studentsCount: studentCount
                 });
             }
             localStorage.setItem('cache_classes', JSON.stringify(window.classes));
+            
             for (let item of window.classes) {
                 try {
                     await supabase.from('classes').upsert({
-                        id: item.id, name: item.name, teacher: item.teacher,
-                        room: item.room, strength: item.strength,
-                        students_count: item.students, updated_at: new Date().toISOString()
+                        id: item.id,
+                        name: item.name,
+                        teacher: item.teacher,
+                        room: item.room,
+                        strength: item.strength,
+                        students_count: item.students,
+                        updated_at: new Date().toISOString()
                     }, { onConflict: 'id' });
                 } catch(e) { console.error('Error saving default class:', e); }
             }
@@ -35482,9 +35542,9 @@ async function loadClassesFromSupabase() {
     }
 }
 
-// ======================= SYNC STUDENT COUNTS =======================
+// ======================= ✅ FIXED: SYNC STUDENT COUNTS (WITH SECTION) =======================
 async function syncStudentCountsToClasses() {
-    console.log('🔄 [CLASSES] Syncing student counts...');
+    console.log('🔄 [CLASSES] Syncing student counts with section...');
     const supabase = getSupabaseClientClasses();
     if (!supabase || !navigator.onLine) {
         showNotification('📴 Offline - Cannot sync student counts', 'warning');
@@ -35493,30 +35553,73 @@ async function syncStudentCountsToClasses() {
     showLoader();
     showNotification('🔄 Syncing student counts...', 'info');
     try {
-        const { data: students, error: studentError } = await supabase.from('students').select('cls, sec');
+        // ✅ Get students with cls and sec
+        const { data: students, error: studentError } = await supabase
+            .from('students')
+            .select('cls, sec');
         if (studentError) throw studentError;
-        const { data: classesData, error: classError } = await supabase.from('classes').select('id, name');
+        
+        const { data: classesData, error: classError } = await supabase
+            .from('classes')
+            .select('id, name');
         if (classError) throw classError;
+        
+        // ✅ Count students per class with section
         let classCounts = {};
         for (let student of students || []) {
             if (student.cls) {
-                let fullClass = student.cls.trim() + (student.sec ? ' ' + student.sec : '');
+                let studentClass = student.cls.trim();
+                let studentSec = student.sec || '';
+                let fullClass = studentClass + (studentSec ? ' ' + studentSec : '');
+                
                 let matchedClass = null;
                 for (let cls of classesData || []) {
-                    if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) { matchedClass = cls.name; break; }
-                    if (getClassBaseName(cls.name) === getClassBaseName(fullClass)) { matchedClass = cls.name; break; }
+                    // Exact match
+                    if (cls.name === fullClass) {
+                        matchedClass = cls.name;
+                        break;
+                    }
+                    // Normalized match
+                    if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) {
+                        matchedClass = cls.name;
+                        break;
+                    }
+                    // Base name match with section
+                    let baseCls = getClassBaseName(cls.name);
+                    let baseStudent = getClassBaseName(fullClass);
+                    if (baseCls === baseStudent && baseCls) {
+                        let clsParts = cls.name.split(' ');
+                        let studentParts = fullClass.split(' ');
+                        if (clsParts.length >= 2 && studentParts.length >= 2) {
+                            if (clsParts[clsParts.length - 1] === studentParts[studentParts.length - 1]) {
+                                matchedClass = cls.name;
+                                break;
+                            }
+                        }
+                        if (!matchedClass) {
+                            matchedClass = cls.name;
+                        }
+                    }
                 }
-                if (!matchedClass) matchedClass = fullClass;
+                
+                if (!matchedClass) {
+                    matchedClass = fullClass;
+                }
+                
                 classCounts[matchedClass] = (classCounts[matchedClass] || 0) + 1;
             }
         }
+        
         let updatedCount = 0, totalStudents = 0;
         for (let cls of classesData || []) {
             let count = classCounts[cls.name] || 0;
             if (count === 0) {
                 let normalized = normalizeClassName(cls.name);
                 for (let [key, value] of Object.entries(classCounts)) {
-                    if (normalizeClassName(key) === normalized) { count = value; break; }
+                    if (normalizeClassName(key) === normalized) {
+                        count = value;
+                        break;
+                    }
                 }
             }
             totalStudents += count;
@@ -35548,9 +35651,13 @@ async function saveClassToSupabase(classData) {
     }
     try {
         const dbData = {
-            id: classData.id, name: classData.name, teacher: classData.teacher || 'Not Assigned',
-            room: classData.room || 'N/A', strength: classData.strength || 35,
-            students_count: classData.students || 0, updated_at: new Date().toISOString()
+            id: classData.id,
+            name: classData.name,
+            teacher: classData.teacher || 'Not Assigned',
+            room: classData.room || 'N/A',
+            strength: classData.strength || 35,
+            students_count: classData.students || 0,
+            updated_at: new Date().toISOString()
         };
         const { error } = await supabase.from('classes').upsert(dbData, { onConflict: 'id' });
         if (error) throw error;
@@ -35952,53 +36059,53 @@ async function viewClassDetails(id) {
     try {
         let c = window.classes.find(cls => cls.id === id);
         if (!c) { showNotification('Class not found!', 'error'); return; }
-        
         if (currentUser.role === 'teacher' && !canTeacherAccessClass(c.name)) {
             showNotification('You can only view your own class', 'error');
             return;
         }
-        
         showLoader();
         showNotification('🔄 Loading class details...', 'info');
-        
         const supabase = getSupabaseClientClasses();
         let classStudents = [];
-        
         if (supabase && navigator.onLine) {
             try {
+                // ✅ Get students with cls and sec matching class name
+                let parts = c.name.split(' ');
+                let className = c.name;
+                let section = '';
+                if (parts.length >= 2 && /^[A-Da-d]$/.test(parts[parts.length - 1])) {
+                    className = parts.slice(0, -1).join(' ');
+                    section = parts[parts.length - 1];
+                }
+                // Try with both cls and sec
                 const { data: students, error } = await supabase
                     .from('students')
                     .select('*')
-                    .eq('cls', c.name);
+                    .eq('cls', className)
+                    .eq('sec', section);
                 if (!error && students) {
                     classStudents = students;
-                } else {
-                    let parts = c.name.split(' ');
-                    if (parts.length >= 2) {
-                        let className = parts.slice(0, -1).join(' ');
-                        let section = parts[parts.length - 1];
-                        const { data: students2, error: error2 } = await supabase
-                            .from('students')
-                            .select('*')
-                            .eq('cls', className)
-                            .eq('sec', section);
-                        if (!error2 && students2) classStudents = students2;
+                }
+                // If no results, try with full name
+                if (classStudents.length === 0) {
+                    const { data: students2, error: error2 } = await supabase
+                        .from('students')
+                        .select('*')
+                        .eq('cls', c.name);
+                    if (!error2 && students2) {
+                        classStudents = students2;
                     }
                 }
             } catch(e) { console.error('Error fetching students:', e); }
         }
-        
         if (classStudents.length === 0 && window.students && window.students.length > 0) {
             for (let s of window.students) {
                 if (s.cls === c.name) classStudents.push(s);
             }
         }
-        
         hideLoader();
-        
         let capacityPercentage = ((c.students || 0) / (c.strength || 35)) * 100;
         let capacityColor = capacityPercentage > 90 ? '#ef4444' : capacityPercentage > 75 ? '#f59e0b' : '#10b981';
-        
         let studentListHtml = '';
         if (classStudents.length === 0) {
             studentListHtml = '<p style="color:#94a3b8; text-align:center; padding:10px;">No students enrolled in this class</p>';
@@ -36012,7 +36119,6 @@ async function viewClassDetails(id) {
             }
             studentListHtml += '</ul>';
         }
-        
         Swal.fire({
             title: `📚 ${escapeHtml(c.name)}`,
             html: `
@@ -36035,7 +36141,6 @@ async function viewClassDetails(id) {
             width: window.innerWidth <= 480 ? '95%' : '500px',
             customClass: { popup: 'mobile-swal-popup' }
         });
-        
     } catch(e) {
         console.error('Error viewing class details:', e);
         hideLoader();
@@ -36047,77 +36152,59 @@ async function viewClassDetails(id) {
 async function viewClassStudents(id) {
     try {
         let c = window.classes.find(cls => cls.id === id);
-        if (!c) {
-            showNotification('Class not found!', 'error');
-            return;
-        }
-        
+        if (!c) { showNotification('Class not found!', 'error'); return; }
         if (currentUser.role === 'teacher' && !canTeacherAccessClass(c.name)) {
             showNotification('You can only view students of your own class', 'error');
             return;
         }
-        
         showLoader();
         showNotification('🔄 Loading students...', 'info');
-        
         const supabase = getSupabaseClientClasses();
         let classStudents = [];
-        
         if (supabase && navigator.onLine) {
             try {
+                let parts = c.name.split(' ');
+                let className = c.name;
+                let section = '';
+                if (parts.length >= 2 && /^[A-Da-d]$/.test(parts[parts.length - 1])) {
+                    className = parts.slice(0, -1).join(' ');
+                    section = parts[parts.length - 1];
+                }
                 const { data: students, error } = await supabase
                     .from('students')
                     .select('*')
-                    .eq('cls', c.name);
-                
-                if (error) {
-                    console.error('Error fetching students:', error);
-                    throw error;
-                }
-                
-                if (students && students.length > 0) {
+                    .eq('cls', className)
+                    .eq('sec', section);
+                if (!error && students) {
                     classStudents = students;
-                    console.log(`✅ Found ${students.length} students in ${c.name}`);
-                } else {
-                    let parts = c.name.split(' ');
-                    if (parts.length >= 2) {
-                        let className = parts.slice(0, -1).join(' ');
-                        let section = parts[parts.length - 1];
-                        const { data: students2, error: error2 } = await supabase
-                            .from('students')
-                            .select('*')
-                            .eq('cls', className)
-                            .eq('sec', section);
-                        if (!error2 && students2 && students2.length > 0) {
-                            classStudents = students2;
-                            console.log(`✅ Found ${students2.length} students in ${className} ${section}`);
-                        }
+                }
+                if (classStudents.length === 0) {
+                    const { data: students2, error: error2 } = await supabase
+                        .from('students')
+                        .select('*')
+                        .eq('cls', c.name);
+                    if (!error2 && students2) {
+                        classStudents = students2;
                     }
                 }
             } catch(e) { console.error('Error fetching students:', e); }
         }
-        
         if (classStudents.length === 0 && window.students && window.students.length > 0) {
             for (let s of window.students) {
                 if (s.cls === c.name) classStudents.push(s);
             }
-            console.log(`📦 Found ${classStudents.length} students from window.students`);
         }
-        
         hideLoader();
-        
         if (classStudents.length === 0) {
             showNotification('No students enrolled in this class', 'info');
             return;
         }
-        
         let studentHtml = '';
         for (let s of classStudents) {
             let photoSrc = s.photo_url || s.photoUrl || s.photo_data || null;
             let photoHtml = photoSrc 
                 ? `<img src="${photoSrc}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; margin-right: 10px;" onerror="this.style.display='none';">` 
                 : `<i class="fas fa-user-graduate" style="font-size: 20px; color: #2563eb; margin-right: 10px;"></i>`;
-            
             studentHtml += `
                 <div style="padding: 10px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -36135,14 +36222,12 @@ async function viewClassStudents(id) {
                 </div>
             `;
         }
-        
         let totalFee = 0, totalPaid = 0, totalDue = 0;
         for (let s of classStudents) {
             totalFee += (s.total_fee || s.totalFee || 0);
             totalPaid += (s.total_paid_fee || s.totalPaidFee || 0);
             totalDue += (s.fee_due || s.feeDue || 0);
         }
-        
         Swal.fire({
             title: `👨‍🎓 Students of ${escapeHtml(c.name)}`,
             html: `
@@ -36165,7 +36250,6 @@ async function viewClassStudents(id) {
             width: window.innerWidth <= 480 ? '95%' : '550px',
             customClass: { popup: 'mobile-swal-popup' }
         });
-        
     } catch(e) {
         console.error('Error viewing students:', e);
         hideLoader();
@@ -36461,15 +36545,12 @@ window.loadClassesFromSupabase = loadClassesFromSupabase;
 window.normalizeClassName = normalizeClassName;
 window.getClassBaseName = getClassBaseName;
 
-console.log('✅ PART 15 COMPLETE - Classes Module with ALL Functions!');
-console.log('📌 Functions Added:');
-console.log('   ✅ viewClassDetails() - View class details with students');
-console.log('   ✅ viewClassStudents() - View all students in class');
-console.log('   ✅ shareClass() - Share class via WhatsApp');
-console.log('   ✅ printClassDetails() - Print class details');
-console.log('   ✅ showAddClassForm() - Add/Edit class');
-console.log('   ✅ deleteClass() - Delete class');
-console.log('   ✅ syncStudentCountsToClasses() - Sync student counts');
+console.log('✅ PART 15 COMPLETE - Classes Module with Student Count (Including Section)!');
+console.log('📌 Features:');
+console.log('   ✅ Student count matches cls + sec combination');
+console.log('   ✅ Sync Student Counts button available');
+console.log('   ✅ Online/Offline Support');
+console.log('   ✅ CRUD Operations with Supabase');
 
 } // End of duplicate check
 // ======================= PART 15 ENDS HERE =======================
