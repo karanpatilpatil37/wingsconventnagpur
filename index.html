@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- ✅ UPDATED: Android-friendly viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Wings Convent</title>
+    <title>Wings Convent · Complete ERP System with 24 Storage Buckets</title>
     
     <!-- ✅ ADDED: Android WebView & Chrome Settings -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -16,54 +16,38 @@
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
     <meta name="format-detection" content="telephone=yes">
     
-    <!-- ✅ PRECONNECT - DNS Fast Track -->
+    <!-- ✅ PRECONNECT for Faster Loading -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://hghwbysjvkqcxdoqwkim.supabase.co">
     
-    <!-- ======================= FONT AWESOME (Fastest CDN) ======================= -->
+    <!-- ======================= FONT AWESOME ======================= -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     
     <!-- ======================= GOOGLE FONTS ======================= -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- ======================= CHART.JS (Async - Non Blocking) ======================= -->
-    <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- ======================= CHART.JS ======================= -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
-    <!-- ======================= SWEETALERT2 (Async - Non Blocking) ======================= -->
-    <script async src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- ======================= SWEETALERT2 ======================= -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <!-- ======================= HTML2CANVAS (Defer - Load After Page) ======================= -->
-    <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <!-- ======================= HTML2CANVAS ======================= -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
-    <!-- ======================= jsPDF (Defer - Load After Page) ======================= -->
-    <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <!-- ======================= jsPDF ======================= -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     
-    <!-- ======================= CROPPER.JS (Defer - Load After Page) ======================= -->
-    <script defer src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.12/dist/cropper.min.js"></script>
+    <!-- ======================= ✅ CROPPER.JS ======================= -->
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.12/dist/cropper.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.12/dist/cropper.min.css">
     
-    <!-- ======================= html2pdf.js (Defer - Load After Page) ======================= -->
-    <script defer src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+    <!-- ======================= ✅ html2pdf.js ======================= -->
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
     
-    <!-- ======================= SUPABASE JS (Async - Non Blocking) ======================= -->
-    <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
-    <!-- ✅ ANDROID WEBVIEW - FAST TOUCH RESPONSE -->
-    <script>
-        // Force GPU Acceleration for Android
-        if (navigator.userAgent.toLowerCase().indexOf('android') > -1) {
-            document.documentElement.style.webkitTransform = 'translateZ(0)';
-            document.documentElement.style.transform = 'translateZ(0)';
-        }
-        // Fast touch events
-        document.addEventListener('touchstart', function() {}, { passive: true });
-        document.addEventListener('touchmove', function() {}, { passive: true });
-        
-        // ✅ Show login screen IMMEDIATELY
-        console.log('🚀 App starting...');
-    </script>
+    <!-- ======================= SUPABASE JS ======================= -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <style>
         /* ======================= ALL CSS STYLES ======================= */
@@ -936,7 +920,7 @@
                     <div class="login-header">
                         <div id="loginSchoolLogoPlaceholder" class="login-logo-placeholder"><i class="fas fa-school"></i></div>
                         <h2>Wings Convent</h2>
-                        <p>Playgropu | Nursery | Upper K.G | Senior K.G </p>
+                        <p>Complete ERP System | 24 Modules | 24 Storage Buckets | Supabase Cloud</p>
                     </div>
                     <div class="login-form">
                         <div class="input-icon"><i class="fas fa-envelope"></i><input type="text" id="loginEmailMobile" placeholder="Email or Mobile Number" value="admin@wings.edu"></div>
@@ -1055,355 +1039,8 @@
         //     navigator.app.exitApp();
         // }
     }, false);
-	
-// ============================================
-// FIX: Chrome Notification Support
-// ============================================
 
-// ======================= NOTIFICATION FUNCTIONS =======================
-
-// Show browser notification (Cross-browser compatible)
-function showBrowserNotification(title, body, icon = '🔔') {
-    console.log(`🔔 Showing notification: ${title}`);
-    
-    // Check if browser supports notifications
-    if (!('Notification' in window)) {
-        console.log('❌ This browser does not support notifications');
-        return false;
-    }
-    
-    // Check if permission is already granted
-    if (Notification.permission === 'granted') {
-        sendNotification(title, body, icon);
-        return true;
-    }
-    
-    // If permission is denied, show instructions
-    if (Notification.permission === 'denied') {
-        console.log('❌ Notifications are blocked');
-        showNotificationEnableInstructions();
-        return false;
-    }
-    
-    // If permission is default, request it
-    if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                sendNotification(title, body, icon);
-                return true;
-            } else {
-                console.log('❌ Permission denied');
-                return false;
-            }
-        });
-        return false;
-    }
-}
-
-// Send notification (internal function)
-function sendNotification(title, body, icon = '🔔') {
-    try {
-        // Create icon
-        const iconSvg = `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232563eb"/%3E%3Ctext x="50" y="67" font-size="40" text-anchor="middle" fill="white"%3E${encodeURIComponent(icon)}%3C/text%3E%3C/svg%3E`;
-        
-        const notification = new Notification(title, {
-            body: body,
-            icon: iconSvg,
-            requireInteraction: false,
-            silent: false,
-            tag: Date.now().toString()
-        });
-        
-        // Handle click
-        notification.onclick = function() {
-            console.log('🔔 Notification clicked!');
-            window.focus();
-            notification.close();
-        };
-        
-        // Auto close after 8 seconds
-        setTimeout(() => {
-            notification.close();
-        }, 8000);
-        
-        console.log('✅ Notification sent successfully');
-        return true;
-        
-    } catch(e) {
-        console.error('❌ Error sending notification:', e);
-        // Fallback to toast notification
-        showNotification(title, 'success');
-        return false;
-    }
-}
-
-// Show instructions to enable notifications
-function showNotificationEnableInstructions() {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            title: '🔔 Enable Notifications',
-            html: `
-                <div style="text-align: left;">
-                    <p><strong>Please enable notifications to stay updated:</strong></p>
-                    <br>
-                    <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; border-left: 4px solid #10b981;">
-                        <p><strong>For Chrome:</strong></p>
-                        <p>1. Click the <strong>🔒 Lock Icon</strong> in address bar</p>
-                        <p>2. Click <strong>"Site settings"</strong></p>
-                        <p>3. Find <strong>"Notifications"</strong></p>
-                        <p>4. Select <strong>"Allow"</strong></p>
-                        <p>5. <strong>Refresh</strong> the page</p>
-                    </div>
-                    <br>
-                    <div style="background: #fef3c7; padding: 12px; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                        <p><strong>For Firefox:</strong></p>
-                        <p>1. Click the <strong>🔒 Lock Icon</strong> in address bar</p>
-                        <p>2. Click <strong>"Connection secure"</strong></p>
-                        <p>3. Click <strong>"More information"</strong></p>
-                        <p>4. Go to <strong>"Permissions"</strong></p>
-                        <p>5. Allow <strong>"Send notifications"</strong></p>
-                        <p>6. <strong>Refresh</strong> the page</p>
-                    </div>
-                </div>
-            `,
-            icon: 'info',
-            confirmButtonText: '🔄 Refresh Now',
-            confirmButtonColor: '#2563eb',
-            showCancelButton: true,
-            cancelButtonText: 'Later',
-            width: window.innerWidth <= 480 ? '95%' : '550px'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                location.reload();
-            }
-        });
-    } else {
-        alert('Please enable notifications in your browser settings.');
-    }
-}
-
-// Request notification permission (called on page load)
-async function requestNotificationPermission() {
-    console.log('🔔 Requesting notification permission...');
-    
-    if (!('Notification' in window)) {
-        console.log('❌ This browser does not support notifications');
-        return;
-    }
-    
-    // If already granted, return
-    if (Notification.permission === 'granted') {
-        console.log('✅ Notifications already enabled');
-        return;
-    }
-    
-    // If denied, show instructions
-    if (Notification.permission === 'denied') {
-        console.log('❌ Notifications are blocked');
-        setTimeout(() => {
-            showNotificationEnableInstructions();
-        }, 2000);
-        return;
-    }
-    
-    // Request permission
-    try {
-        const permission = await Notification.requestPermission();
-        console.log('📋 Permission result:', permission);
-        
-        if (permission === 'granted') {
-            console.log('✅ Notifications enabled!');
-            showNotification('✅ Notifications enabled successfully!', 'success');
-            
-            // Send welcome notification
-            setTimeout(() => {
-                showBrowserNotification(
-                    '🔔 Welcome!',
-                    'You will receive notifications from Wings Convent School.',
-                    '🏫'
-                );
-            }, 1000);
-        } else if (permission === 'denied') {
-            console.log('❌ Notifications denied');
-        }
-    } catch(e) {
-        console.error('❌ Error requesting permission:', e);
-    }
-}
-
-// ======================= FIX: Override Existing Notification Function =======================
-
-// Override the existing showNotification function to include browser notifications
-const originalShowNotification = window.showNotification;
-
-window.showNotification = function(msg, type) {
-    // Call original function
-    if (typeof originalShowNotification === 'function') {
-        originalShowNotification(msg, type);
-    }
-    
-    // Also show browser notification for important messages
-    if (type === 'success' || type === 'info') {
-        // Check if browser notifications are enabled
-        if (Notification.permission === 'granted') {
-            // Get icon based on type
-            let icon = '✅';
-            if (type === 'info') icon = 'ℹ️';
-            if (type === 'success') icon = '✅';
-            if (type === 'warning') icon = '⚠️';
-            if (type === 'error') icon = '❌';
-            
-            // Send browser notification
-            try {
-                const notification = new Notification('🏫 Wings Convent School', {
-                    body: msg,
-                    icon: `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232563eb"/%3E%3Ctext x="50" y="67" font-size="40" text-anchor="middle" fill="white"%3E${encodeURIComponent(icon)}%3C/text%3E%3C/svg%3E`,
-                    requireInteraction: false,
-                    silent: false,
-                    tag: Date.now().toString()
-                });
-                
-                setTimeout(() => {
-                    notification.close();
-                }, 5000);
-                
-            } catch(e) {
-                // Silently fail if notification fails
-                console.log('Browser notification not sent:', e.message);
-            }
-        }
-    }
-};
-
-// ======================= INIT =======================
-
-// Request notification permission on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Delay notification request to avoid blocking page load
-    setTimeout(() => {
-        requestNotificationPermission();
-    }, 3000);
-});
-
-// Also on login
-const originalLoginSuccess = window.loginSuccess;
-window.loginSuccess = function(user) {
-    if (typeof originalLoginSuccess === 'function') {
-        originalLoginSuccess(user);
-    }
-    
-    // Request notification permission on login
-    setTimeout(() => {
-        requestNotificationPermission();
-    }, 1000);
-};
-
-console.log('✅ Chrome Notification Fix Applied!');
-console.log('📋 Current permission:', Notification.permission);
-
-// ============================================
-// CHROME MOBILE - SERVICE WORKER FIX
-// ============================================
-
-(function() {
-    console.log('📱 Checking Chrome Mobile...');
-    
-    // Check if Chrome Mobile
-    const isChromeMobile = /Android/.test(navigator.userAgent) && 
-                           navigator.userAgent.includes('Chrome');
-    
-    if (!isChromeMobile) {
-        console.log('❌ Not Chrome Mobile - No fix needed');
-        return;
-    }
-    
-    console.log('📱 Chrome Mobile detected - Registering Service Worker...');
-    
-    // ====== 1. REGISTER SERVICE WORKER ======
-    if ('serviceWorker' in navigator) {
-        // Create inline service worker (since sw.js may not exist)
-        try {
-            const swCode = `
-                self.addEventListener('install', function(e) {
-                    console.log('✅ SW installed');
-                    e.waitUntil(self.skipWaiting());
-                });
-                self.addEventListener('activate', function(e) {
-                    console.log('✅ SW activated');
-                    e.waitUntil(self.clients.claim());
-                });
-                self.addEventListener('push', function(e) {
-                    const data = e.data ? e.data.json() : {};
-                    e.waitUntil(
-                        self.registration.showNotification(
-                            data.title || '🔔 Notification',
-                            { 
-                                body: data.body || 'You have a new notification.',
-                                icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232563eb"/%3E%3Ctext x="50" y="67" font-size="40" text-anchor="middle" fill="white"%3E🏫%3C/text%3E%3C/svg%3E',
-                                vibrate: [200, 100, 200],
-                                requireInteraction: true
-                            }
-                        )
-                    );
-                });
-                self.addEventListener('notificationclick', function(e) {
-                    e.notification.close();
-                    e.waitUntil(
-                        clients.matchAll({ type: 'window' }).then(function(clientList) {
-                            if (clientList.length > 0) {
-                                return clientList[0].focus();
-                            }
-                            return clients.openWindow('/');
-                        })
-                    );
-                });
-            `;
-            
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            const url = URL.createObjectURL(blob);
-            
-            navigator.serviceWorker.register(url, { scope: '/' })
-                .then(registration => {
-                    console.log('✅ Service Worker registered successfully!');
-                    console.log('📋 Scope:', registration.scope);
-                    URL.revokeObjectURL(url);
-                    
-                    // Check if push is supported
-                    if ('PushManager' in window) {
-                        console.log('✅ Push API is supported!');
-                    }
-                })
-                .catch(error => {
-                    console.log('❌ Service Worker registration failed:', error);
-                    console.log('📱 Using toast notifications as fallback');
-                });
-        } catch(e) {
-            console.log('❌ Service Worker creation error:', e);
-        }
-    } else {
-        console.log('❌ Service Workers not supported');
-        console.log('📱 Using toast notifications as fallback');
-    }
-    
-    // ====== 2. REQUEST PERMISSION ON CLICK ======
-    document.addEventListener('click', function requestPermission() {
-        if ('Notification' in window) {
-            if (Notification.permission === 'default') {
-                console.log('📋 Requesting notification permission...');
-                Notification.requestPermission().then(permission => {
-                    console.log('📋 Permission:', permission);
-                    if (permission === 'granted') {
-                        console.log('✅ Notifications enabled!');
-                        showNotification('✅ Notifications enabled on Chrome Mobile!', 'success');
-                    }
-                });
-            }
-        }
-    }, { once: false });
-    
-    console.log('✅ Chrome Mobile Service Worker fix complete!');
-    console.log('📱 Tap anywhere to enable notifications.');
-})();
+// ============================================================ PART 01 INDEX.HTML ENDS HERE ===========================================
 // ============================================================ PART 01 INDEX.HTML ENDS HERE ===========================================	
 //============================================================= PART 02 SUPABASE DATABASE START HERE ===================================
 // ======================= PART 2: SUPABASE CREDENTIALS & CONFIGURATION =======================
@@ -54290,25 +53927,36 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
 // ======================= PART 25 ENDS HERE ===================================================================
 //===============================================================================================================
 // ============================================
-// CHROME - IN-WINDOW POPUP (DESKTOP + MOBILE)
+// CHROME - IN-WINDOW POPUP (DESKTOP + MOBILE + APK)
 // ============================================
 
 (function() {
-    console.log('🔥 Chrome in-window popup - DESKTOP + MOBILE...');
+    console.log('🔥 Chrome in-window popup - ALL PLATFORMS...');
     
     // Check if Chrome
     const isChrome = navigator.userAgent.includes('Chrome') && 
                      !navigator.userAgent.includes('Edg');
     
-    if (!isChrome) {
-        console.log('❌ Not Chrome');
+    // ✅ APK/WebView Detection
+    const isWebView = /Android/.test(navigator.userAgent) && 
+                      (navigator.userAgent.includes('wv') || 
+                       navigator.userAgent.includes('WebView'));
+    
+    const isApk = window.navigator.standalone === true || 
+                  window.matchMedia('(display-mode: standalone)').matches ||
+                  document.referrer.includes('android-app://');
+    
+    const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+    
+    // ✅ If not Chrome and not APK, skip
+    if (!isChrome && !isApk && !isWebView) {
+        console.log('❌ Not Chrome or APK');
         return;
     }
     
-    const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
-    console.log(`🌐 Chrome detected - Mobile: ${isMobile}`);
+    console.log(`🌐 Chrome: ${isChrome}, WebView: ${isWebView}, APK: ${isApk}, Mobile: ${isMobile}`);
     
-    // ====== SOUND ======
+    // ====== SOUND (APK friendly) ======
     function playSound() {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -54324,12 +53972,35 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
                 oscillator.stop();
                 audioCtx.close();
             }, isMobile ? 200 : 150);
-        } catch(e) {}
+        } catch(e) {
+            // ✅ Silent fail for APK
+            console.log('⚠️ Sound not available');
+        }
     }
     
-    // ====== IN-WINDOW POPUP (Desktop + Mobile Optimized) ======
+    // ====== IN-WINDOW POPUP (APK friendly) ======
     window.showInWindowPopup = function(title, message, type = 'success') {
         console.log(`💬 Popup: ${title}`);
+        
+        // ✅ For APK/WebView, use Swal toast (most reliable)
+        if (isApk || isWebView) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: type || 'success',
+                    title: title,
+                    text: message,
+                    showConfirmButton: false,
+                    timer: 4000,
+                    customClass: {
+                        popup: 'apk-swal-popup'
+                    }
+                });
+                console.log('✅ APK: Swal toast shown');
+                return true;
+            }
+        }
         
         const colors = {
             success: '#10b981',
@@ -54348,7 +54019,6 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         const existing = document.getElementById('inWindowPopup');
         if (existing) existing.remove();
         
-        // Mobile vs Desktop optimization
         const isMobileDevice = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
         
         const popup = document.createElement('div');
@@ -54583,9 +54253,11 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
                     return;
                 }
             }
-        } catch(e) {}
+        } catch(e) {
+            console.log('⚠️ localStorage check failed:', e);
+        }
         
-        // Wait for login
+        // Wait for login (interval check)
         let attempts = 0;
         const interval = setInterval(() => {
             attempts++;
@@ -54598,9 +54270,11 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
                         'success'
                     );
                 }, 1500);
+                return;
             }
             if (attempts > 20) {
                 clearInterval(interval);
+                console.log('⏹️ Stop checking - no user found');
             }
         }, 500);
     }
@@ -54611,11 +54285,13 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
     
     // Also on DOM ready
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('📋 DOM loaded - checking user again...');
         setTimeout(showOnLoad, 500);
     });
     
     console.log('✅ Chrome in-window popup permanently added!');
     console.log(`📱 ${isMobile ? 'Mobile' : 'Desktop'} Chrome optimized.`);
+    console.log(`📦 ${isApk || isWebView ? 'APK/WebView mode - Using Swal fallback' : 'Browser mode'}`);
     console.log('📋 Popup will appear automatically on page load/login.');
     
 })();
