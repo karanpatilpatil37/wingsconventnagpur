@@ -4143,28 +4143,81 @@ console.log('✅ All module loaders - Fixed with login checks');
 console.log('✅ deleteAllStorageFiles() - Fixed with proper client');
 // ======================= PART 03-B- ENDS HERE ===============================================================================================//
 // ======================= PART 03-C: LOGO ICON UPDATE START HERE ==================================================================================//
+// ======================= PART 03-C: LOGO ICON UPDATE (SILENT MODE) =======================
 
+// ======================= SILENT LOGGER (No console spam) =======================
+function silentLog(message, type = 'info') {
+    // 🔥 SILENT - No console logs
+    // Uncomment below for debugging only
+    // if (type === 'error') console.error(message);
+}
+
+// ======================= UPDATE SCHOOL LOGO IN HEADER =======================
+function updateSchoolLogoInHeader() {
+    try {
+        const logoUrl = localStorage.getItem('schoolLogoUrl');
+        const logoData = localStorage.getItem('schoolLogo');
+        const logoPlaceholder = document.getElementById('loginSchoolLogoPlaceholder');
+        const headerLogo = document.getElementById('headerLogo');
+        
+        // ✅ Update login logo
+        if (logoPlaceholder) {
+            if (logoUrl && logoUrl.startsWith('http')) {
+                logoPlaceholder.innerHTML = `<img src="${logoUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-school\\' style=\\'font-size:36px; color:white;\\'></i>';">`;
+            } else if (logoData && logoData.startsWith('data:image')) {
+                logoPlaceholder.innerHTML = `<img src="${logoData}" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                logoPlaceholder.innerHTML = `<i class="fas fa-school" style="font-size:36px; color:white;"></i>`;
+            }
+        }
+        
+        // ✅ Update header logo
+        if (headerLogo) {
+            if (logoUrl && logoUrl.startsWith('http')) {
+                headerLogo.innerHTML = `<img src="${logoUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-school\\' style=\\'font-size:20px; color:white;\\'></i>';">`;
+            } else if (logoData && logoData.startsWith('data:image')) {
+                headerLogo.innerHTML = `<img src="${logoData}" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                headerLogo.innerHTML = `<i class="fas fa-school" style="font-size:20px; color:white;"></i>`;
+            }
+        }
+        
+        // ✅ Update login page header
+        const loginHeader = document.querySelector('.login-header h2');
+        if (loginHeader) {
+            const schoolName = localStorage.getItem('schoolName') || 'Wings Convent';
+            loginHeader.textContent = schoolName;
+        }
+        
+        // ✅ Update app header name
+        const appHeaderName = document.querySelector('.logo-main');
+        if (appHeaderName) {
+            const schoolName = localStorage.getItem('schoolName') || 'Wings Convent';
+            appHeaderName.textContent = schoolName;
+        }
+        
+        // 🔥 SILENT - No console log, no popup
+    } catch(e) {
+        // 🔥 SILENT - No error popup
+    }
+}
+
+// ======================= LOAD SCHOOL LOGO (SILENT) =======================
 async function loadSchoolLogoFromProfile() {
-    console.log('🔄 loadSchoolLogoFromProfile called...');
-    
     const supabase = getSupabaseClient();
+    
+    // 🔥 OFFLINE: Use cache silently
     if (!supabase || !navigator.onLine) {
-        console.log('📴 Offline - Loading logo from localStorage cache');
-        // Offline: Use cached logo
         let cachedUrl = localStorage.getItem('schoolLogoUrl');
         let cachedData = localStorage.getItem('schoolLogo');
         if (cachedUrl || cachedData) {
-            console.log('📦 Using cached logo');
             updateSchoolLogoInHeader();
-            return true;
         }
-        return false;
+        return true;
     }
     
     try {
-        console.log('🔄 Fetching logo from Supabase profile table...');
-        
-        // Fetch from profile table
+        // ✅ Fetch from profile table
         const { data, error } = await supabase
             .from('profile')
             .select('logo_url')
@@ -4172,8 +4225,7 @@ async function loadSchoolLogoFromProfile() {
             .single();
         
         if (error) {
-            console.warn('⚠️ Profile table error:', error.message);
-            // Try fallback: school_settings table
+            // ✅ Try fallback: school_settings table
             const { data: settingsData, error: settingsError } = await supabase
                 .from('school_settings')
                 .select('value')
@@ -4183,7 +4235,6 @@ async function loadSchoolLogoFromProfile() {
             if (!settingsError && settingsData && settingsData.value) {
                 let logoUrl = settingsData.value.schoolLogoUrl || null;
                 if (logoUrl) {
-                    console.log('✅ Logo found in school_settings:', logoUrl);
                     localStorage.setItem('schoolLogoUrl', logoUrl);
                     localStorage.removeItem('schoolLogo');
                     updateSchoolLogoInHeader();
@@ -4193,25 +4244,21 @@ async function loadSchoolLogoFromProfile() {
             return false;
         }
         
-        // Check if logo exists in profile
+        // ✅ Check if logo exists in profile
         if (data && data.logo_url) {
-            console.log('✅ Logo found in profile table:', data.logo_url);
-            
-            // 🔥 SAVE TO CACHE (ONLINE SAVE FLOW)
+            // 🔥 SAVE TO CACHE (SILENT)
             localStorage.setItem('schoolLogoUrl', data.logo_url);
-            localStorage.removeItem('schoolLogo'); // Remove old Base64 if any
+            localStorage.removeItem('schoolLogo');
             localStorage.setItem('schoolLogoCacheTime', new Date().toISOString());
             
-            // Update UI
+            // ✅ Update UI (SILENT)
             updateSchoolLogoInHeader();
-            showNotification('✅ Logo loaded!', 'success');
+            // 🔥 REMOVED: showNotification('✅ Logo loaded!', 'success');
             return true;
         } else {
-            console.log('ℹ️ No logo found in profile table');
-            // Check if there's a cached logo
+            // ✅ Check cache fallback
             let cachedUrl = localStorage.getItem('schoolLogoUrl');
             if (cachedUrl) {
-                console.log('📦 Using cached logo as fallback');
                 updateSchoolLogoInHeader();
                 return true;
             }
@@ -4219,11 +4266,9 @@ async function loadSchoolLogoFromProfile() {
         }
         
     } catch(error) {
-        console.error('❌ Error loading logo from profile:', error);
-        // Use cached logo if available
+        // 🔥 SILENT - No error popup
         let cachedUrl = localStorage.getItem('schoolLogoUrl');
         if (cachedUrl) {
-            console.log('📦 Using cached logo (error fallback)');
             updateSchoolLogoInHeader();
             return true;
         }
@@ -4231,6 +4276,96 @@ async function loadSchoolLogoFromProfile() {
     }
 }
 
+// ======================= LOAD SCHOOL INFO (SILENT) =======================
+async function loadSchoolInfoFromProfile() {
+    const supabase = getSupabaseClient();
+    
+    if (!supabase || !navigator.onLine) {
+        // ✅ Use cached school info
+        const schoolName = localStorage.getItem('schoolName');
+        if (schoolName) {
+            updateSchoolLogoInHeader();
+        }
+        return true;
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('profile')
+            .select('*')
+            .eq('id', 'PROF001')
+            .single();
+        
+        if (error) {
+            return false;
+        }
+        
+        if (data) {
+            // ✅ Save to localStorage (SILENT)
+            if (data.school_name) localStorage.setItem('schoolName', data.school_name);
+            if (data.school_address) localStorage.setItem('schoolAddress', data.school_address);
+            if (data.school_phone) localStorage.setItem('schoolPhone', data.school_phone);
+            if (data.school_email) localStorage.setItem('schoolEmail', data.school_email);
+            if (data.logo_url) {
+                localStorage.setItem('schoolLogoUrl', data.logo_url);
+                localStorage.removeItem('schoolLogo');
+            }
+            
+            // ✅ Update UI (SILENT)
+            updateSchoolLogoInHeader();
+            // 🔥 REMOVED: showNotification('✅ Cache successfully!', 'success');
+            return true;
+        }
+        return false;
+        
+    } catch(error) {
+        // 🔥 SILENT
+        return false;
+    }
+}
+
+// ======================= INIT LOGO (SILENT) =======================
+async function initSchoolLogo() {
+    try {
+        // ✅ Try to load from cache first (instant)
+        const cachedUrl = localStorage.getItem('schoolLogoUrl');
+        const cachedData = localStorage.getItem('schoolLogo');
+        if (cachedUrl || cachedData) {
+            updateSchoolLogoInHeader();
+        }
+        
+        // ✅ Then load from Supabase (silent background)
+        if (navigator.onLine) {
+            await loadSchoolLogoFromProfile();
+            await loadSchoolInfoFromProfile();
+        }
+        
+        // 🔥 SILENT - No console log, no popup
+    } catch(e) {
+        // 🔥 SILENT
+    }
+}
+
+// ======================= EXPOSE FUNCTIONS =======================
+window.updateSchoolLogoInHeader = updateSchoolLogoInHeader;
+window.loadSchoolLogoFromProfile = loadSchoolLogoFromProfile;
+window.loadSchoolInfoFromProfile = loadSchoolInfoFromProfile;
+window.initSchoolLogo = initSchoolLogo;
+
+// ✅ Auto-init on page load (SILENT)
+document.addEventListener('DOMContentLoaded', function() {
+    // 🔥 SILENT - No popup
+    setTimeout(initSchoolLogo, 100);
+});
+
+// 🔥 SILENT - No console log
+console.log = function() {};
+console.warn = function() {};
+console.info = function() {};
+// Keep errors for debugging
+// console.error = function() {};
+
+console.log('✅ LOGO ICON UPDATE COMPLETE - SILENT MODE');
 // ======================= SAVE LOGO TO PROFILE TABLE (FIXED) =======================
 async function saveLogoToProfileTable(logoUrl) {
     console.log('💾 saveLogoToProfileTable called...');
@@ -9722,8 +9857,7 @@ async function rebuildCacheAfterLogin() {
         window.employees = JSON.parse(localStorage.getItem('cache_employees') || '[]');
         window.users = JSON.parse(localStorage.getItem('cache_users') || '[]');
         if (typeof updateSchoolLogoInHeader === 'function') updateSchoolLogoInHeader();
-        hideLoader();
-        showNotification('✅ Cache successfully!', 'success');
+        hideLoader();        
         return true;
     } catch (error) {
         console.error('❌ Cache rebuild failed:', error);
