@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- ✅ UPDATED: Android-friendly viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Wings Convent · Complete ERP System with 24 Storage Buckets</title>
+    <title>Wings Convent · Complete ERP System</title>
     
     <!-- ✅ ADDED: Android WebView & Chrome Settings -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -207,7 +207,7 @@
             line-height: 1.6;
         }
 
-        /* App Header */
+        /* ======================= APP HEADER (DATE/TIME REMOVED) ======================= */
         .app-header {
             background: var(--bg-surface);
             padding: 8px 16px;
@@ -218,38 +218,125 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
+            flex-wrap: nowrap;
+            gap: 8px;
+            min-height: 56px;
         }
-        .logo-container { display: flex; align-items: center; gap: 8px; }
+
+        /* ======================= LOGO STYLES ======================= */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
         .logo-img {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            overflow: hidden;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+            transition: transform 0.2s ease;
         }
+        .logo-img:hover { transform: scale(1.05); }
+        .logo-img i { font-size: 20px; color: white; }
         .logo-img img { width: 100%; height: 100%; object-fit: cover; }
-        .logo-img i { font-size: 18px; color: white; }
-        .logo-container span {
-            font-size: 16px;
-            font-weight: 700;
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .logo-main {
+            font-size: 18px;
+            font-weight: 800;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            letter-spacing: -0.5px;
         }
-        .header-right { display: flex; align-items: center; gap: 10px; }
+        .logo-sub {
+            font-size: 9px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ======================= USER PROFILE AVATAR ======================= */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-body);
+            padding: 4px 12px 4px 6px;
+            border-radius: 40px;
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            min-height: 36px;
+        }
+        .user-profile:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .user-profile:hover #headerUserName { color: white; }
+        .user-profile #userAvatarEmoji {
+            font-size: 22px;
+            line-height: 1;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-profile img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+        .user-profile span {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .theme-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--bg-body);
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
 
         /* ======================= 🔔 NOTIFICATION BELL STYLES ======================= */
         #notificationBellContainer {
             position: relative;
             display: inline-block;
             cursor: pointer;
-            margin-right: 10px;
+            flex-shrink: 0;
+            margin: 0;
         }
         #notificationBellBtn {
             width: 38px;
@@ -264,6 +351,7 @@
             color: var(--text-primary);
             transition: all 0.2s ease;
             position: relative;
+            touch-action: manipulation;
         }
         #notificationBellBtn:hover {
             background: var(--primary);
@@ -300,9 +388,7 @@
             z-index: 1000;
             padding: 12px 0;
         }
-        #notificationDropdown.show {
-            display: block;
-        }
+        #notificationDropdown.show { display: block; }
         
         .notification-item {
             padding: 10px 16px;
@@ -310,9 +396,7 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        .notification-item:hover {
-            background: var(--bg-body);
-        }
+        .notification-item:hover { background: var(--bg-body); }
         .notification-item.unread {
             background: rgba(37, 99, 235, 0.05);
             border-left: 3px solid #2563eb;
@@ -331,38 +415,6 @@
             font-size: 10px;
             color: #94a3b8;
             margin-top: 4px;
-        }
-
-        .date-time {
-            background: var(--bg-body);
-            padding: 6px 12px;
-            border-radius: 40px;
-            border: 1px solid var(--border-light);
-            font-size: 12px;
-            white-space: nowrap;
-        }
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--bg-body);
-            padding: 6px 12px;
-            border-radius: 40px;
-            border: 1px solid var(--border-light);
-            cursor: pointer;
-        }
-        .user-profile span { font-size: 12px; }
-        .theme-btn {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: var(--bg-body);
-            border: 1px solid var(--border-light);
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         /* Dashboard Grid */
@@ -807,6 +859,55 @@
 
         /* ✅ UPDATED: Responsive & Android Safe Area Fixes */
         @media (max-width: 768px) {
+            .app-header {
+                padding: 6px 12px;
+                min-height: 48px;
+                gap: 6px;
+            }
+            .logo-img {
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+            }
+            .logo-img i { font-size: 17px; }
+            .logo-main { font-size: 15px; }
+            .logo-sub { font-size: 7px; letter-spacing: 0.5px; }
+            .logo-container { gap: 8px; }
+            
+            .header-right { gap: 6px; }
+            
+            .user-profile {
+                padding: 3px 8px 3px 4px;
+            }
+            .user-profile #userAvatarEmoji {
+                font-size: 18px;
+                width: 26px;
+                height: 26px;
+            }
+            .user-profile span { font-size: 11px; display: none; }
+            .user-profile img { width: 26px; height: 26px; }
+            
+            .theme-btn { width: 32px; height: 32px; font-size: 14px; }
+            
+            #notificationBellBtn {
+                width: 34px !important;
+                height: 34px !important;
+                font-size: 16px !important;
+            }
+            #notificationBadge {
+                width: 18px !important;
+                height: 18px !important;
+                font-size: 9px !important;
+                top: -4px !important;
+                right: -4px !important;
+            }
+            #notificationDropdown {
+                width: 320px !important;
+                right: -80px !important;
+                top: 40px !important;
+                max-height: 450px !important;
+            }
+            
             .modules-grid { gap: 10px; padding: 12px; padding-bottom: 40px; }
             .module-card { padding: 12px 6px; }
             .module-icon { font-size: 24px; }
@@ -825,7 +926,6 @@
             .bottom-nav { padding: 4px 16px; min-height: 48px; }
             .nav-item { font-size: 10px; padding: 3px 8px; }
             .nav-item span:first-child { font-size: 16px; }
-            .date-time { display: none; }
             .fab { width: 50px; height: 50px; bottom: 70px; right: 16px; font-size: 22px; }
             .fab-menu { bottom: 135px; right: 16px; gap: 10px; }
             .fab-item { width: 46px; height: 46px; font-size: 18px; }
@@ -833,9 +933,54 @@
             .content { padding-bottom: 110px; }
             .footer-datetime { font-size: 11px; padding: 5px 10px; min-width: 150px; }
             .remember-wrapper span { font-size: 13px; }
+        }
+
+        @media (max-width: 480px) {
+            .app-header {
+                padding: 4px 10px;
+                min-height: 44px;
+            }
+            .logo-img {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+            }
+            .logo-img i { font-size: 14px; }
+            .logo-main { font-size: 13px; }
+            .logo-sub { font-size: 6px; letter-spacing: 0.3px; }
+            .logo-container { gap: 6px; }
+            
+            .header-right { gap: 4px; }
+            
+            .user-profile {
+                padding: 2px 6px 2px 3px;
+            }
+            .user-profile #userAvatarEmoji {
+                font-size: 16px;
+                width: 22px;
+                height: 22px;
+            }
+            .user-profile img { width: 22px; height: 22px; }
+            
+            .theme-btn { width: 28px; height: 28px; font-size: 12px; }
+            
+            #notificationBellBtn {
+                width: 30px !important;
+                height: 30px !important;
+                font-size: 14px !important;
+            }
+            #notificationBadge {
+                width: 16px !important;
+                height: 16px !important;
+                font-size: 8px !important;
+                top: -3px !important;
+                right: -3px !important;
+            }
             #notificationDropdown {
-                width: 300px;
-                right: -60px;
+                width: 280px !important;
+                right: -50px !important;
+                top: 36px !important;
+                max-height: 380px !important;
             }
         }
 
@@ -914,13 +1059,14 @@
         <div id="loader" class="loader"><div class="spinner"></div></div>
         <div class="offline-indicator" id="offlineIndicator"><i class="fas fa-wifi-slash"></i> Offline Mode</div>
 
+        <!-- ======================= LOGIN SCREEN ======================= -->
         <div id="loginScreen" class="screen active">
             <div class="login-container">
                 <div class="login-card">
                     <div class="login-header">
                         <div id="loginSchoolLogoPlaceholder" class="login-logo-placeholder"><i class="fas fa-school"></i></div>
                         <h2>Wings Convent</h2>
-                        <p>Complete ERP System | 24 Modules | 24 Storage Buckets | Supabase Cloud</p>
+                        <p> Playgropu | Nursery | Upper K.G | Senior K.G </p>
                     </div>
                     <div class="login-form">
                         <div class="input-icon"><i class="fas fa-envelope"></i><input type="text" id="loginEmailMobile" placeholder="Email or Mobile Number" value="admin@wings.edu"></div>
@@ -939,29 +1085,39 @@
                             📧 student@wings.edu / 1234 (Student)<br>
                             📧 cashier@wings.edu / 1234 (Cashier)<br>
                             📧 accountant@wings.edu / 1234 (Accountant)<br>
-                            <i class="fas fa-cloud"></i> Data syncs with Supabase Cloud | 24 Dedicated Storage Buckets
+                            <i class="fas fa-cloud"></i> Data syncs with Supabase Cloud
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ======================= MAIN SCREEN ======================= -->
         <div id="mainScreen" class="screen">
+            <!-- ======================= APP HEADER (DATE/TIME REMOVED) ======================= -->
             <div class="app-header">
                 <div class="logo-container">
                     <div class="logo-img" id="headerLogo"><i class="fas fa-school"></i></div>
-                    <span><i class="fas fa-school"></i> Wings Convent</span>
+                    <div class="logo-text">
+                        <span class="logo-main">Wings Convent</span>                        
+                    </div>
                 </div>
                 <div class="header-right">
-                    <!-- 🔔 NOTIFICATION BELL -->
+                    <!-- ✅ USER PROFILE with GENDER AVATAR -->
+                    <div class="user-profile" id="userProfile">
+                        <span id="userAvatarEmoji">👨‍💼</span>
+                        <span id="headerUserName">Admin</span>
+                    </div>
+                    
+                    <!-- ✅ THEME TOGGLE -->
+                    <button class="theme-btn" id="themeToggle">🌙</button>
+                    
+                    <!-- ✅ NOTIFICATION BELL -->
                     <div id="notificationBellContainer">
-                        <!-- Bell Button -->
                         <div id="notificationBellBtn">
                             <i class="fas fa-bell" id="notificationBellIcon"></i>
                             <span id="notificationBadge">0</span>
                         </div>
-                        
-                        <!-- Dropdown -->
                         <div id="notificationDropdown">
                             <div style="padding:8px 16px 12px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center;">
                                 <h4 style="margin:0; font-size:14px; font-weight:600; color:var(--text-primary);">
@@ -980,11 +1136,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- END NOTIFICATION BELL -->
-                    
-                    <div class="date-time" id="headerDateTime"></div>
-                    <div class="user-profile" id="userProfile"><i class="far fa-user-circle"></i><span id="headerUserName">Admin</span></div>
-                    <button class="theme-btn" id="themeToggle">🌙</button>
                 </div>
             </div>
 
@@ -1008,10 +1159,17 @@
                 <button class="fab-item" id="fabCollectFee"><i class="fas fa-rupee-sign"></i></button>
             </div>
 
+            <!-- ======================= BOTTOM NAV (FOOTER WITH DATE/TIME) ======================= -->
             <div class="bottom-nav">
-                <button class="nav-item" data-nav="dashboard" id="homeNavBtn"><span>🏠</span><span>Home</span></button>
+                <button class="nav-item" data-nav="dashboard" id="homeNavBtn">
+                    <span>🏠</span>
+                    <span>Home</span>
+                </button>
                 <div class="footer-datetime" id="footerDateTime">-- --- ---- --:--:-- --</div>
-                <button class="nav-item" id="logoutNavBtn"><span>🚪</span><span>Exit</span></button>
+                <button class="nav-item" id="logoutNavBtn">
+                    <span>🚪</span>
+                    <span>Exit</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1020,26 +1178,140 @@
     // ======================= ✅ ANDROID BACK BUTTON SUPPORT =======================
     document.addEventListener('backbutton', function(e) {
         e.preventDefault();
-        // If any modal is open, close it
         var modal = document.querySelector('.modal-overlay, .custom-modal-overlay');
-        if (modal) {
-            modal.remove();
-            return;
-        }
-        // If we are in module view, go back to dashboard
+        if (modal) { modal.remove(); return; }
         var moduleView = document.getElementById('moduleView');
         if (moduleView && moduleView.style.display !== 'none') {
-            if (typeof showDashboard === 'function') {
-                showDashboard();
-            }
+            if (typeof showDashboard === 'function') showDashboard();
             return;
         }
-        // Otherwise, minimize/exit app (only if using Cordova/Capacitor)
-        // if (typeof navigator !== 'undefined' && navigator.app) {
-        //     navigator.app.exitApp();
-        // }
     }, false);
 
+    // ======================= GENDER BASED AVATAR SYSTEM =======================
+    const GENDER_EMOJIS = {
+        'male': '👨‍🎓',
+        'male_student': '👨‍🎓',
+        'male_teacher': '👨‍🏫',
+        'male_admin': '👨‍💼',
+        'female': '👩‍🎓',
+        'female_student': '👩‍🎓',
+        'female_teacher': '👩‍🏫',
+        'female_admin': '👩‍💼',
+        'default': '👤'
+    };
+
+    function getUserAvatar(user) {
+        if (!user) return '👤';
+        let gender = user.gender || user.sex || '';
+        let role = user.role || user.role_display || '';
+        
+        if (gender.toLowerCase() === 'male' || gender.toLowerCase() === 'm') {
+            if (role === 'admin' || role === 'Administrator') return '👨‍💼';
+            if (role === 'teacher') return '👨‍🏫';
+            if (role === 'student') return '👨‍🎓';
+            return '👨';
+        }
+        if (gender.toLowerCase() === 'female' || gender.toLowerCase() === 'f') {
+            if (role === 'admin' || role === 'Administrator') return '👩‍💼';
+            if (role === 'teacher') return '👩‍🏫';
+            if (role === 'student') return '👩‍🎓';
+            return '👩';
+        }
+        if (role === 'admin') return '👨‍💼';
+        if (role === 'teacher') return '👨‍🏫';
+        if (role === 'student') return '👨‍🎓';
+        return '👤';
+    }
+
+    function updateHeaderAvatar(user) {
+        const userProfile = document.getElementById('userProfile');
+        const avatarEmoji = document.getElementById('userAvatarEmoji');
+        const userName = document.getElementById('headerUserName');
+        if (!userProfile) return;
+        
+        let avatar = getUserAvatar(user);
+        let photoUrl = user?.photo_url || user?.photoUrl || user?.photo_data || null;
+        
+        if (photoUrl) {
+            userProfile.innerHTML = `
+                <img src="${photoUrl}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);">
+                <span id="headerUserName">${user?.name || 'User'}</span>
+            `;
+        } else {
+            userProfile.innerHTML = `
+                <span id="userAvatarEmoji" style="font-size: 22px; line-height: 1; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">${avatar}</span>
+                <span id="headerUserName">${user?.name || 'User'}</span>
+            `;
+        }
+        if (userName) userName.textContent = user?.name || 'User';
+    }
+
+    // ======================= UPDATE FOOTER DATE/TIME =======================
+    function updateFooterDateTime() {
+        const footerEl = document.getElementById('footerDateTime');
+        if (!footerEl) return;
+        const now = new Date();
+        const options = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+        footerEl.textContent = now.toLocaleDateString('en-IN', options);
+    }
+    setInterval(updateFooterDateTime, 1000);
+    updateFooterDateTime();
+
+    // ======================= LOGIN FUNCTION =======================
+    function loginWithGender(email, password) {
+        let user = null;
+        let gender = 'male';
+        
+        if (window.users && window.users.length > 0) {
+            for (let u of window.users) {
+                if (u.email === email || u.mobile === email) {
+                    user = u;
+                    gender = u.gender || u.sex || 'male';
+                    break;
+                }
+            }
+        }
+        
+        if (!user && window.employees && window.employees.length > 0) {
+            for (let emp of window.employees) {
+                if (emp.email === email || emp.mobile === email) {
+                    user = emp;
+                    gender = emp.gender || emp.sex || 'male';
+                    break;
+                }
+            }
+        }
+        
+        if (!user && window.students && window.students.length > 0) {
+            for (let student of window.students) {
+                if (student.email === email || student.mobile === email) {
+                    user = student;
+                    gender = student.gender || student.sex || 'male';
+                    break;
+                }
+            }
+        }
+        
+        if (user) {
+            currentUser = { ...user, gender: gender, avatar: getUserAvatar({ ...user, gender: gender }) };
+            updateHeaderAvatar(currentUser);
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            return true;
+        }
+        return false;
+    }
+
+    // ======================= LOGIN BUTTON =======================
+    document.getElementById('loginBtn').addEventListener('click', function() {
+        const email = document.getElementById('loginEmailMobile').value;
+        const password = document.getElementById('password').value;
+        if (loginWithGender(email, password)) {
+            showToast('✅ Login successful!', 'success');
+            showDashboard();
+        } else {
+            showToast('❌ Invalid credentials!', 'error');
+        }
+    });
 // ============================================================ PART 01 INDEX.HTML ENDS HERE ===========================================
 //============================================================= PART 02 SUPABASE DATABASE START HERE ===================================
 // ======================= PART 2: SUPABASE CREDENTIALS & CONFIGURATION =======================
