@@ -17515,7 +17515,204 @@ function getSupabaseClient() {
     }
     return null;
 }
+// ======================= FIX: FEES MODULE UPI QR CODE =======================
 
+// ✅ Add this function at the top of Fees Module (after getSupabaseClient)
+async function loadUPIQRCodeForFees() {
+    console.log('🔄 [FEE] Loading UPI QR Code from Supabase...');
+    
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
+        console.log('📴 [FEE] Offline - Using localStorage');
+        return getUPIFromLocalStorage();
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('profile')
+            .select('upi_qr_url, upi_id, upi_instructions')
+            .eq('id', 'PROF001')
+            .single();
+        
+        if (error) {
+            console.error('❌ [FEE] Supabase error:', error);
+            return getUPIFromLocalStorage();
+        }
+        
+        if (data) {
+            console.log('✅ [FEE] UPI loaded from Supabase:', data);
+            
+            // ✅ Update localStorage with cloud data
+            if (data.upi_qr_url) {
+                localStorage.setItem('upiQRCodeUrl', data.upi_qr_url);
+                localStorage.removeItem('upiQRCode');
+            }
+            if (data.upi_id) {
+                localStorage.setItem('upiId', data.upi_id);
+            }
+            if (data.upi_instructions) {
+                localStorage.setItem('upiInstructions', data.upi_instructions);
+            }
+            
+            return {
+                qrUrl: data.upi_qr_url,
+                qrData: null,
+                upiId: data.upi_id,
+                instructions: data.upi_instructions
+            };
+        }
+        
+        return getUPIFromLocalStorage();
+        
+    } catch(e) {
+        console.error('❌ [FEE] Error:', e);
+        return getUPIFromLocalStorage();
+    }
+}
+
+function getUPIFromLocalStorage() {
+    return {
+        qrUrl: localStorage.getItem('upiQRCodeUrl') || null,
+        qrData: localStorage.getItem('upiQRCode') || null,
+        upiId: localStorage.getItem('upiId') || '',
+        instructions: localStorage.getItem('upiInstructions') || ''
+    };
+}
+
+// ✅ FIXED: showCollectFeeForm() with UPI from Supabase
+function showCollectFeeForm() {
+    try {
+        feeReceiptProofData = null;
+        feeReceiptProofUrl = null;
+        
+        if (!window.students || window.students.length === 0) {
+            showNotification('No students found! Please add students first.', 'warning');
+            return;
+        }
+        
+        // ✅ Load UPI from Supabase FIRST
+        let upiData = {
+            qrUrl: null,
+            qrData: null,
+            upiId: '',
+            instructions: ''
+        };
+        
+        // ✅ Async load UPI data
+        loadUPIQRCodeForFees().then(data => {
+            upiData = data;
+            updateUPIInModal(upiData);
+        }).catch(() => {
+            upiData = getUPIFromLocalStorage();
+            updateUPIInModal(upiData);
+        });
+        
+        // ✅ Build UPI HTML with loading state
+        let upiQRHTML = `
+            <div class="upi-qr-container" id="upiQRContainer" style="display: none; text-align: center; margin-top: 10px; background: white; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                <div id="upiStatusBadge" style="padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-bottom: 8px; display: inline-block; background: #f1f5f9; color: #64748b;">
+                    🔄 Loading UPI...
+                </div>
+                <img id="upiQRCodeImg" style="max-width: 100px; max-height: 100px; margin: 0 auto; display: none; border-radius: 8px;" 
+                     onerror="this.style.display='none'; document.getElementById('upiError').style.display='block';">
+                <p id="upiIdDisplay" style="font-size: 11px; color: #1e293b; margin-top: 4px; font-weight: 600;">Loading...</p>
+                <p id="upiInstructionsDisplay" style="font-size: 9px; color: #64748b; margin-top: 2px;">Loading...</p>
+                <p id="upiError" style="display:none; font-size: 10px; color: #ef4444; margin-top: 4px;">
+                    <i class="fas fa-exclamation-triangle"></i> QR Code not found
+                </p>
+                <button id="refreshUpiBtn" style="background: #8b5cf6; color: white; border: none; padding: 4px 12px; border-radius: 20px; font-size: 9px; cursor: pointer; margin-top: 4px; touch-action: manipulation;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        `;
+        
+        // ... rest of the modal code ...
+        
+        // ✅ After modal is created, update UPI
+        function updateUPIInModal(data) {
+            const qrImg = document.getElementById('upiQRCodeImg');
+            const upiIdDisplay = document.getElementById('upiIdDisplay');
+            const upiInstructionsDisplay = document.getElementById('upiInstructionsDisplay');
+            const statusBadge = document.getElementById('upiStatusBadge');
+            const qrContainer = document.getElementById('upiQRContainer');
+            const errorEl = document.getElementById('upiError');
+            
+            if (upiIdDisplay) {
+                upiIdDisplay.textContent = data.upiId || 'Not Configured';
+            }
+            
+            if (upiInstructionsDisplay) {
+                upiInstructionsDisplay.textContent = data.instructions || 'Scan QR code to pay';
+            }
+            
+            if (qrImg) {
+                if (data.qrUrl && data.qrUrl.startsWith('http')) {
+                    qrImg.src = data.qrUrl;
+                    qrImg.style.display = 'block';
+                    if (errorEl) errorEl.style.display = 'none';
+                    console.log('✅ [FEE] QR Code from cloud URL');
+                    if (statusBadge) {
+                        statusBadge.textContent = '✅ Synced from cloud';
+                        statusBadge.style.background = '#10b981';
+                        statusBadge.style.color = 'white';
+                    }
+                } else if (data.qrData && data.qrData.startsWith('data:image')) {
+                    qrImg.src = data.qrData;
+                    qrImg.style.display = 'block';
+                    if (errorEl) errorEl.style.display = 'none';
+                    console.log('✅ [FEE] QR Code from base64');
+                    if (statusBadge) {
+                        statusBadge.textContent = '📁 Using local data';
+                        statusBadge.style.background = '#f59e0b';
+                        statusBadge.style.color = '#1e293b';
+                    }
+                } else {
+                    qrImg.style.display = 'none';
+                    if (errorEl) errorEl.style.display = 'block';
+                    console.log('❌ [FEE] No QR Code');
+                    if (statusBadge) {
+                        statusBadge.textContent = '⚠️ No UPI configured';
+                        statusBadge.style.background = '#ef4444';
+                        statusBadge.style.color = 'white';
+                    }
+                }
+            }
+            
+            if (qrContainer) {
+                qrContainer.style.display = 'block';
+            }
+            
+            // ✅ Refresh button
+            const refreshBtn = document.getElementById('refreshUpiBtn');
+            if (refreshBtn) {
+                refreshBtn.onclick = function() {
+                    if (statusBadge) {
+                        statusBadge.textContent = '🔄 Refreshing...';
+                        statusBadge.style.background = '#f59e0b';
+                        statusBadge.style.color = '#1e293b';
+                    }
+                    loadUPIQRCodeForFees().then(newData => {
+                        updateUPIInModal(newData);
+                        showNotification('UPI QR Code refreshed!', 'success');
+                    });
+                };
+            }
+        }
+        
+        // ... rest of the modal code ...
+        
+        // ✅ After modal is created, load UPI
+        setTimeout(() => {
+            loadUPIQRCodeForFees().then(data => {
+                updateUPIInModal(data);
+            });
+        }, 500);
+        
+    } catch(e) {
+        console.error('Show collect fee error:', e);
+        showNotification('Error opening fee collection form: ' + e.message, 'error');
+    }
+}
 // ======================= GET STUDENT TOTAL FEE =======================
 function getStudentTotalFee(studentName) { 
     try {
@@ -35217,7 +35414,7 @@ console.log('📥 [LEAVE] Download button working for documents');
 // ======================= PART 14 ENDS HERE =======================
 // ======================= PART 14 ENDS HERE =======================
 // ======================= PART 15: CLASS MANAGEMENT MODULE (FIXED) =======================
-// ======================= PART 15: CLASS MANAGEMENT MODULE (FIXED - STUDENT COUNT WITH SECTION) =======================
+// ======================= PART 15: CLASSES MODULE (ONLINE/OFFLINE SAVE FLOW) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.classModuleLoaded === 'undefined') {
     window.classModuleLoaded = true;
@@ -35234,6 +35431,11 @@ let classesPerPage = 6;
 let classesTotalPages = 1;
 let isClassesLoading = false;
 let classChartInstance = null;
+
+// ======================= PENDING QUEUE FOR CLASSES =======================
+if (typeof window.pendingClassesQueue === 'undefined') {
+    window.pendingClassesQueue = [];
+}
 
 // ======================= HELPER FUNCTIONS =======================
 function escapeHtml(str) {
@@ -35310,7 +35512,7 @@ function getSupabaseClientClasses() {
     return null;
 }
 
-// ======================= ✅ FIXED: NORMALIZE CLASS NAME =======================
+// ======================= ✅ NORMALIZE CLASS NAME =======================
 function normalizeClassName(className) {
     if (!className) return '';
     let normalized = className.trim();
@@ -35354,20 +35556,152 @@ function getClassBaseName(className) {
     return className.trim();
 }
 
-// ======================= ✅ FIXED: LOAD CLASSES WITH STUDENT COUNT (WITH SECTION) =======================
+// ======================= ✅ PENDING QUEUE FUNCTIONS =======================
+function loadPendingClassesQueue() {
+    const saved = localStorage.getItem('pendingClassesQueue');
+    if (saved) {
+        try {
+            window.pendingClassesQueue = JSON.parse(saved);
+            console.log(`📦 Loaded ${window.pendingClassesQueue.length} pending class items`);
+        } catch(e) {
+            window.pendingClassesQueue = [];
+        }
+    }
+}
+
+function savePendingClassesQueue() {
+    localStorage.setItem('pendingClassesQueue', JSON.stringify(window.pendingClassesQueue));
+    updatePendingStatus();
+}
+
+function addToPendingClassesQueue(operation, data) {
+    const pendingItem = {
+        id: Date.now().toString(),
+        operation: operation,
+        data: data,
+        timestamp: new Date().toISOString(),
+        retryCount: 0
+    };
+    window.pendingClassesQueue.push(pendingItem);
+    savePendingClassesQueue();
+    console.log(`📴 Added to pending queue: ${operation} - ${data.name || data.id}`);
+    updatePendingStatus();
+}
+
+function updatePendingStatus() {
+    const offlineIndicator = document.getElementById('offlineIndicator');
+    if (!offlineIndicator) return;
+    
+    const pendingCount = window.pendingClassesQueue ? window.pendingClassesQueue.length : 0;
+    
+    if (!navigator.onLine) {
+        offlineIndicator.style.display = 'flex';
+        offlineIndicator.innerHTML = `<i class="fas fa-wifi-slash"></i> Offline Mode | ${pendingCount} pending classes`;
+        offlineIndicator.style.background = '#f59e0b';
+    } else if (pendingCount > 0) {
+        offlineIndicator.style.display = 'flex';
+        offlineIndicator.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> Syncing classes... ${pendingCount} pending`;
+        offlineIndicator.style.background = '#10b981';
+    } else {
+        offlineIndicator.style.display = 'none';
+    }
+}
+
+// ======================= ✅ PROCESS PENDING CLASSES QUEUE =======================
+async function processPendingClassesQueue() {
+    if (!navigator.onLine) {
+        console.log('📴 Offline - Cannot process queue');
+        return;
+    }
+    
+    if (window.pendingClassesQueue.length === 0) {
+        console.log('📭 No pending classes');
+        return;
+    }
+    
+    const supabase = getSupabaseClientClasses();
+    if (!supabase) {
+        console.log('❌ No Supabase client');
+        return;
+    }
+    
+    console.log(`🔄 Processing ${window.pendingClassesQueue.length} pending class operations...`);
+    let completedIds = [];
+    let successCount = 0;
+    
+    for (const item of window.pendingClassesQueue) {
+        try {
+            if (item.operation === 'add' || item.operation === 'update') {
+                const dbData = {
+                    id: item.data.id,
+                    name: item.data.name,
+                    teacher: item.data.teacher || 'Not Assigned',
+                    room: item.data.room || 'N/A',
+                    strength: item.data.strength || 35,
+                    students_count: item.data.students || 0,
+                    updated_at: new Date().toISOString()
+                };
+                const { error } = await supabase
+                    .from('classes')
+                    .upsert(dbData, { onConflict: 'id' });
+                
+                if (!error) {
+                    completedIds.push(item.id);
+                    successCount++;
+                    console.log(`✅ Synced: ${item.data.name}`);
+                } else {
+                    item.retryCount++;
+                    console.error(`⚠️ Failed to sync: ${item.data.name}`, error);
+                }
+            }
+            else if (item.operation === 'delete') {
+                const { error } = await supabase
+                    .from('classes')
+                    .delete()
+                    .eq('id', item.data.id);
+                
+                if (!error) {
+                    completedIds.push(item.id);
+                    successCount++;
+                    console.log(`✅ Deleted: ${item.data.id}`);
+                } else {
+                    item.retryCount++;
+                    console.error(`⚠️ Failed to delete: ${item.data.id}`, error);
+                }
+            }
+        } catch(err) {
+            item.retryCount++;
+            console.error('❌ Pending error:', err);
+        }
+        await new Promise(r => setTimeout(r, 100));
+    }
+    
+    window.pendingClassesQueue = window.pendingClassesQueue.filter(item => !completedIds.includes(item.id));
+    savePendingClassesQueue();
+    updatePendingStatus();
+    
+    if (successCount > 0) {
+        showNotification(`✅ ${successCount} class operations synced to cloud!`, 'success');
+        // ✅ Clear cache to refresh counts
+        localStorage.removeItem('classStudentCounts');
+    }
+}
+
+// ======================= ✅ FAST: LOAD CLASSES WITH CACHED STUDENT COUNTS =======================
 async function loadClassesFromSupabase() {
     console.log('📋 [CLASSES] loadClassesFromSupabase called...');
     const supabase = getSupabaseClientClasses();
     
+    // ✅ OFFLINE: Load from cache
     if (!supabase || !navigator.onLine) {
-        console.log('📴 [CLASSES] Offline - Loading from cache');
+        console.log('📴 Offline - Loading from cache');
         const cached = localStorage.getItem('cache_classes');
         if (cached) {
             try {
                 const parsed = JSON.parse(cached);
                 window.classes.length = 0;
                 for (let item of parsed) window.classes.push(item);
-                console.log(`📦 [CLASSES] Loaded ${window.classes.length} classes from cache`);
+                console.log(`📦 Loaded ${window.classes.length} classes from cache`);
                 return true;
             } catch(e) { console.error('Cache parse error:', e); }
         }
@@ -35376,78 +35710,76 @@ async function loadClassesFromSupabase() {
     }
     
     try {
+        // ✅ Load classes only (without students for speed)
         const { data: classData, error: classError } = await supabase
             .from('classes')
             .select('*')
             .order('name', { ascending: true });
         if (classError) throw classError;
-        console.log(`📊 [CLASSES] Supabase returned ${classData ? classData.length : 0} class records`);
+        console.log(`📊 Supabase returned ${classData ? classData.length : 0} class records`);
         
-        // ✅ Load students with both cls and sec
-        const { data: studentData, error: studentError } = await supabase
-            .from('students')
-            .select('id, cls, sec');
-        if (studentError) console.error('Students fetch error:', studentError);
-        
-        // ✅ Build class-wise student count - FIXED: Combine cls + sec
+        // ✅ Try to get student counts from cache
         let classStudentCount = {};
-        if (studentData && studentData.length > 0) {
-            for (let student of studentData) {
-                if (student.cls) {
-                    // ✅ Combine cls and sec to match class name
-                    let studentClass = student.cls.trim();
-                    let studentSec = student.sec || '';
-                    let fullClass = studentClass + (studentSec ? ' ' + studentSec : '');
-                    
-                    // Try to match with existing class
-                    let matchedClass = null;
-                    if (classData && classData.length > 0) {
-                        for (let cls of classData) {
-                            // Exact match
-                            if (cls.name === fullClass) {
-                                matchedClass = cls.name;
-                                break;
-                            }
-                            // Normalized match
-                            if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) {
-                                matchedClass = cls.name;
-                                break;
-                            }
-                            // Base name match (without section)
-                            if (getClassBaseName(cls.name) === getClassBaseName(fullClass)) {
-                                // Check if section matches
-                                let clsParts = cls.name.split(' ');
-                                let studentParts = fullClass.split(' ');
-                                if (clsParts.length >= 2 && studentParts.length >= 2) {
-                                    if (clsParts[clsParts.length - 1] === studentParts[studentParts.length - 1]) {
-                                        matchedClass = cls.name;
-                                        break;
-                                    }
-                                }
-                                // If no section match, still use it
-                                if (!matchedClass) {
+        let studentCountsCache = localStorage.getItem('classStudentCounts');
+        if (studentCountsCache) {
+            try {
+                classStudentCount = JSON.parse(studentCountsCache);
+                console.log('📦 Student counts loaded from cache');
+            } catch(e) {}
+        }
+        
+        // ✅ If cache is empty or stale, fetch students
+        if (Object.keys(classStudentCount).length === 0) {
+            console.log('🔄 Fetching student counts from Supabase...');
+            const { data: studentData, error: studentError } = await supabase
+                .from('students')
+                .select('cls, sec');
+            if (!studentError && studentData) {
+                for (let student of studentData) {
+                    if (student.cls) {
+                        let studentClass = student.cls.trim();
+                        let studentSec = student.sec || '';
+                        let fullClass = studentClass + (studentSec ? ' ' + studentSec : '');
+                        
+                        let matchedClass = null;
+                        if (classData && classData.length > 0) {
+                            for (let cls of classData) {
+                                if (cls.name === fullClass) {
                                     matchedClass = cls.name;
+                                    break;
+                                }
+                                if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) {
+                                    matchedClass = cls.name;
+                                    break;
+                                }
+                                let baseCls = getClassBaseName(cls.name);
+                                let baseStudent = getClassBaseName(fullClass);
+                                if (baseCls === baseStudent && baseCls) {
+                                    let clsParts = cls.name.split(' ');
+                                    let studentParts = fullClass.split(' ');
+                                    if (clsParts.length >= 2 && studentParts.length >= 2) {
+                                        if (clsParts[clsParts.length - 1] === studentParts[studentParts.length - 1]) {
+                                            matchedClass = cls.name;
+                                            break;
+                                        }
+                                    }
+                                    if (!matchedClass) matchedClass = cls.name;
                                 }
                             }
                         }
+                        if (!matchedClass) matchedClass = fullClass;
+                        classStudentCount[matchedClass] = (classStudentCount[matchedClass] || 0) + 1;
                     }
-                    
-                    if (!matchedClass) {
-                        matchedClass = fullClass;
-                    }
-                    
-                    classStudentCount[matchedClass] = (classStudentCount[matchedClass] || 0) + 1;
                 }
+                localStorage.setItem('classStudentCounts', JSON.stringify(classStudentCount));
+                console.log('📊 Student counts cached:', classStudentCount);
             }
-            console.log('📊 [CLASSES] Class-wise student counts:', classStudentCount);
         }
         
         window.classes.length = 0;
         if (classData && classData.length > 0) {
             for (let item of classData) {
                 let studentCount = classStudentCount[item.name] || 0;
-                
-                // If no match, try normalized matching
                 if (studentCount === 0) {
                     let normalized = normalizeClassName(item.name);
                     for (let [key, value] of Object.entries(classStudentCount)) {
@@ -35457,7 +35789,6 @@ async function loadClassesFromSupabase() {
                         }
                     }
                 }
-                
                 window.classes.push({
                     id: item.id,
                     name: item.name,
@@ -35469,29 +35800,12 @@ async function loadClassesFromSupabase() {
                     created_at: item.created_at
                 });
             }
-            
             localStorage.setItem('cache_classes', JSON.stringify(window.classes));
-            
-            // ✅ Update Supabase classes table with correct student counts
-            for (let item of window.classes) {
-                try {
-                    await supabase.from('classes').update({
-                        students_count: item.students,
-                        updated_at: new Date().toISOString()
-                    }).eq('id', item.id);
-                } catch(e) { console.error('Error updating class student count:', e); }
-            }
             return true;
         } else {
-            // ✅ Generate default classes with correct names
-            console.log('🔄 [CLASSES] Generating default classes...');
-            const defaultClassNames = [
-                'Playgroup A', 'Playgroup B',
-                'Nursery A', 'Nursery B',
-                'KG1 A', 'KG1 B',
-                'KG2 A', 'KG2 B'
-            ];
-            
+            // ✅ Generate default classes
+            console.log('🔄 Generating default classes...');
+            const defaultClassNames = ['Playgroup A', 'Playgroup B', 'Nursery A', 'Nursery B', 'KG1 A', 'KG1 B', 'KG2 A', 'KG2 B'];
             for (let name of defaultClassNames) {
                 let studentCount = classStudentCount[name] || 0;
                 if (studentCount === 0) {
@@ -35503,9 +35817,8 @@ async function loadClassesFromSupabase() {
                         }
                     }
                 }
-                let classId = 'CLS' + String(window.classes.length + 1).padStart(3, '0');
                 window.classes.push({
-                    id: classId,
+                    id: 'CLS' + String(window.classes.length + 1).padStart(3, '0'),
                     name: name,
                     teacher: 'Not Assigned',
                     room: 'N/A',
@@ -35515,24 +35828,10 @@ async function loadClassesFromSupabase() {
                 });
             }
             localStorage.setItem('cache_classes', JSON.stringify(window.classes));
-            
-            for (let item of window.classes) {
-                try {
-                    await supabase.from('classes').upsert({
-                        id: item.id,
-                        name: item.name,
-                        teacher: item.teacher,
-                        room: item.room,
-                        strength: item.strength,
-                        students_count: item.students,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'id' });
-                } catch(e) { console.error('Error saving default class:', e); }
-            }
             return true;
         }
     } catch(e) {
-        console.error('❌ [CLASSES] Error loading:', e);
+        console.error('❌ Error loading:', e);
         const cached = localStorage.getItem('cache_classes');
         if (cached) {
             try { window.classes = JSON.parse(cached); return true; } catch(err) {}
@@ -35542,9 +35841,9 @@ async function loadClassesFromSupabase() {
     }
 }
 
-// ======================= ✅ FIXED: SYNC STUDENT COUNTS (WITH SECTION) =======================
+// ======================= ✅ SYNC STUDENT COUNTS TO CLASSES =======================
 async function syncStudentCountsToClasses() {
-    console.log('🔄 [CLASSES] Syncing student counts with section...');
+    console.log('🔄 Syncing student counts to classes...');
     const supabase = getSupabaseClientClasses();
     if (!supabase || !navigator.onLine) {
         showNotification('📴 Offline - Cannot sync student counts', 'warning');
@@ -35553,38 +35852,30 @@ async function syncStudentCountsToClasses() {
     showLoader();
     showNotification('🔄 Syncing student counts...', 'info');
     try {
-        // ✅ Get students with cls and sec
         const { data: students, error: studentError } = await supabase
             .from('students')
             .select('cls, sec');
         if (studentError) throw studentError;
-        
         const { data: classesData, error: classError } = await supabase
             .from('classes')
             .select('id, name');
         if (classError) throw classError;
-        
-        // ✅ Count students per class with section
         let classCounts = {};
         for (let student of students || []) {
             if (student.cls) {
                 let studentClass = student.cls.trim();
                 let studentSec = student.sec || '';
                 let fullClass = studentClass + (studentSec ? ' ' + studentSec : '');
-                
                 let matchedClass = null;
                 for (let cls of classesData || []) {
-                    // Exact match
                     if (cls.name === fullClass) {
                         matchedClass = cls.name;
                         break;
                     }
-                    // Normalized match
                     if (normalizeClassName(cls.name) === normalizeClassName(fullClass)) {
                         matchedClass = cls.name;
                         break;
                     }
-                    // Base name match with section
                     let baseCls = getClassBaseName(cls.name);
                     let baseStudent = getClassBaseName(fullClass);
                     if (baseCls === baseStudent && baseCls) {
@@ -35596,20 +35887,14 @@ async function syncStudentCountsToClasses() {
                                 break;
                             }
                         }
-                        if (!matchedClass) {
-                            matchedClass = cls.name;
-                        }
+                        if (!matchedClass) matchedClass = cls.name;
                     }
                 }
-                
-                if (!matchedClass) {
-                    matchedClass = fullClass;
-                }
-                
+                if (!matchedClass) matchedClass = fullClass;
                 classCounts[matchedClass] = (classCounts[matchedClass] || 0) + 1;
             }
         }
-        
+        localStorage.setItem('classStudentCounts', JSON.stringify(classCounts));
         let updatedCount = 0, totalStudents = 0;
         for (let cls of classesData || []) {
             let count = classCounts[cls.name] || 0;
@@ -35640,15 +35925,21 @@ async function syncStudentCountsToClasses() {
     }
 }
 
-// ======================= SAVE CLASS TO SUPABASE =======================
+// ======================= ✅ SAVE CLASS TO SUPABASE (ONLINE/OFFLINE FLOW) =======================
 async function saveClassToSupabase(classData) {
-    console.log('📤 [CLASSES] saveClassToSupabase called for:', classData.name);
+    console.log('📤 Saving class to Supabase:', classData.name);
+    
     const supabase = getSupabaseClientClasses();
+    
+    // ✅ OFFLINE: Save to pending queue
     if (!supabase || !navigator.onLine) {
-        addToPendingQueue('classes', 'upsert', classData);
-        showNotification('📴 Offline: Class saved locally.', 'warning');
-        return false;
+        console.log('📴 Offline - Adding to pending queue');
+        addToPendingClassesQueue('add', classData);
+        showNotification('📴 Offline: Class saved locally. Will sync when online.', 'warning');
+        updatePendingStatus();
+        return true; // ✅ Local save successful
     }
+    
     try {
         const dbData = {
             id: classData.id,
@@ -35659,80 +35950,141 @@ async function saveClassToSupabase(classData) {
             students_count: classData.students || 0,
             updated_at: new Date().toISOString()
         };
-        const { error } = await supabase.from('classes').upsert(dbData, { onConflict: 'id' });
-        if (error) throw error;
-        showNotification('✅ Class saved!', 'success');
-        let cached = JSON.parse(localStorage.getItem('cache_classes') || '[]');
-        let index = cached.findIndex(c => c.id === classData.id);
-        if (index !== -1) cached[index] = { ...cached[index], ...classData };
-        else cached.push(classData);
-        localStorage.setItem('cache_classes', JSON.stringify(cached));
+        const { error } = await supabase
+            .from('classes')
+            .upsert(dbData, { onConflict: 'id' });
+        
+        if (error) {
+            console.error('❌ Supabase error:', error);
+            throw error;
+        }
+        
+        console.log(`✅ Class "${classData.name}" saved to Supabase`);
+        showNotification('✅ Class saved to cloud!', 'success');
+        
+        // ✅ Remove from pending queue if exists
+        if (window.pendingClassesQueue && window.pendingClassesQueue.length > 0) {
+            window.pendingClassesQueue = window.pendingClassesQueue.filter(item => 
+                !(item.operation === 'add' && item.data.id === classData.id) &&
+                !(item.operation === 'update' && item.data.id === classData.id)
+            );
+            savePendingClassesQueue();
+            updatePendingStatus();
+        }
+        
+        // ✅ Clear cache to refresh counts
+        localStorage.removeItem('classStudentCounts');
         return true;
+        
     } catch(e) {
-        console.error('Save error:', e);
-        addToPendingQueue('classes', 'upsert', classData);
-        showNotification('⚠️ Failed to save to cloud.', 'warning');
+        console.error('❌ Save error:', e);
+        addToPendingClassesQueue('add', classData);
+        showNotification('⚠️ Failed to save to cloud. Added to pending queue.', 'warning');
+        updatePendingStatus();
         return false;
     }
 }
 
-// ======================= DELETE CLASS =======================
-async function deleteClassFromSupabase(classId) {
-    console.log('🗑️ [CLASSES] deleteClassFromSupabase called for:', classId);
+// ======================= ✅ UPDATE CLASS IN SUPABASE (ONLINE/OFFLINE FLOW) =======================
+async function updateClassInSupabase(classData) {
+    console.log('📤 Updating class in Supabase:', classData.name);
+    
     const supabase = getSupabaseClientClasses();
+    
+    // ✅ OFFLINE: Add to pending queue
     if (!supabase || !navigator.onLine) {
-        addToPendingQueue('classes', 'delete', { id: classId });
-        showNotification('📴 Offline: Deletion will sync when online.', 'warning');
-        return false;
-    }
-    try {
-        const { error } = await supabase.from('classes').delete().eq('id', classId);
-        if (error) throw error;
-        showNotification('✅ Class deleted from Database!', 'success');
-        let cached = JSON.parse(localStorage.getItem('cache_classes') || '[]');
-        cached = cached.filter(c => c.id !== classId);
-        localStorage.setItem('cache_classes', JSON.stringify(cached));
+        console.log('📴 Offline - Adding to pending queue');
+        addToPendingClassesQueue('update', classData);
+        showNotification('📴 Offline: Class updated locally. Will sync when online.', 'warning');
+        updatePendingStatus();
         return true;
+    }
+    
+    try {
+        const dbData = {
+            id: classData.id,
+            name: classData.name,
+            teacher: classData.teacher || 'Not Assigned',
+            room: classData.room || 'N/A',
+            strength: classData.strength || 35,
+            students_count: classData.students || 0,
+            updated_at: new Date().toISOString()
+        };
+        const { error } = await supabase
+            .from('classes')
+            .upsert(dbData, { onConflict: 'id' });
+        
+        if (error) throw error;
+        
+        console.log(`✅ Class "${classData.name}" updated in Supabase`);
+        showNotification('✅ Class updated in cloud!', 'success');
+        
+        // ✅ Remove from pending queue if exists
+        if (window.pendingClassesQueue && window.pendingClassesQueue.length > 0) {
+            window.pendingClassesQueue = window.pendingClassesQueue.filter(item => 
+                !(item.operation === 'update' && item.data.id === classData.id)
+            );
+            savePendingClassesQueue();
+            updatePendingStatus();
+        }
+        
+        localStorage.removeItem('classStudentCounts');
+        return true;
+        
     } catch(e) {
-        console.error('Delete error:', e);
-        addToPendingQueue('classes', 'delete', { id: classId });
-        showNotification('⚠️ Failed to delete from cloud.', 'warning');
+        console.error('❌ Update error:', e);
+        addToPendingClassesQueue('update', classData);
+        showNotification('⚠️ Failed to update in cloud. Added to pending queue.', 'warning');
+        updatePendingStatus();
         return false;
     }
 }
 
-// ======================= PENDING QUEUE =======================
-async function processPendingClassesQueue() {
-    if (!navigator.onLine) return;
+// ======================= ✅ DELETE CLASS FROM SUPABASE (ONLINE/OFFLINE FLOW) =======================
+async function deleteClassFromSupabase(classId) {
+    console.log('🗑️ Deleting class from Supabase:', classId);
+    
     const supabase = getSupabaseClientClasses();
-    if (!supabase) return;
-    let allPending = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
-    let pendingItems = allPending.filter(item => item.table === 'classes');
-    if (pendingItems.length === 0) return;
-    let completedIds = [], successCount = 0;
-    for (const item of pendingItems) {
-        try {
-            if (item.operation === 'upsert') {
-                const dbData = { id: item.data.id, name: item.data.name, teacher: item.data.teacher || 'Not Assigned',
-                    room: item.data.room || 'N/A', strength: item.data.strength || 0, students_count: item.data.students || 0 };
-                const { error } = await supabase.from('classes').upsert(dbData, { onConflict: 'id' });
-                if (!error) { completedIds.push(item.id); successCount++; }
-            } else if (item.operation === 'delete') {
-                const { error } = await supabase.from('classes').delete().eq('id', item.data.id);
-                if (!error) { completedIds.push(item.id); successCount++; }
-            }
-        } catch(err) { console.error('Pending error:', err); }
-        await new Promise(r => setTimeout(r, 100));
+    
+    // ✅ OFFLINE: Add to pending queue
+    if (!supabase || !navigator.onLine) {
+        console.log('📴 Offline - Adding to pending queue');
+        addToPendingClassesQueue('delete', { id: classId });
+        showNotification('📴 Offline: Deletion will sync when online.', 'warning');
+        updatePendingStatus();
+        return true;
     }
-    allPending = allPending.filter(item => !completedIds.includes(item.id));
-    localStorage.setItem('pendingSyncQueue', JSON.stringify(allPending));
-    if (successCount > 0) showNotification(`✅ ${successCount} class records synced!`, 'success');
-}
-
-function addToPendingQueue(table, operation, data) {
-    let queue = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
-    queue.push({ id: Date.now().toString(), table: table, operation: operation, data: data, timestamp: new Date().toISOString() });
-    localStorage.setItem('pendingSyncQueue', JSON.stringify(queue));
+    
+    try {
+        const { error } = await supabase
+            .from('classes')
+            .delete()
+            .eq('id', classId);
+        
+        if (error) throw error;
+        
+        console.log(`✅ Class ${classId} deleted from Supabase`);
+        showNotification('✅ Class deleted from cloud!', 'success');
+        
+        // ✅ Remove from pending queue if exists
+        if (window.pendingClassesQueue && window.pendingClassesQueue.length > 0) {
+            window.pendingClassesQueue = window.pendingClassesQueue.filter(item => 
+                !(item.operation === 'delete' && item.data.id === classId)
+            );
+            savePendingClassesQueue();
+            updatePendingStatus();
+        }
+        
+        localStorage.removeItem('classStudentCounts');
+        return true;
+        
+    } catch(e) {
+        console.error('❌ Delete error:', e);
+        addToPendingClassesQueue('delete', { id: classId });
+        showNotification('⚠️ Failed to delete from cloud. Added to pending queue.', 'warning');
+        updatePendingStatus();
+        return false;
+    }
 }
 
 // ======================= GET TEACHER'S CLASS =======================
@@ -35792,9 +36144,18 @@ async function loadClassManagement() {
         <h3 style="margin-top:20px;">Loading Classes...</h3>
         <p style="color:var(--text-secondary);">Fetching data from Supabase cloud</p></div>`;
     try {
+        loadPendingClassesQueue();
+        updatePendingStatus();
         if (navigator.onLine) {
             await loadClassesFromSupabase();
-            await syncStudentCountsToClasses();
+            // ✅ Auto-sync pending queue when online
+            if (window.pendingClassesQueue.length > 0) {
+                await processPendingClassesQueue();
+            }
+            // ✅ Sync student counts in background
+            setTimeout(() => {
+                syncStudentCountsToClasses();
+            }, 500);
         } else {
             const cached = localStorage.getItem('cache_classes');
             if (cached) { try { window.classes = JSON.parse(cached); } catch(e) {} }
@@ -35824,7 +36185,7 @@ async function loadClassManagement() {
 
 // ======================= RENDER CLASS MANAGEMENT =======================
 function renderClassManagement() {
-    console.log('🎨 [CLASSES] renderClassManagement called - classes count:', window.classes.length);
+    console.log('🎨 renderClassManagement called - classes count:', window.classes.length);
     if (window.classes.length === 0) {
         let addButton = (currentUser.role === 'admin') 
             ? `<button class="btn btn-primary btn-sm" onclick="showAddClassForm()" style="margin-top:10px;"><i class="fas fa-plus"></i> Add First Class</button>` : '';
@@ -35834,7 +36195,9 @@ function renderClassManagement() {
             <p style="color:var(--text-secondary);">${navigator.onLine ? 'No class data found.' : 'You are offline. Connect to internet to load data.'}</p>
             ${addButton}
             <button class="btn btn-success btn-sm" onclick="refreshClassesData()" style="margin-left:10px; margin-top:10px;"><i class="fas fa-sync-alt"></i> Sync from Cloud</button>
-            <button class="btn btn-info btn-sm" onclick="syncStudentCountsToClasses()" style="margin-left:10px; margin-top:10px;"><i class="fas fa-users"></i> Sync Student Counts</button></div>`;
+            <button class="btn btn-info btn-sm" onclick="syncStudentCountsToClasses()" style="margin-left:10px; margin-top:10px;"><i class="fas fa-users"></i> Sync Student Counts</button>
+            ${window.pendingClassesQueue && window.pendingClassesQueue.length > 0 ? `<button class="btn btn-warning btn-sm" onclick="processPendingClassesQueue()" style="margin-left:10px; margin-top:10px;"><i class="fas fa-sync-alt"></i> Sync Pending (${window.pendingClassesQueue.length})</button>` : ''}
+        </div>`;
         return;
     }
     
@@ -35879,7 +36242,7 @@ function renderClassManagement() {
     let paginatedClasses = filteredClasses.slice(start, start + classesPerPage);
     
     let canAddClass = (currentUser.role === 'admin');
-    let pendingCount = (JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]')).filter(item => item.table === 'classes').length;
+    let pendingCount = window.pendingClassesQueue ? window.pendingClassesQueue.length : 0;
     let pendingBadge = pendingCount > 0 ? `<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-left: 8px;"><i class="fas fa-clock"></i> ${pendingCount} Pending Sync</span>` : '';
     let teacherClassDisplay = (currentUser.role === 'teacher') ? (getTeacherClassName() ? ` | Your Class: <strong>${getTeacherClassName()}</strong>` : ' | <span style="color:#f59e0b;">No class assigned</span>') : '';
     
@@ -35907,6 +36270,7 @@ function renderClassManagement() {
         }
         .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .offline-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
+        .pending-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .role-badge { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; }
         .class-card { background: var(--bg-surface); border-radius: 20px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border-light); transition: transform 0.2s ease; }
         .class-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
@@ -35937,8 +36301,9 @@ function renderClassManagement() {
     <div style="text-align: right; margin-bottom: 10px;">
         <span class="${navigator.onLine ? 'online-badge' : 'offline-badge'}">
             <i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i>
-            ${navigator.onLine ? 'Connected to Cloud' : 'Offline Mode'} | 
+            ${navigator.onLine ? '☁️ Online' : '📴 Offline'} | 
             <strong>${window.classes.length}</strong> Total Classes ${pendingBadge}
+            ${pendingCount > 0 ? `<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-left: 8px;"><i class="fas fa-clock"></i> ${pendingCount} Pending</span>` : ''}
         </span>
         <span class="role-badge" style="margin-left: 8px;">
             <i class="fas ${currentUser.role === 'admin' ? 'fa-user-shield' : 'fa-chalkboard-teacher'}"></i>
@@ -35957,6 +36322,7 @@ function renderClassManagement() {
         <button class="btn btn-success btn-sm" onclick="refreshClassesData()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-sync-alt"></i> Refresh</button>
         ${canAddClass ? `<button class="btn btn-primary btn-sm" onclick="showAddClassForm()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: linear-gradient(135deg, #2563eb, #1e40af); color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-plus"></i> Add Class</button>` : ''}
         <button class="btn btn-info btn-sm" onclick="syncStudentCountsToClasses()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: #8b5cf6; color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-users"></i> Sync Counts</button>
+        ${pendingCount > 0 ? `<button class="btn btn-warning btn-sm" onclick="processPendingClassesQueue()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: #f59e0b; color: #1e293b; cursor: pointer; font-weight: 600;"><i class="fas fa-sync-alt"></i> Sync Pending (${pendingCount})</button>` : ''}
         <button class="btn btn-secondary btn-sm" onclick="exportClassesCSV()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px; border: none; background: #6c757d; color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-file-csv"></i> Export CSV</button>
     </div>
     
@@ -36054,7 +36420,7 @@ function renderClassCards(classesToRender) {
     grid.innerHTML = html;
 }
 
-// ======================= ✅ FIXED: VIEW CLASS DETAILS =======================
+// ======================= VIEW CLASS DETAILS =======================
 async function viewClassDetails(id) {
     try {
         let c = window.classes.find(cls => cls.id === id);
@@ -36069,7 +36435,6 @@ async function viewClassDetails(id) {
         let classStudents = [];
         if (supabase && navigator.onLine) {
             try {
-                // ✅ Get students with cls and sec matching class name
                 let parts = c.name.split(' ');
                 let className = c.name;
                 let section = '';
@@ -36077,7 +36442,6 @@ async function viewClassDetails(id) {
                     className = parts.slice(0, -1).join(' ');
                     section = parts[parts.length - 1];
                 }
-                // Try with both cls and sec
                 const { data: students, error } = await supabase
                     .from('students')
                     .select('*')
@@ -36086,15 +36450,12 @@ async function viewClassDetails(id) {
                 if (!error && students) {
                     classStudents = students;
                 }
-                // If no results, try with full name
                 if (classStudents.length === 0) {
                     const { data: students2, error: error2 } = await supabase
                         .from('students')
                         .select('*')
                         .eq('cls', c.name);
-                    if (!error2 && students2) {
-                        classStudents = students2;
-                    }
+                    if (!error2 && students2) classStudents = students2;
                 }
             } catch(e) { console.error('Error fetching students:', e); }
         }
@@ -36148,7 +36509,7 @@ async function viewClassDetails(id) {
     }
 }
 
-// ======================= ✅ FIXED: VIEW CLASS STUDENTS =======================
+// ======================= VIEW CLASS STUDENTS =======================
 async function viewClassStudents(id) {
     try {
         let c = window.classes.find(cls => cls.id === id);
@@ -36183,9 +36544,7 @@ async function viewClassStudents(id) {
                         .from('students')
                         .select('*')
                         .eq('cls', c.name);
-                    if (!error2 && students2) {
-                        classStudents = students2;
-                    }
+                    if (!error2 && students2) classStudents = students2;
                 }
             } catch(e) { console.error('Error fetching students:', e); }
         }
@@ -36386,12 +36745,14 @@ function showAddClassForm(editId = null) {
     document.body.appendChild(modal);
 }
 
-// ======================= SAVE CLASS DATA =======================
+// ======================= ✅ SAVE CLASS DATA (ONLINE/OFFLINE FLOW) =======================
 window.saveClassData = async function(editId) {
     let name = document.getElementById('classNameInput').value.trim();
     if (!name) { showNotification('Class name is required!', 'error'); return; }
+    
     let isEdit = editId !== null;
     let classData = isEdit ? window.classes.find(c => c.id === editId) : null;
+    
     let classObj = {
         id: editId || ('CLS' + Date.now()),
         name: name,
@@ -36400,22 +36761,56 @@ window.saveClassData = async function(editId) {
         strength: parseInt(document.getElementById('classStrengthInput').value) || 35,
         students: isEdit ? (classData?.students || 0) : 0
     };
+    
+    // ✅ Update local array and cache FIRST (UI renders immediately)
     if (isEdit) {
         let idx = window.classes.findIndex(c => c.id === editId);
         if (idx !== -1) window.classes[idx] = { ...window.classes[idx], ...classObj };
-        showNotification('✅ Class updated!', 'success');
+        showNotification('✅ Class updated locally!', 'success');
     } else {
         window.classes.push(classObj);
-        showNotification('✅ Class added!', 'success');
+        showNotification('✅ Class added locally!', 'success');
         if (typeof recentActivities !== 'undefined') {
-            recentActivities.unshift({ id: 'ACT' + Date.now(), action: 'New Class Added', details: name, time: new Date().toLocaleTimeString(), icon: '🏫' });
+            recentActivities.unshift({
+                id: 'ACT' + Date.now(),
+                action: 'New Class Added',
+                details: name,
+                time: new Date().toLocaleTimeString(),
+                icon: '🏫'
+            });
         }
     }
+    
+    // ✅ Update localStorage cache
     localStorage.setItem('cache_classes', JSON.stringify(window.classes));
-    await saveClassToSupabase(classObj);
-    await syncStudentCountsToClasses();
+    
+    // ✅ Re-render UI immediately
+    renderClassManagement();
+    
+    // ✅ Close modal
     document.querySelector('.modal-overlay')?.remove();
-    loadClassManagement();
+    
+    // ✅ Save to Supabase (background)
+    let syncResult = false;
+    if (isEdit) {
+        syncResult = await updateClassInSupabase(classObj);
+    } else {
+        syncResult = await saveClassToSupabase(classObj);
+    }
+    
+    if (syncResult && navigator.onLine) {
+        // ✅ If sync successful, re-render to show cloud status
+        await syncStudentCountsToClasses();
+        loadClassManagement();
+    } else if (!navigator.onLine) {
+        // ✅ Offline: Show pending status
+        updatePendingStatus();
+        loadClassManagement();
+    } else {
+        // ✅ Failed: Show error but data is already in cache
+        showNotification('⚠️ Class saved locally, but cloud sync failed.', 'warning');
+        loadClassManagement();
+    }
 };
 
 // ======================= DELETE CLASS =======================
@@ -36438,11 +36833,16 @@ async function deleteClass(id) {
     }).then(async (result) => {
         if (result.isConfirmed) {
             showLoader();
+            
+            // ✅ Remove from local array and cache FIRST
             window.classes = window.classes.filter(cls => cls.id !== id);
             localStorage.setItem('cache_classes', JSON.stringify(window.classes));
-            await deleteClassFromSupabase(id);
-            hideLoader();
             loadClassManagement();
+            
+            // ✅ Delete from Supabase (background)
+            await deleteClassFromSupabase(id);
+            
+            hideLoader();
             showNotification('Class deleted successfully!', 'success');
         }
     });
@@ -36452,6 +36852,7 @@ async function deleteClass(id) {
 async function refreshClassesData() {
     showLoader();
     showNotification('🔄 Syncing classes from cloud...', 'info');
+    localStorage.removeItem('classStudentCounts');
     await loadClassesFromSupabase();
     await processPendingClassesQueue();
     await syncStudentCountsToClasses();
@@ -36494,10 +36895,11 @@ function exportClassesCSV() {
     showNotification('Classes exported to CSV!', 'success');
 }
 
-// ======================= ONLINE/OFFLINE HANDLERS =======================
+// ======================= ONLINE/OFFLINE EVENT LISTENERS =======================
 window.addEventListener('online', async () => {
     console.log('🟢 [CLASSES] Online - Syncing...');
     showNotification('🟢 Back online! Syncing class data...', 'success');
+    localStorage.removeItem('classStudentCounts');
     await loadClassesFromSupabase();
     await processPendingClassesQueue();
     await syncStudentCountsToClasses();
@@ -36507,6 +36909,7 @@ window.addEventListener('online', async () => {
 window.addEventListener('offline', () => {
     console.log('🔴 [CLASSES] Offline mode');
     showNotification('🔴 Offline mode - Class data will sync when online', 'warning');
+    updatePendingStatus();
 });
 
 // ======================= AUTO-LOAD =======================
@@ -36541,16 +36944,29 @@ window.refreshClassesData = refreshClassesData;
 window.exportClassesCSV = exportClassesCSV;
 window.syncStudentCountsToClasses = syncStudentCountsToClasses;
 window.saveClassToSupabase = saveClassToSupabase;
+window.updateClassInSupabase = updateClassInSupabase;
+window.deleteClassFromSupabase = deleteClassFromSupabase;
 window.loadClassesFromSupabase = loadClassesFromSupabase;
+window.processPendingClassesQueue = processPendingClassesQueue;
+window.addToPendingClassesQueue = addToPendingClassesQueue;
+window.loadPendingClassesQueue = loadPendingClassesQueue;
+window.savePendingClassesQueue = savePendingClassesQueue;
+window.updatePendingStatus = updatePendingStatus;
 window.normalizeClassName = normalizeClassName;
 window.getClassBaseName = getClassBaseName;
 
-console.log('✅ PART 15 COMPLETE - Classes Module with Student Count (Including Section)!');
+// ✅ Load pending queue on module load
+loadPendingClassesQueue();
+updatePendingStatus();
+
+console.log('✅ PART 15 COMPLETE - Online/Offline Save Flow Implemented!');
 console.log('📌 Features:');
+console.log('   ✅ Online Save Flow: Local Cache → UI → Supabase (Background)');
+console.log('   ✅ Offline Save Flow: Local Cache → UI → Pending Queue');
+console.log('   ✅ Auto Sync on Internet Connect');
+console.log('   ✅ Fast Loading with Cached Student Counts');
+console.log('   ✅ Pending Queue Status Display');
 console.log('   ✅ Student count matches cls + sec combination');
-console.log('   ✅ Sync Student Counts button available');
-console.log('   ✅ Online/Offline Support');
-console.log('   ✅ CRUD Operations with Supabase');
 
 } // End of duplicate check
 // ======================= PART 15 ENDS HERE =======================
@@ -49785,10 +50201,18 @@ function showThemeModal() {
 // ================================================================
 // ==================== 3. UPI QR MODAL ===========================
 // ================================================================
+// ======================= FIXED: SHOW UPI QR MODAL =======================
 function showUPIQRModal() {
-    var qrCodeVal = localStorage.getItem('upiQRCodeUrl') || localStorage.getItem('upiQRCode') || '';
-    var tempQRFile = null;
-    var modal = document.createElement('div');
+    // ✅ First try localStorage
+    let qrCodeVal = localStorage.getItem('upiQRCodeUrl') || localStorage.getItem('upiQRCode') || '';
+    let upiIdVal = localStorage.getItem('upiId') || '';
+    let upiInstructionsVal = localStorage.getItem('upiInstructions') || '';
+    
+    let tempQRFile = null;
+    let isDataLoaded = false;
+    
+    // ✅ Create modal
+    const modal = document.createElement('div');
     modal.className = 'custom-modal-overlay';
     modal.innerHTML = `
         <div class="custom-modal-container">
@@ -49797,27 +50221,57 @@ function showUPIQRModal() {
                 <button class="custom-modal-close" onclick="closeCustomModal(this.closest('.custom-modal-overlay'))">&times;</button>
             </div>
             <div class="custom-modal-body">
-                <div class="custom-form-group"><label>📱 UPI ID</label><input type="text" id="upiId" class="custom-form-control" value="${localStorage.getItem('upiId') || ''}" placeholder="e.g., school@okhdfcbank"></div>
-                <div class="custom-form-group"><label>📝 Payment Instructions</label><textarea id="upiInstructions" class="custom-form-control" rows="2">${localStorage.getItem('upiInstructions') || 'Scan QR code to pay'}</textarea></div>
+                <!-- ✅ Sync Status -->
+                <div id="upiSyncStatus" style="text-align:center; margin-bottom:10px;">
+                    <span id="upiStatusBadge" style="padding:4px 12px; border-radius:20px; font-size:10px; background:#f1f5f9; color:#64748b;">
+                        🔄 Checking cloud...
+                    </span>
+                </div>
+                
+                <div class="custom-form-group">
+                    <label>📱 UPI ID</label>
+                    <input type="text" id="upiId" class="custom-form-control" value="${escapeHtml(upiIdVal)}" placeholder="e.g., school@okhdfcbank">
+                </div>
+                <div class="custom-form-group">
+                    <label>📝 Payment Instructions</label>
+                    <textarea id="upiInstructions" class="custom-form-control" rows="2">${escapeHtml(upiInstructionsVal)}</textarea>
+                </div>
                 <div style="text-align:center; margin:15px 0;">
-                    <div id="qrPreview" style="width:150px; height:150px; margin:0 auto; border:2px solid #e2e8f0; border-radius:16px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">${qrCodeVal ? '<img src="' + qrCodeVal + '" style="max-width:100%; max-height:100%;">' : '<i class="fas fa-qrcode" style="font-size:48px; color:#94a3b8;"></i>'}</div>
+                    <div id="qrPreview" style="width:150px; height:150px; margin:0 auto; border:2px solid #e2e8f0; border-radius:16px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
+                        ${qrCodeVal ? `<img src="${qrCodeVal}" style="max-width:100%; max-height:100%;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-qrcode\\' style=\\'font-size:48px; color:#94a3b8;\\'></i>';">` : '<i class="fas fa-qrcode" style="font-size:48px; color:#94a3b8;"></i>'}
+                    </div>
                     <div class="custom-upload-area" id="uploadQRCode" style="margin-top:12px;"><i class="fas fa-cloud-upload-alt"></i> Click to Upload QR Code</div>
+                    <button id="syncFromCloudBtn" class="btn btn-info" style="margin-top:8px; padding:8px 16px; border-radius:30px; font-size:12px; background:#8b5cf6; color:white; border:none; cursor:pointer;">
+                        <i class="fas fa-cloud-download-alt"></i> Sync from Cloud
+                    </button>
                 </div>
             </div>
-            <div class="custom-modal-footer"><button class="btn btn-secondary" onclick="closeCustomModal(this.closest('.custom-modal-overlay'))">Cancel</button><button class="btn btn-primary" id="saveUpiBtn">Save & Sync</button></div>
+            <div class="custom-modal-footer">
+                <button class="btn btn-secondary" onclick="closeCustomModal(this.closest('.custom-modal-overlay'))">Cancel</button>
+                <button class="btn btn-primary" id="saveUpiBtn">Save & Sync</button>
+            </div>
         </div>
     `;
     document.body.appendChild(modal);
     
+    // ✅ Load from Supabase on modal open
+    loadUPIFromSupabaseForModal();
+    
+    // ======================= SYNC FROM CLOUD BUTTON =======================
+    document.getElementById('syncFromCloudBtn').onclick = function() {
+        loadUPIFromSupabaseForModal();
+    };
+    
+    // ======================= UPLOAD QR CODE =======================
     document.getElementById('uploadQRCode').onclick = function() {
-        var input = document.createElement('input');
+        const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
         input.onchange = function(e) {
-            var reader = new FileReader();
+            const reader = new FileReader();
             reader.onload = function(ev) { 
                 tempQRFile = ev.target.result; 
-                document.getElementById('qrPreview').innerHTML = '<img src="' + ev.target.result + '" style="max-width:100%; max-height:100%;">'; 
+                document.getElementById('qrPreview').innerHTML = `<img src="${ev.target.result}" style="max-width:100%; max-height:100%;">`; 
                 showNotificationSafe('QR Code selected!', 'info'); 
             };
             reader.readAsDataURL(e.target.files[0]);
@@ -49825,13 +50279,102 @@ function showUPIQRModal() {
         input.click();
     };
     
+    // ======================= SAVE UPI =======================
     document.getElementById('saveUpiBtn').onclick = async function() {
-        await saveUPIWithSync(document.getElementById('upiId').value, document.getElementById('upiInstructions').value, tempQRFile);
+        const upiId = document.getElementById('upiId').value;
+        const instructions = document.getElementById('upiInstructions').value;
+        
+        await saveUPIWithSync(upiId, instructions, tempQRFile);
         closeCustomModal(modal);
         loadSettingsModule();
     };
 }
 
+// ======================= LOAD UPI FROM SUPABASE =======================
+async function loadUPIFromSupabaseForModal() {
+    console.log('🔄 [UPI] Loading from Supabase...');
+    
+    const statusBadge = document.getElementById('upiStatusBadge');
+    if (statusBadge) {
+        statusBadge.textContent = '🔄 Loading from cloud...';
+        statusBadge.style.background = '#f59e0b';
+        statusBadge.style.color = '#1e293b';
+    }
+    
+    const supabase = getSupabaseClient();
+    if (!supabase || !navigator.onLine) {
+        if (statusBadge) {
+            statusBadge.textContent = '📴 Offline - Using local data';
+            statusBadge.style.background = '#f59e0b';
+            statusBadge.style.color = '#1e293b';
+        }
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('profile')
+            .select('upi_qr_url, upi_id, upi_instructions')
+            .eq('id', 'PROF001')
+            .single();
+        
+        if (error) {
+            console.error('❌ [UPI] Error:', error);
+            if (statusBadge) {
+                statusBadge.textContent = '⚠️ Error loading from cloud';
+                statusBadge.style.background = '#ef4444';
+                statusBadge.style.color = 'white';
+            }
+            return;
+        }
+        
+        if (data) {
+            console.log('✅ [UPI] Loaded from Supabase:', data);
+            
+            // ✅ Update localStorage
+            if (data.upi_qr_url) {
+                localStorage.setItem('upiQRCodeUrl', data.upi_qr_url);
+                localStorage.removeItem('upiQRCode');
+            }
+            if (data.upi_id) {
+                localStorage.setItem('upiId', data.upi_id);
+                document.getElementById('upiId').value = data.upi_id;
+            }
+            if (data.upi_instructions) {
+                localStorage.setItem('upiInstructions', data.upi_instructions);
+                document.getElementById('upiInstructions').value = data.upi_instructions;
+            }
+            
+            // ✅ Update QR Preview
+            const qrPreview = document.getElementById('qrPreview');
+            if (qrPreview && data.upi_qr_url) {
+                qrPreview.innerHTML = `<img src="${data.upi_qr_url}" style="max-width:100%; max-height:100%;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-qrcode\\' style=\\'font-size:48px; color:#94a3b8;\\'></i>';">`;
+            }
+            
+            if (statusBadge) {
+                statusBadge.textContent = '✅ Synced from cloud';
+                statusBadge.style.background = '#10b981';
+                statusBadge.style.color = 'white';
+            }
+            
+            showNotificationSafe('✅ UPI data synced from cloud!', 'success');
+        } else {
+            if (statusBadge) {
+                statusBadge.textContent = '📭 No data in cloud';
+                statusBadge.style.background = '#f59e0b';
+                statusBadge.style.color = '#1e293b';
+            }
+        }
+        
+    } catch(e) {
+        console.error('❌ [UPI] Error:', e);
+        if (statusBadge) {
+            statusBadge.textContent = '❌ Error loading from cloud';
+            statusBadge.style.background = '#ef4444';
+            statusBadge.style.color = 'white';
+        }
+    }
+}
 // ================================================================
 // ==================== 4. FEE STRUCTURE MODAL (PURE SUPABASE) =========
 // ================================================================
