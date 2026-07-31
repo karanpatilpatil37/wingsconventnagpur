@@ -38651,6 +38651,7 @@ console.log('📌 Admin: FULL ACCESS - Can add/edit/delete all timetables');
 // ======================= PART 16 ENDS HERE =======================
 // ======================= PART 16 ENDS HERE =======================
 // ======================= PART 17: COMPLETE TRANSPORT MODULE =======================
+// ======================= PART 17: TRANSPORT MODULE (COMPLETE - BUG FREE) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.transportModuleLoaded === 'undefined') {
     window.transportModuleLoaded = true;
@@ -38658,8 +38659,183 @@ if (typeof window.transportModuleLoaded === 'undefined') {
 // ======================= GLOBAL VARIABLES =======================
 if (typeof window.transportData === 'undefined') {
     window.transportData = { routes: [] };
-    console.log('✅ Initialized transportData');
+    console.log('✅ [TRANSPORT] Initialized transportData');
 }
+
+// ======================= ✅ PERSISTENT STUDENT ASSIGNMENTS =======================
+if (typeof window.transportStudentAssignments === 'undefined') {
+    window.transportStudentAssignments = {};
+    console.log('✅ [TRANSPORT] Initialized transportStudentAssignments');
+}
+
+function loadStudentAssignments() {
+    try {
+        const saved = localStorage.getItem('transportStudentAssignments');
+        if (saved) {
+            window.transportStudentAssignments = JSON.parse(saved);
+            console.log('📦 [TRANSPORT] Loaded student assignments from localStorage');
+            return true;
+        }
+    } catch(e) {
+        console.warn('Error loading student assignments:', e);
+    }
+    return false;
+}
+
+function saveStudentAssignments() {
+    try {
+        localStorage.setItem('transportStudentAssignments', JSON.stringify(window.transportStudentAssignments));
+        console.log('💾 [TRANSPORT] Saved student assignments to localStorage');
+        return true;
+    } catch(e) {
+        console.warn('Error saving student assignments:', e);
+        return false;
+    }
+}
+
+function loadStudentsWithTransport() {
+    try {
+        loadStudentAssignments();
+        const saved = localStorage.getItem('studentsData');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.length > 0) {
+                window.students = parsed;
+                for (let student of window.students) {
+                    if (student.id && window.transportStudentAssignments[student.id] !== undefined) {
+                        student.transportRouteId = window.transportStudentAssignments[student.id];
+                        student.transportEnabled = student.transportRouteId !== null;
+                    } else {
+                        if (student.transportRouteId === undefined) {
+                            student.transportRouteId = null;
+                        }
+                        if (student.transportEnabled === undefined) {
+                            student.transportEnabled = false;
+                        }
+                    }
+                }
+                console.log(`📦 [TRANSPORT] Loaded ${window.students.length} students with transport properties`);
+                return true;
+            }
+        }
+        if (typeof window.students !== 'undefined' && window.students.length > 0) {
+            for (let student of window.students) {
+                if (student.id && window.transportStudentAssignments[student.id] !== undefined) {
+                    student.transportRouteId = window.transportStudentAssignments[student.id];
+                    student.transportEnabled = student.transportRouteId !== null;
+                } else {
+                    if (student.transportRouteId === undefined) {
+                        student.transportRouteId = null;
+                    }
+                    if (student.transportEnabled === undefined) {
+                        student.transportEnabled = false;
+                    }
+                }
+            }
+            try {
+                localStorage.setItem('studentsData', JSON.stringify(window.students));
+            } catch(e) {}
+            return true;
+        }
+    } catch(e) {
+        console.warn('Error loading students:', e);
+    }
+    return false;
+}
+
+function ensureStudentsTransportProperty() {
+    if (typeof window.students === 'undefined' || window.students.length === 0) {
+        const saved = localStorage.getItem('studentsData');
+        if (saved) {
+            try {
+                window.students = JSON.parse(saved);
+            } catch(e) {}
+        }
+    }
+    if (window.students && window.students.length > 0) {
+        let updated = false;
+        for (let student of window.students) {
+            if (student.id && window.transportStudentAssignments[student.id] !== undefined) {
+                student.transportRouteId = window.transportStudentAssignments[student.id];
+                student.transportEnabled = student.transportRouteId !== null;
+                updated = true;
+            } else {
+                if (student.transportRouteId === undefined) {
+                    student.transportRouteId = null;
+                    updated = true;
+                }
+                if (student.transportEnabled === undefined) {
+                    student.transportEnabled = false;
+                    updated = true;
+                }
+                if (student.id) {
+                    window.transportStudentAssignments[student.id] = student.transportRouteId;
+                }
+            }
+        }
+        if (updated) {
+            try {
+                localStorage.setItem('studentsData', JSON.stringify(window.students));
+                saveStudentAssignments();
+            } catch(e) {}
+        }
+        return true;
+    }
+    return false;
+}
+
+function getAssignedStudentsForRoute(routeId) {
+    ensureStudentsTransportProperty();
+    let assigned = [];
+    if (window.students && window.students.length > 0) {
+        for (let s of window.students) {
+            let assignedRoute = s.transportRouteId;
+            if (s.id && window.transportStudentAssignments[s.id] !== undefined) {
+                assignedRoute = window.transportStudentAssignments[s.id];
+            }
+            if (assignedRoute === routeId) {
+                assigned.push(s);
+            }
+        }
+    }
+    return assigned;
+}
+
+function updateStudentAssignment(studentId, routeId) {
+    if (!studentId) return false;
+    window.transportStudentAssignments[studentId] = routeId;
+    saveStudentAssignments();
+    if (window.students) {
+        for (let s of window.students) {
+            if (s.id === studentId) {
+                s.transportRouteId = routeId;
+                s.transportEnabled = routeId !== null;
+                break;
+            }
+        }
+        try {
+            localStorage.setItem('studentsData', JSON.stringify(window.students));
+        } catch(e) {}
+    }
+    return true;
+}
+
+function updateRouteStudentCount(routeId) {
+    if (!routeId) return;
+    let route = window.transportData.routes.find(function(r) { return r.id === routeId; });
+    if (route) {
+        let assigned = getAssignedStudentsForRoute(routeId);
+        route.students = assigned.length;
+        try {
+            localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes));
+        } catch(e) {}
+    }
+}
+
+// Load on module start
+loadStudentAssignments();
+loadStudentsWithTransport();
+ensureStudentsTransportProperty();
 
 let transportFilterText = '';
 let isTransportLoading = false;
@@ -38668,7 +38844,7 @@ let routeChartInstance = null;
 // ======================= HELPER FUNCTIONS =======================
 function escapeHtml(str) {
     if (!str) return '';
-    return String(str).replace(/[&<>]/g, function(m) {
+    return String(str).replace(/[&<>']/g, function(m) {
         if (m === '&') return '&amp;';
         if (m === '<') return '&lt;';
         if (m === '>') return '&gt;';
@@ -38676,26 +38852,56 @@ function escapeHtml(str) {
     });
 }
 
-function showLoader() { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'flex'; }
-function hideLoader() { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'none'; }
+function showLoader() { 
+    const loader = document.getElementById('loader'); 
+    if(loader) loader.style.display = 'flex'; 
+}
+
+function hideLoader() { 
+    const loader = document.getElementById('loader'); 
+    if(loader) loader.style.display = 'none'; 
+}
 
 function showNotification(msg, type) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({ toast: true, position: 'top-end', icon: type, title: msg, showConfirmButton: false, timer: 3000 });
-    } else {
-        console.log(`[${type}] ${msg}`);
-        alert(msg);
+    try {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({ toast: true, position: 'top-end', icon: type, title: msg, showConfirmButton: false, timer: 3000 });
+        } else {
+            console.log(`[${type}] ${msg}`);
+        }
+    } catch(e) {
+        console.log('Notification error:', e);
     }
 }
 
 function dataURLtoBlob(dataURL) {
-    const arr = dataURL.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    const n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
-    return new Blob([u8arr], { type: mime });
+    try {
+        const arr = dataURL.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        const n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+        return new Blob([u8arr], { type: mime });
+    } catch(e) {
+        console.error('Blob conversion error:', e);
+        return null;
+    }
+}
+
+function downloadFile(dataURL, fileName) {
+    try {
+        const link = document.createElement('a');
+        link.href = dataURL;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return true;
+    } catch(e) {
+        console.error('Download error:', e);
+        return false;
+    }
 }
 
 function getSchoolNameSetting() {
@@ -38710,6 +38916,43 @@ function getSchoolPhoneSetting() {
     return localStorage.getItem('schoolPhone') || '';
 }
 
+function getSchoolEmailSetting() {
+    return localStorage.getItem('schoolEmail') || '';
+}
+
+function getSchoolLogoBase64() {
+    try {
+        let logoUrl = localStorage.getItem('schoolLogoUrl');
+        let logoData = localStorage.getItem('schoolLogo');
+        if (logoUrl && logoUrl.startsWith('http')) {
+            return logoUrl;
+        } else if (logoData && logoData.startsWith('data:image')) {
+            return logoData;
+        }
+        return null;
+    } catch(e) {
+        console.warn('Error getting school logo:', e);
+        return null;
+    }
+}
+
+function getSchoolLogoHTML(style) {
+    style = style || 'width: 40px; height: 40px; border-radius: 50%; margin-bottom: 4px; object-fit: cover;';
+    try {
+        let logoUrl = localStorage.getItem('schoolLogoUrl');
+        let logoData = localStorage.getItem('schoolLogo');
+        if (logoUrl && logoUrl.startsWith('http')) {
+            return '<img src="' + logoUrl + '" style="' + style + '" onerror="this.style.display=\'none\'">';
+        } else if (logoData && logoData.startsWith('data:image')) {
+            return '<img src="' + logoData + '" style="' + style + '">';
+        }
+    } catch(e) {
+        console.warn('Error getting school logo HTML:', e);
+    }
+    return '<i class="fas fa-school" style="font-size: 28px; color: #2563eb; margin-bottom: 4px;"></i>';
+}
+
+// ======================= GET DRIVER DETAILS =======================
 function getDriverPhotoFromEmployees(driverName) {
     if (!driverName) return null;
     if (window.employees) {
@@ -38734,31 +38977,59 @@ function getDriverPhoneFromEmployees(driverName) {
     return null;
 }
 
+function getDriverList() {
+    let drivers = [];
+    if (window.employees) {
+        for (let emp of window.employees) {
+            let dept = (emp.department || '').toLowerCase();
+            let desig = (emp.designation || '').toLowerCase();
+            if (dept === 'transport' || desig === 'driver' || desig.includes('driver')) {
+                drivers.push(emp);
+            }
+        }
+    }
+    return drivers;
+}
+
+// ======================= GET STUDENT DETAILS =======================
+function getStudentPhoto(student) {
+    if (!student) return null;
+    return student.photo_url || student.photoData || student.photo || null;
+}
+
+function getStudentFatherName(student) {
+    if (!student) return 'N/A';
+    return student.father_name || student.fatherName || student.father || 'N/A';
+}
+
+function getStudentMobile(student) {
+    if (!student) return 'N/A';
+    return student.mobile || student.phone || 'N/A';
+}
+
 // ======================= GET SUPABASE CLIENT =======================
 function getSupabaseClientTransport() {
-    if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) return window.supabaseClient;
-    if (typeof supabaseClient !== 'undefined' && supabaseClient) return supabaseClient;
-    if (typeof supabase !== 'undefined' && supabase.createClient) {
-        try {
+    try {
+        if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) return window.supabaseClient;
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) return supabaseClient;
+        if (typeof supabase !== 'undefined' && supabase.createClient) {
             const url = "https://hghwbysjvkqcxdoqwkim.supabase.co";
             const key = "sb_publishable_6T05auZDBn2okYevOxMjUg_TIF9nZ1w";
             window.supabaseClient = supabase.createClient(url, key);
-            console.log('✅ Supabase client initialized for Transport');
+            console.log('✅ [TRANSPORT] Supabase client initialized');
             return window.supabaseClient;
-        } catch(e) {
-            console.error('Supabase init error:', e);
         }
+    } catch(e) {
+        console.error('Supabase init error:', e);
     }
     return null;
 }
 
-// ======================= LOAD TRANSPORT FROM SUPABASE (NO SAMPLE DATA) =======================
+// ======================= LOAD TRANSPORT FROM SUPABASE =======================
 async function loadTransportFromSupabase() {
     console.log('🚌 [TRANSPORT] loadTransportFromSupabase called...');
-    
     const supabase = getSupabaseClientTransport();
     
-    // OFFLINE: Load from cache only
     if (!supabase || !navigator.onLine) {
         console.log('📴 [TRANSPORT] Offline - Loading from cache');
         const cached = localStorage.getItem('cache_transportation');
@@ -38766,7 +39037,12 @@ async function loadTransportFromSupabase() {
             try {
                 const parsed = JSON.parse(cached);
                 window.transportData.routes = parsed;
-                console.log(`📦 [TRANSPORT] Loaded ${window.transportData.routes.length} routes from cache`);
+                for (let route of window.transportData.routes) {
+                    if (route.driverName) {
+                        route.driverPhone = getDriverPhoneFromEmployees(route.driverName) || route.driverPhone;
+                        route.driverPhotoUrl = getDriverPhotoFromEmployees(route.driverName) || route.driverPhotoUrl;
+                    }
+                }
                 return true;
             } catch(e) {
                 console.error('Cache parse error:', e);
@@ -38778,7 +39054,6 @@ async function loadTransportFromSupabase() {
         return false;
     }
     
-    // ONLINE: Load from Supabase ONLY
     try {
         console.log('🔄 [TRANSPORT] Loading from Supabase transportation table...');
         const { data, error } = await supabase
@@ -38791,65 +39066,78 @@ async function loadTransportFromSupabase() {
             throw error;
         }
         
-        console.log(`📊 [TRANSPORT] Supabase returned ${data ? data.length : 0} records`);
+        console.log('📊 [TRANSPORT] Supabase returned ' + (data ? data.length : 0) + ' records');
         
-        // Clear existing routes array
         window.transportData.routes = [];
         
         if (data && data.length > 0) {
-            // Map data to our route format
             for (let item of data) {
-                // Parse attachments if it's a string, otherwise use as is
                 let attachments = item.attachments;
                 if (typeof attachments === 'string') {
-                    try {
-                        attachments = JSON.parse(attachments);
-                    } catch(e) {
-                        attachments = [];
-                    }
+                    try { attachments = JSON.parse(attachments); } catch(e) { attachments = []; }
                 }
+                if (!attachments) attachments = [];
+                
+                let driverPhoto = item.driver_photo_url || getDriverPhotoFromEmployees(item.driver_name);
+                let driverPhone = item.driver_phone || getDriverPhoneFromEmployees(item.driver_name);
                 
                 window.transportData.routes.push({
                     id: item.id,
                     routeName: item.route_name || '',
                     vehicleNo: item.vehicle_no || '',
                     driverName: item.driver_name || '',
-                    driverPhone: item.driver_phone || getDriverPhoneFromEmployees(item.driver_name),
-                    driverPhotoUrl: item.driver_photo_url || getDriverPhotoFromEmployees(item.driver_name),
+                    driverPhone: driverPhone || '',
+                    driverPhotoUrl: driverPhoto || null,
                     driverPhotoData: null,
                     stops: item.stops || '',
                     students: item.students_count || 0,
                     attachments: attachments || []
                 });
             }
+            
             localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes));
-            console.log(`✅ [TRANSPORT] Loaded ${window.transportData.routes.length} routes from Supabase`);
-            console.log('🚌 [TRANSPORT] First route data:', window.transportData.routes[0]);
+            console.log('✅ [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from Supabase');
             return true;
         } else {
             console.log('📭 [TRANSPORT] No routes found in Supabase');
-            // ⚠️ CRITICAL: NO SAMPLE DATA - Keep array empty
             window.transportData.routes = [];
-            localStorage.removeItem('cache_transportation');
+            const cached = localStorage.getItem('cache_transportation');
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && parsed.length > 0) {
+                        window.transportData.routes = parsed;
+                        return true;
+                    }
+                } catch(e) {}
+            }
             return false;
         }
     } catch(e) {
         console.error('❌ [TRANSPORT] Error loading from Supabase:', e);
+        const cached = localStorage.getItem('cache_transportation');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                if (parsed && parsed.length > 0) {
+                    window.transportData.routes = parsed;
+                    return true;
+                }
+            } catch(err) {}
+        }
         window.transportData.routes = [];
         return false;
     }
 }
 
-// ======================= SAVE TRANSPORT TO SUPABASE (CREATE / UPDATE) =======================
+// ======================= SAVE TRANSPORT TO SUPABASE =======================
 async function saveTransportToSupabase(routeData) {
     console.log('📤 [TRANSPORT] saveTransportToSupabase called for:', routeData.routeName);
-    
     const supabase = getSupabaseClientTransport();
     
     if (!supabase || !navigator.onLine) {
         console.log('📴 [TRANSPORT] Offline - Adding to pending queue');
         addToPendingQueue('transportation', 'upsert', routeData);
-        showNotification('📴 Offline: Route saved locally. Will sync when online.', 'warning');
         return false;
     }
     
@@ -38867,36 +39155,18 @@ async function saveTransportToSupabase(routeData) {
             updated_at: new Date().toISOString()
         };
         
-        console.log('📤 [TRANSPORT] Saving to Supabase:', dbData);
-        
         const { error } = await supabase
             .from('transportation')
             .upsert(dbData, { onConflict: 'id' });
         
-        if (error) {
-            console.error('❌ [TRANSPORT] Supabase upsert error:', error);
-            throw error;
-        }
+        if (error) throw error;
         
-        console.log(`✅ [TRANSPORT] Route "${routeData.routeName}" saved to Supabase`);
-        showNotification('✅ Route saved to Database!', 'success');
-        
-        // Update cache
-        let cached = JSON.parse(localStorage.getItem('cache_transportation') || '[]');
-        let index = cached.findIndex(r => r.id === routeData.id);
-        if (index !== -1) {
-            cached[index] = routeData;
-        } else {
-            cached.push(routeData);
-        }
-        localStorage.setItem('cache_transportation', JSON.stringify(cached));
-        
+        console.log('✅ [TRANSPORT] Route "' + routeData.routeName + '" saved to Supabase');
         return true;
         
     } catch(e) {
         console.error('❌ [TRANSPORT] Save error:', e);
         addToPendingQueue('transportation', 'upsert', routeData);
-        showNotification('⚠️ Failed to save to cloud. Added to pending queue.', 'warning');
         return false;
     }
 }
@@ -38904,12 +39174,10 @@ async function saveTransportToSupabase(routeData) {
 // ======================= DELETE TRANSPORT FROM SUPABASE =======================
 async function deleteTransportFromSupabase(routeId) {
     console.log('🗑️ [TRANSPORT] deleteTransportFromSupabase called for:', routeId);
-    
     const supabase = getSupabaseClientTransport();
     
     if (!supabase || !navigator.onLine) {
         addToPendingQueue('transportation', 'delete', { id: routeId });
-        showNotification('📴 Offline: Deletion will sync when online.', 'warning');
         return false;
     }
     
@@ -38921,24 +39189,31 @@ async function deleteTransportFromSupabase(routeId) {
         
         if (error) throw error;
         
-        console.log(`✅ [TRANSPORT] Route ${routeId} deleted from Supabase`);
-        showNotification('✅ Route deleted from Database!', 'success');
-        
-        let cached = JSON.parse(localStorage.getItem('cache_transportation') || '[]');
-        cached = cached.filter(r => r.id !== routeId);
-        localStorage.setItem('cache_transportation', JSON.stringify(cached));
-        
+        console.log('✅ [TRANSPORT] Route ' + routeId + ' deleted from Supabase');
         return true;
         
     } catch(e) {
         console.error('❌ [TRANSPORT] Delete error:', e);
         addToPendingQueue('transportation', 'delete', { id: routeId });
-        showNotification('⚠️ Failed to delete from cloud. Added to pending queue.', 'warning');
         return false;
     }
 }
 
-// ======================= PROCESS PENDING TRANSPORT QUEUE =======================
+// ======================= PENDING QUEUE =======================
+function addToPendingQueue(table, operation, data) {
+    let queue = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
+    queue.push({
+        id: Date.now().toString(),
+        table: table,
+        operation: operation,
+        data: data,
+        timestamp: new Date().toISOString(),
+        retryCount: 0
+    });
+    localStorage.setItem('pendingSyncQueue', JSON.stringify(queue));
+    console.log('📴 [TRANSPORT] Added to pending queue: ' + operation + ' - ' + (data.routeName || data.id));
+}
+
 async function processPendingTransportQueue() {
     if (!navigator.onLine) {
         console.log('📴 [TRANSPORT] Offline - Cannot process queue');
@@ -38952,18 +39227,18 @@ async function processPendingTransportQueue() {
     }
     
     let allPending = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
-    let pendingItems = allPending.filter(item => item.table === 'transportation');
+    let pendingItems = allPending.filter(function(item) { return item.table === 'transportation'; });
     
     if (pendingItems.length === 0) {
         console.log('📭 [TRANSPORT] No pending items');
         return;
     }
     
-    console.log(`🔄 [TRANSPORT] Processing ${pendingItems.length} pending operations...`);
+    console.log('🔄 [TRANSPORT] Processing ' + pendingItems.length + ' pending operations...');
     let completedIds = [];
     let successCount = 0;
     
-    for (const item of pendingItems) {
+    for (let item of pendingItems) {
         try {
             if (item.operation === 'upsert') {
                 const dbData = {
@@ -38981,7 +39256,7 @@ async function processPendingTransportQueue() {
                 if (!error) {
                     completedIds.push(item.id);
                     successCount++;
-                    console.log(`✅ [TRANSPORT] Synced: ${item.data.routeName}`);
+                    console.log('✅ [TRANSPORT] Synced: ' + item.data.routeName);
                 }
             }
             else if (item.operation === 'delete') {
@@ -38989,20 +39264,24 @@ async function processPendingTransportQueue() {
                 if (!error) {
                     completedIds.push(item.id);
                     successCount++;
-                    console.log(`✅ [TRANSPORT] Deleted: ${item.data.id}`);
+                    console.log('✅ [TRANSPORT] Deleted: ' + item.data.id);
                 }
             }
         } catch(err) {
             console.error('❌ [TRANSPORT] Pending error:', err);
+            item.retryCount = (item.retryCount || 0) + 1;
+            if (item.retryCount > 3) {
+                completedIds.push(item.id);
+            }
         }
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(function(r) { setTimeout(r, 100); });
     }
     
-    allPending = allPending.filter(item => !completedIds.includes(item.id));
+    allPending = allPending.filter(function(item) { return !completedIds.includes(item.id); });
     localStorage.setItem('pendingSyncQueue', JSON.stringify(allPending));
     
     if (successCount > 0) {
-        showNotification(`✅ ${successCount} transport records synced to Database!`, 'success');
+        showNotification('✅ ' + successCount + ' transport records synced to Database!', 'success');
     }
 }
 
@@ -39010,13 +39289,11 @@ async function processPendingTransportQueue() {
 async function loadTransport() {
     console.log('🚌 [TRANSPORT] loadTransport called');
     
-    // Prevent multiple simultaneous loads
     if (isTransportLoading) {
         console.log('⚠️ [TRANSPORT] Already loading, skipping...');
         return;
     }
     
-    // Check if user is logged in
     if (!currentUser) {
         document.getElementById('moduleContent').innerHTML = `
             <div class="profile-card" style="text-align:center; padding:40px;">
@@ -39028,7 +39305,6 @@ async function loadTransport() {
         return;
     }
     
-    // Role-based access
     if (currentUser.role !== 'admin') {
         document.getElementById('moduleContent').innerHTML = `
             <div class="profile-card" style="text-align:center; padding:40px;">
@@ -39044,7 +39320,6 @@ async function loadTransport() {
     isTransportLoading = true;
     showLoader();
     
-    // Show loading indicator
     document.getElementById('moduleContent').innerHTML = `
         <div style="text-align:center; padding:60px;">
             <i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--primary);"></i>
@@ -39054,36 +39329,23 @@ async function loadTransport() {
     `;
     
     try {
-        // Load from Supabase (or cache if offline)
-        let loaded = false;
+        loadStudentAssignments();
+        loadStudentsWithTransport();
+        ensureStudentsTransportProperty();
+        
         if (navigator.onLine) {
-            loaded = await loadTransportFromSupabase();
-            if (loaded) {
-                console.log('✅ [TRANSPORT] Loaded successfully online');
-            } else {
-                console.log('⚠️ [TRANSPORT] No data from Supabase, checking cache...');
-                const cached = localStorage.getItem('cache_transportation');
-                if (cached) {
-                    try {
-                        window.transportData.routes = JSON.parse(cached);
-                        console.log(`📦 [TRANSPORT] Loaded ${window.transportData.routes.length} routes from cache (fallback)`);
-                    } catch(e) {}
-                }
-            }
+            await loadTransportFromSupabase();
+            console.log('✅ [TRANSPORT] Loaded successfully online');
         } else {
-            // Offline - use cache
             const cached = localStorage.getItem('cache_transportation');
             if (cached) {
                 try {
                     window.transportData.routes = JSON.parse(cached);
-                    console.log(`📦 [TRANSPORT] Loaded ${window.transportData.routes.length} routes from cache (offline)`);
-                } catch(e) {
-                    console.error('Cache parse error:', e);
-                }
+                    console.log('📦 [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from cache (offline)');
+                } catch(e) {}
             }
         }
         
-        // Update driver info from employees
         for (let route of window.transportData.routes) {
             if (route.driverName) {
                 route.driverPhone = getDriverPhoneFromEmployees(route.driverName) || route.driverPhone;
@@ -39091,7 +39353,6 @@ async function loadTransport() {
             }
         }
         
-        // Render the module
         renderTransportUI();
         hideLoader();
         isTransportLoading = false;
@@ -39116,7 +39377,17 @@ async function loadTransport() {
 function renderTransportUI() {
     console.log('🎨 [TRANSPORT] renderTransportUI called - routes count:', window.transportData.routes.length);
     
-    // If no routes, show empty state with option to add
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    
+    // Update student counts for all routes
+    for (var i = 0; i < window.transportData.routes.length; i++) {
+        var route = window.transportData.routes[i];
+        var assigned = getAssignedStudentsForRoute(route.id);
+        route.students = assigned.length;
+    }
+    
     if (window.transportData.routes.length === 0) {
         document.getElementById('moduleContent').innerHTML = `
             <div style="text-align:center; padding:60px; background:var(--bg-surface); border-radius:20px;">
@@ -39130,22 +39401,21 @@ function renderTransportUI() {
         return;
     }
     
-    let filteredRoutes = window.transportData.routes.filter(t => 
-        transportFilterText === '' || 
-        t.routeName?.toLowerCase().includes(transportFilterText.toLowerCase()) || 
-        t.driverName?.toLowerCase().includes(transportFilterText.toLowerCase())
-    );
+    let filteredRoutes = window.transportData.routes.filter(function(t) {
+        return transportFilterText === '' || 
+            (t.routeName && t.routeName.toLowerCase().includes(transportFilterText.toLowerCase())) || 
+            (t.driverName && t.driverName.toLowerCase().includes(transportFilterText.toLowerCase()));
+    });
     
     let routes = filteredRoutes.length;
-    let totalStudents = filteredRoutes.reduce((sum, r) => sum + (r.students || 0), 0);
-    let routeNames = filteredRoutes.map(r => r.routeName);
-    let studentCounts = filteredRoutes.map(r => r.students || 0);
+    let totalStudents = filteredRoutes.reduce(function(sum, r) { return sum + (r.students || 0); }, 0);
+    let routeNames = filteredRoutes.map(function(r) { return r.routeName || 'Unnamed'; });
+    let studentCounts = filteredRoutes.map(function(r) { return r.students || 0; });
     
-    // Check pending items
     let pendingCount = 0;
     let allPending = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
-    pendingCount = allPending.filter(item => item.table === 'transportation').length;
-    let pendingBadge = pendingCount > 0 ? `<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-left: 8px;"><i class="fas fa-clock"></i> ${pendingCount} Pending Sync</span>` : '';
+    pendingCount = allPending.filter(function(item) { return item.table === 'transportation'; }).length;
+    let pendingBadge = pendingCount > 0 ? '<span style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-left: 8px;"><i class="fas fa-clock"></i> ' + pendingCount + ' Pending Sync</span>' : '';
     
     let content = `
     <style>
@@ -39157,164 +39427,201 @@ function renderTransportUI() {
             .transport-info-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
             .chart-card canvas { max-height: 200px; }
         }
-        .driver-photo-small { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #10b981; }
+        .driver-photo-small { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #10b981; }
         .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .offline-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .upload-area { border: 2px dashed var(--border-light); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
         .upload-area:hover { background: rgba(16, 185, 129, 0.05); border-color: #10b981; }
+        .fallback-avatar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .fallback-avatar.blue {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+        }
     </style>
     
     <div style="text-align: right; margin-bottom: 10px;">
         <span class="${navigator.onLine ? 'online-badge' : 'offline-badge'}">
             <i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i>
-            ${navigator.onLine ? 'Connected to Cloud' : 'Offline Mode'} | 
+            ${navigator.onLine ? '🟢 Online' : '🔴 Offline'} | 
             <strong>${window.transportData.routes.length}</strong> Routes ${pendingBadge}
         </span>
     </div>
     
-    <div class="action-buttons transport-action-buttons">
-        <div style="position: relative; flex: 1;">
-            <i class="fas fa-search"></i>
-            <input type="text" id="transportSearch" class="search-box" placeholder="Search by route or driver..." value="${transportFilterText}" style="padding-left: 35px; width: 100%;">
+    <div class="action-buttons transport-action-buttons" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+        <div style="position: relative; flex: 1; min-width: 180px;">
+            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
+            <input type="text" id="transportSearch" class="search-box" placeholder="Search by route or driver..." value="${transportFilterText}" style="padding-left: 35px; width: 100%; border-radius: 30px; padding: 10px 12px 10px 35px; min-height: 44px;">
         </div>
-        <button class="btn btn-primary btn-sm" onclick="filterTransport()"><i class="fas fa-search"></i> Filter</button>
-        <button class="btn btn-info btn-sm" onclick="clearTransportFilter()"><i class="fas fa-eraser"></i> Clear</button>
-        <button class="btn btn-warning btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-        <button class="btn btn-success btn-sm" onclick="refreshTransportData()"><i class="fas fa-sync-alt"></i> Refresh</button>
-        <button class="btn btn-secondary btn-sm" onclick="exportTransportCSV()"><i class="fas fa-file-csv"></i> Export CSV</button>
-        <button class="btn btn-danger btn-sm" onclick="exportTransportPDF()" style="background: #dc2626;"><i class="fas fa-file-pdf"></i> Export PDF</button>
-        <button class="btn btn-primary btn-sm" onclick="showAddTransportForm()"><i class="fas fa-plus"></i> Add Route</button>
+        <button class="btn btn-primary btn-sm" onclick="filterTransport()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px;"><i class="fas fa-search"></i> Filter</button>
+        <button class="btn btn-info btn-sm" onclick="clearTransportFilter()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px;"><i class="fas fa-eraser"></i> Clear</button>
+        <button class="btn btn-warning btn-sm" onclick="window.print()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px;"><i class="fas fa-print"></i> Print</button>
+        <button class="btn btn-success btn-sm" onclick="refreshTransportData()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportTransportCSV()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px;"><i class="fas fa-file-csv"></i> Export CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="exportTransportPDF()" style="background: #dc2626; padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px;"><i class="fas fa-file-pdf"></i> Export PDF</button>
+        <button class="btn btn-primary btn-sm" onclick="showAddTransportForm()" style="padding: 10px 16px; border-radius: 30px; font-size: 13px; min-height: 44px;"><i class="fas fa-plus"></i> Add Route</button>
     </div>
     
-    <div class="summary-cards transport-summary-cards" style="grid-template-columns: repeat(2, 1fr);">
-        <div class="summary-item"><div class="summary-value">${routes}</div><div>Total Routes</div><small>🚌</small></div>
-        <div class="summary-item"><div class="summary-value">${totalStudents}</div><div>Students Enrolled</div><small>👨‍🎓</small></div>
+    <div class="summary-cards transport-summary-cards" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
+        <div class="summary-item" style="background: var(--bg-surface); padding: 16px; border-radius: 16px; text-align: center; border: 1px solid var(--border-light);">
+            <div class="summary-value" style="font-size: 24px; font-weight: 700; color: var(--primary);">${routes}</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">🚌 Total Routes</div>
+        </div>
+        <div class="summary-item" style="background: var(--bg-surface); padding: 16px; border-radius: 16px; text-align: center; border: 1px solid var(--border-light);">
+            <div class="summary-value" style="font-size: 24px; font-weight: 700; color: #10b981;">${totalStudents}</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">👨‍🎓 Students Enrolled</div>
+        </div>
     </div>
     
     <div class="chart-container">
-        <div class="chart-card">
-            <h3><i class="fas fa-chart-bar"></i> 🚌 Route-wise Students Distribution</h3>
+        <div class="chart-card" style="background: var(--bg-surface); padding: 16px; border-radius: 20px; border: 1px solid var(--border-light);">
+            <h3 style="font-size: 14px; margin: 0 0 12px 0; color: var(--text-primary);"><i class="fas fa-chart-bar"></i> 🚌 Route-wise Students Distribution</h3>
             <canvas id="routeChart" style="max-height: 250px; width: 100%;"></canvas>
         </div>
     </div>
     
-    <div id="transportList" class="cards-container"></div>`;
+    <div id="transportList" class="cards-container" style="margin-top: 16px;"></div>`;
     
     document.getElementById('moduleContent').innerHTML = content;
     renderTransportList(filteredRoutes);
     
-    // Destroy existing chart instance before creating new one
-    if (routeChartInstance) {
-        try {
+    // Chart
+    try {
+        if (routeChartInstance) {
             routeChartInstance.destroy();
             routeChartInstance = null;
-            console.log('✅ Chart instance destroyed');
-        } catch(e) {
-            console.log('⚠️ Error destroying chart:', e);
         }
+    } catch(e) {
+        routeChartInstance = null;
     }
     
-    // Create new chart
-    setTimeout(() => {
+    setTimeout(function() {
         try {
-            const chartCtx = document.getElementById('routeChart')?.getContext('2d');
-            if (chartCtx && routeNames.length > 0) {
-                routeChartInstance = new Chart(chartCtx, {
-                    type: 'bar',
-                    data: { 
-                        labels: routeNames, 
-                        datasets: [{ 
-                            label: 'Students', 
-                            data: studentCounts, 
-                            backgroundColor: 'rgba(16, 185, 129, 0.7)', 
-                            borderColor: '#10b981', 
-                            borderWidth: 1, 
-                            borderRadius: 6 
-                        }] 
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: true, 
-                        plugins: { legend: { position: 'top' } }, 
-                        scales: { 
-                            y: { 
-                                beginAtZero: true, 
-                                title: { display: true, text: 'Students' }, 
-                                ticks: { stepSize: 1 } 
-                            } 
-                        } 
-                    }
-                });
-                console.log('✅ Chart created successfully');
+            const chartCanvas = document.getElementById('routeChart');
+            if (!chartCanvas) return;
+            if (typeof Chart === 'undefined') return;
+            if (routeNames.length === 0 || studentCounts.length === 0) return;
+            
+            let hasData = false;
+            for (let i = 0; i < studentCounts.length; i++) {
+                if (studentCounts[i] > 0) { hasData = true; break; }
             }
+            
+            if (!hasData) {
+                chartCanvas.style.display = 'none';
+                const parent = chartCanvas.parentElement;
+                if (parent) {
+                    let msg = parent.querySelector('.chart-empty-msg');
+                    if (!msg) {
+                        msg = document.createElement('p');
+                        msg.className = 'chart-empty-msg';
+                        msg.textContent = 'No students assigned to any route';
+                        msg.style.textAlign = 'center';
+                        msg.style.color = '#94a3b8';
+                        msg.style.padding = '20px';
+                        parent.appendChild(msg);
+                    }
+                }
+                return;
+            }
+            
+            routeChartInstance = new Chart(chartCanvas.getContext('2d'), {
+                type: 'bar',
+                data: { 
+                    labels: routeNames, 
+                    datasets: [{ 
+                        label: 'Students', 
+                        data: studentCounts, 
+                        backgroundColor: 'rgba(16, 185, 129, 0.7)', 
+                        borderColor: '#10b981', 
+                        borderWidth: 1, 
+                        borderRadius: 6 
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: true, 
+                    plugins: { legend: { position: 'top' } }, 
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            title: { display: true, text: 'Students' }, 
+                            ticks: { stepSize: 1 } 
+                        } 
+                    } 
+                }
+            });
         } catch(e) {
-            console.error('❌ Error creating chart:', e);
+            console.error('Chart error:', e);
+            routeChartInstance = null;
         }
-    }, 200);
+    }, 400);
 }
 
+// ======================= ✅ FIXED: RENDER TRANSPORT LIST (NO BUG) =======================
 function renderTransportList(routesToRender) { 
-    let html = '';
-    for (let t of routesToRender) {
-        let driverPhoto = getDriverPhotoFromEmployees(t.driverName);
-        let driverPhotoHtml = driverPhoto ? 
-            `<img src="${driverPhoto}" class="driver-photo-small">` :
-            `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-user"></i></div>`;
-        
-        let mapAttachment = t.attachments?.[0];
-        
-        html += `
-        <div class="data-card" style="margin-bottom: 12px; border-radius: 20px;">
-            <div class="card-header" style="display: flex; gap: 12px; padding: 12px; flex-wrap: wrap;">
-                <div class="card-photo" style="width: 50px; height: 50px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-bus" style="color: white; font-size: 24px;"></i>
-                </div>
-                <div class="card-title" style="flex: 1;">
-                    <h3 style="font-size: 15px;">${escapeHtml(t.routeName)}</h3>
-                    <p style="font-size: 11px;">${escapeHtml(t.vehicleNo) || 'No Vehicle'} | Driver: ${escapeHtml(t.driverName) || 'Not Assigned'}</p>
-                </div>
-                <div>${driverPhotoHtml}</div>
-            </div>
-            <div class="info-grid" style="padding: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-                <div><span class="info-label"><i class="fas fa-phone"></i> Driver Phone</span><span class="info-value">${escapeHtml(t.driverPhone) || 'N/A'}</span></div>
-                <div><span class="info-label"><i class="fas fa-users"></i> Students</span><span class="info-value">${t.students || 0}</span></div>
-                <div><span class="info-label"><i class="fas fa-map-marker-alt"></i> Stops</span><span class="info-value">${t.stops ? (t.stops.length > 50 ? t.stops.substring(0, 50) + '...' : escapeHtml(t.stops)) : '-'}</span></div>
-            </div>`;
-        
-        if (mapAttachment?.url) {
-            html += `<div style="background:#f0fdf4; padding: 8px 12px; margin: 0 12px 8px 12px; border-radius: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                    <span><i class="fas fa-map"></i> Route Map:</span>
-                    <a href="${mapAttachment.url}" target="_blank" class="action-chip" style="background: #10b981; color: white;"><i class="fas fa-cloud-upload-alt"></i> View Map</a>
-                    <button class="action-chip" onclick="downloadRouteMap('${t.id}')"><i class="fas fa-download"></i> Download</button>
-                </div>
-            </div>`;
-        } else if (mapAttachment?.data) {
-            html += `<div style="background:#fef3c7; padding: 8px 12px; margin: 0 12px 8px 12px; border-radius: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                    <span><i class="fas fa-map"></i> Route Map:</span>
-                    <button class="action-chip" onclick="downloadRouteMap('${t.id}')"><i class="fas fa-download"></i> Download Map</button>
-                </div>
-            </div>`;
-        }
-        
-        html += `<div class="card-actions" style="padding: 10px; gap: 6px; flex-wrap: wrap;">
-                <button class="action-chip" onclick="viewTransportDetails('${t.id}')"><i class="fas fa-eye"></i> View</button>
-                <button class="action-chip" onclick="showAddTransportForm('${t.id}')"><i class="fas fa-edit"></i> Edit</button>
-                <button class="action-chip" onclick="deleteTransport('${t.id}')" style="color: #dc2626;"><i class="fas fa-trash"></i> Delete</button>
-                <button class="action-chip" onclick="assignStudentsToRoute('${t.id}')"><i class="fas fa-users"></i> Assign</button>
-                <button class="action-chip" onclick="viewRouteStudents('${t.id}')"><i class="fas fa-list"></i> Students</button>
-                <button class="action-chip" onclick="printRouteDetails('${t.id}')"><i class="fas fa-print"></i> Print</button>
-                <button class="action-chip" onclick="shareRoute('${t.id}')"><i class="fab fa-whatsapp"></i> Share</button>
-            </div>
-        </div>`;
-    }
+    var html = '';
     
     if (routesToRender.length === 0) {
-        html = `<div class="profile-card" style="text-align: center; padding: 40px;">
-            <i class="fas fa-bus" style="font-size: 48px; color: #94a3b8;"></i>
-            <p>No transport routes found. Click "Add Route" to create.</p>
-            <button class="btn btn-primary btn-sm" onclick="showAddTransportForm()">+ Add Route</button>
+        html = '<div class="profile-card" style="text-align: center; padding: 40px; background: var(--bg-surface); border-radius: 20px;">' +
+            '<i class="fas fa-bus" style="font-size: 48px; color: #94a3b8;"></i>' +
+            '<p style="margin-top: 10px; color: var(--text-secondary);">No transport routes found. Click "Add Route" to create.</p>' +
+            '<button class="btn btn-primary btn-sm" onclick="showAddTransportForm()" style="margin-top: 10px;">+ Add Route</button>' +
+        '</div>';
+        document.getElementById('transportList').innerHTML = html;
+        return;
+    }
+    
+    for (var i = 0; i < routesToRender.length; i++) {
+        var t = routesToRender[i];
+        
+        // Get actual student count from persistent storage
+        var actualStudents = getAssignedStudentsForRoute(t.id);
+        var studentCount = actualStudents.length;
+        t.students = studentCount;
+        
+        // ✅ FIXED: Driver Photo - clean onerror (no quote bug)
+        var driverPhoto = t.driverPhotoUrl || t.driverPhotoData || getDriverPhotoFromEmployees(t.driverName);
+        var driverPhotoHtml = '';
+        if (driverPhoto) {
+            driverPhotoHtml = '<img src="' + driverPhoto + '" class="driver-photo-small" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
+                              '<div class="fallback-avatar" style="width:50px;height:50px;font-size:20px;display:none;"><i class="fas fa-user"></i></div>';
+        } else {
+            driverPhotoHtml = '<div class="fallback-avatar" style="width:50px;height:50px;font-size:20px;"><i class="fas fa-user"></i></div>';
+        }
+        
+        var mapAttachment = t.attachments && t.attachments.length > 0 ? t.attachments[0] : null;
+        
+        html += `
+        <div class="data-card" style="margin-bottom: 12px; border-radius: 20px; background: var(--bg-surface); border: 1px solid var(--border-light); overflow: hidden;">
+            <div class="card-header" style="display: flex; gap: 12px; padding: 12px 16px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border-light);">
+                <div class="card-title" style="flex: 1; min-width: 120px;">
+                    <h3 style="font-size: 15px; margin: 0; color: var(--text-primary);">${escapeHtml(t.routeName) || 'Unnamed Route'}</h3>
+                    <p style="font-size: 11px; margin: 2px 0 0; color: var(--text-secondary);">${escapeHtml(t.vehicleNo) || 'No Vehicle'} | Driver: ${escapeHtml(t.driverName) || 'Not Assigned'}</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    ${driverPhotoHtml}
+                </div>
+            </div>
+            <div class="info-grid" style="padding: 12px 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: var(--bg-body);">
+                <div><span style="font-size: 10px; color: #94a3b8; display: block;"><i class="fas fa-phone"></i> Driver Phone</span><span style="font-size: 13px; font-weight: 500; color: var(--text-primary);">${escapeHtml(t.driverPhone) || 'N/A'}</span></div>
+                <div><span style="font-size: 10px; color: #94a3b8; display: block;"><i class="fas fa-users"></i> Students</span><span style="font-size: 13px; font-weight: 600; color: #2563eb;">${studentCount}</span></div>
+                <div><span style="font-size: 10px; color: #94a3b8; display: block;"><i class="fas fa-map-marker-alt"></i> Stops</span><span style="font-size: 13px; font-weight: 500; color: var(--text-primary);">${t.stops ? (t.stops.length > 40 ? t.stops.substring(0, 40) + '...' : escapeHtml(t.stops)) : '-'}</span></div>
+            </div>
+            <div class="card-actions" style="padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap; background: var(--bg-surface); border-radius: 0 0 20px 20px;">
+                <button class="action-chip" onclick="viewTransportDetails('${t.id}')" style="background: #2563eb; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; min-height: 36px;"><i class="fas fa-eye"></i> View</button>
+                <button class="action-chip" onclick="showAddTransportForm('${t.id}')" style="background: #f59e0b; color: #1e293b; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; min-height: 36px;"><i class="fas fa-edit"></i> Edit</button>
+                <button class="action-chip" onclick="deleteTransport('${t.id}')" style="background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; min-height: 36px;"><i class="fas fa-trash"></i> Delete</button>
+                <button class="action-chip" onclick="assignStudentsToRoute('${t.id}')" style="background: #8b5cf6; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; min-height: 36px;"><i class="fas fa-users"></i> Assign</button>
+                <button class="action-chip" onclick="viewRouteStudents('${t.id}')" style="background: #06b6d4; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; min-height: 36px;"><i class="fas fa-list"></i> Students</button>
+                <button class="action-chip" onclick="printRouteDetails('${t.id}')" style="background: #64748b; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; min-height: 36px;"><i class="fas fa-print"></i> Print</button>
+                <button class="action-chip" onclick="shareRoute('${t.id}')" style="background: #25D366; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; min-height: 36px;"><i class="fab fa-whatsapp"></i> Share</button>
+            </div>
         </div>`;
     }
     
@@ -39322,152 +39629,255 @@ function renderTransportList(routesToRender) {
 }
 
 // ======================= ADD/EDIT TRANSPORT FORM =======================
-function showAddTransportForm(editId = null) {
+function showAddTransportForm(editId) {
+    editId = editId || null;
     if (currentUser.role !== 'admin') { 
         showNotification('Only administrators can add/edit transport routes', 'error'); 
         return; 
     }
     
     let isEdit = editId !== null;
-    let routeData = isEdit ? window.transportData.routes.find(r => r.id === editId) : null;
+    let routeData = isEdit ? window.transportData.routes.find(function(r) { return r.id === editId; }) : null;
+    
+    if (isEdit && !routeData) {
+        showNotification('Route not found!', 'error');
+        return;
+    }
+    
     let modalId = 'transportModal_' + Date.now();
     
-    window[`tempAttachment_${modalId}`] = null;
-    window[`tempAttachmentUrl_${modalId}`] = null;
-    window[`tempDriverPhoto_${modalId}`] = null;
-    window[`tempDriverPhotoUrl_${modalId}`] = null;
+    window['tempAttachment_' + modalId] = null;
+    window['tempAttachmentUrl_' + modalId] = null;
+    window['tempDriverPhoto_' + modalId] = null;
+    window['tempDriverPhotoUrl_' + modalId] = null;
     
+    let drivers = getDriverList();
     let driverOptions = '<option value="">-- Select Driver (from Employees) --</option>';
-    if (window.employees) {
-        for (let emp of window.employees) {
-            if (emp.department === 'Transport' || emp.designation === 'Driver' || emp.designation?.toLowerCase().includes('driver')) {
-                driverOptions += `<option value="${emp.name}" ${isEdit && routeData?.driverName === emp.name ? 'selected' : ''}>${emp.name} (${emp.department})</option>`;
-            }
+    if (drivers.length > 0) {
+        for (let emp of drivers) {
+            let selected = (isEdit && routeData && routeData.driverName === emp.name) ? 'selected' : '';
+            driverOptions += '<option value="' + emp.name + '" ' + selected + '>' + emp.name + ' (' + (emp.designation || emp.department) + ')</option>';
         }
+    } else {
+        driverOptions += '<option value="">-- No drivers found in Employees --</option>';
     }
     
     let currentDriverPhotoPreview = '';
-    if (isEdit && (routeData?.driverPhotoUrl || routeData?.driverPhotoData)) {
-        let photoSrc = routeData.driverPhotoUrl || routeData.driverPhotoData;
-        currentDriverPhotoPreview = `<div style="margin-top: 10px; text-align: center;">
-            <img src="${photoSrc}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #10b981;">
-            <p style="font-size: 11px; margin-top: 5px; color: ${routeData.driverPhotoUrl ? '#10b981' : '#f59e0b'}">
-                <i class="fas ${routeData.driverPhotoUrl ? 'fa-cloud-upload-alt' : 'fa-camera'}"></i> 
-                ${routeData.driverPhotoUrl ? 'Photo in Cloud' : 'Current Photo'}
-            </p>
-        </div>`;
+    let driverPhotoSrc = routeData ? (routeData.driverPhotoUrl || routeData.driverPhotoData || getDriverPhotoFromEmployees(routeData.driverName)) : null;
+    if (isEdit && driverPhotoSrc) {
+        currentDriverPhotoPreview = '<div style="margin-top: 10px; text-align: center;">' +
+            '<img src="' + driverPhotoSrc + '" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #10b981;" onerror="this.style.display=\'none\'">' +
+            '<p style="font-size: 11px; margin-top: 5px; color: ' + (routeData.driverPhotoUrl ? '#10b981' : '#f59e0b') + '">' +
+                '<i class="fas ' + (routeData.driverPhotoUrl ? 'fa-cloud-upload-alt' : 'fa-camera') + '"></i> ' + 
+                (routeData.driverPhotoUrl ? 'Photo in Cloud' : 'Current Photo') +
+            '</p>' +
+        '</div>';
     }
     
     let existingMapPreview = '';
-    if (isEdit && routeData?.attachments?.[0]?.url) {
-        existingMapPreview = `<div style="background:#d1fae5; padding:10px; border-radius:12px; margin-top:8px;">
-            <i class="fas fa-cloud-upload-alt"></i> Existing Map in Cloud
-            <a href="${routeData.attachments[0].url}" target="_blank" class="action-chip" style="margin-left:10px;">View</a>
-        </div>`;
-    } else if (isEdit && routeData?.attachments?.[0]?.data) {
-        existingMapPreview = `<div style="background:#fef3c7; padding:10px; border-radius:12px; margin-top:8px;">
-            <i class="fas fa-file"></i> Existing Map (Local)
-        </div>`;
+    if (isEdit && routeData && routeData.attachments && routeData.attachments.length > 0) {
+        let map = routeData.attachments[0];
+        if (map.url) {
+            existingMapPreview = '<div style="background:#d1fae5; padding:10px; border-radius:12px; margin-top:8px;">' +
+                '<i class="fas fa-cloud-upload-alt" style="color:#10b981;"></i> Existing Map in Cloud' +
+                '<a href="' + map.url + '" target="_blank" class="action-chip" style="margin-left:10px; background:#10b981; color:white; padding:2px 12px; border-radius:20px; text-decoration:none; font-size:11px;">View</a>' +
+            '</div>';
+        } else if (map.data) {
+            existingMapPreview = '<div style="background:#fef3c7; padding:10px; border-radius:12px; margin-top:8px;">' +
+                '<i class="fas fa-file" style="color:#f59e0b;"></i> Existing Map (Local)' +
+            '</div>';
+        }
     }
     
     let modalHtml = `
-        <div id="${modalId}" class="modal-overlay" style="z-index: 10000;">
-            <div class="modal-content" style="max-width: 600px; width: 95%; border-radius: 24px; background: var(--bg-surface); max-height: 90vh; overflow-y: auto;">
-                <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669); padding: 16px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <div id="${modalId}" class="modal-overlay" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10000; overflow-y:auto;">
+            <div class="modal-content" style="max-width: 600px; width: 95%; border-radius: 24px; background: var(--bg-surface); max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669); padding: 16px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10;">
                     <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas ${isEdit ? 'fa-edit' : 'fa-plus-circle'}"></i> ${isEdit ? 'Edit Route' : 'Add New Route'}</h2>
-                    <button class="close-btn" onclick="closeTransportModal('${modalId}')" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer;">&times;</button>
+                    <button class="close-btn" onclick="closeTransportModal('${modalId}')" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
                 </div>
                 <div class="modal-body" style="padding: 20px;">
-                    <div class="form-group"><label style="font-weight: 600;">🚌 Route Name *</label><input type="text" id="routeName_${modalId}" class="form-control" placeholder="e.g., Route 1 - Model Town" value="${isEdit ? escapeHtml(routeData?.routeName || '') : ''}"></div>
-                    <div class="form-group"><label style="font-weight: 600;">🚛 Vehicle Number</label><input type="text" id="vehicleNo_${modalId}" class="form-control" placeholder="e.g., DL 01 AB 1234" value="${isEdit ? escapeHtml(routeData?.vehicleNo || '') : ''}"></div>
-                    <div class="form-group"><label style="font-weight: 600;">👨 Select Driver</label><select id="driverName_${modalId}" class="form-control">${driverOptions}</select><small style="font-size: 11px; color: #64748b;">Driver photo and phone will be auto-filled from Employees module</small></div>
-                    <div class="form-group"><label style="font-weight: 600;"><i class="fas fa-camera"></i> Driver Photo (Optional)</label>
-                        <div id="driverPhotoUpload_${modalId}" class="upload-area"><i class="fas fa-camera"></i><p>Click to upload Driver Photo (1:1)</p><p style="font-size: 11px;">📸 Camera or Gallery</p></div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">🚌 Route Name *</label>
+                        <input type="text" id="routeName_${modalId}" class="form-control" placeholder="e.g., Route 1 - Model Town" value="${isEdit ? escapeHtml(routeData.routeName || '') : ''}" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-light); min-height:44px; font-size:14px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">🚛 Vehicle Number</label>
+                        <input type="text" id="vehicleNo_${modalId}" class="form-control" placeholder="e.g., DL 01 AB 1234" value="${isEdit ? escapeHtml(routeData.vehicleNo || '') : ''}" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-light); min-height:44px; font-size:14px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">👨 Select Driver</label>
+                        <select id="driverName_${modalId}" class="form-control" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-light); min-height:44px; font-size:14px;">
+                            ${driverOptions}
+                        </select>
+                        <small style="font-size: 11px; color: #64748b;">Driver photo and phone will be auto-filled from Employees module</small>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;"><i class="fas fa-camera"></i> Driver Photo (Optional)</label>
+                        <div id="driverPhotoUpload_${modalId}" class="upload-area" style="border: 2px dashed var(--border-light); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
+                            <i class="fas fa-camera" style="font-size: 28px; color: #10b981;"></i>
+                            <p style="margin: 8px 0 0; font-size: 13px;">Click to upload Driver Photo (1:1)</p>
+                            <p style="font-size: 11px; color: var(--text-secondary);">📸 Camera or Gallery</p>
+                        </div>
                         <div id="driverPhotoPreview_${modalId}" style="margin-top: 10px;">${currentDriverPhotoPreview}</div>
                     </div>
-                    <div class="form-group"><label style="font-weight: 600;">📍 Stops (comma separated)</label><textarea id="stopsList_${modalId}" class="form-control" rows="3" placeholder="e.g., Model Town, Civil Lines, Mall Road">${isEdit ? escapeHtml(routeData?.stops || '') : ''}</textarea></div>
-                    <div class="form-group"><label style="font-weight: 600;"><i class="fas fa-map-marked-alt"></i> Route Map (Optional)</label>
-                        <div id="routeMapUpload_${modalId}" class="upload-area"><i class="fas fa-camera"></i><p>Click to upload Route Map</p><p style="font-size: 11px;">📁 PDF, JPG, PNG</p></div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;">📍 Stops (comma separated)</label>
+                        <textarea id="stopsList_${modalId}" class="form-control" rows="3" placeholder="e.g., Model Town, Civil Lines, Mall Road" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-light); font-size:14px;">${isEdit ? escapeHtml(routeData.stops || '') : ''}</textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;"><i class="fas fa-map-marked-alt"></i> Route Map (Optional)</label>
+                        <div id="routeMapUpload_${modalId}" class="upload-area" style="border: 2px dashed var(--border-light); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
+                            <i class="fas fa-map" style="font-size: 28px; color: #10b981;"></i>
+                            <p style="margin: 8px 0 0; font-size: 13px;">Click to upload Route Map</p>
+                            <p style="font-size: 11px; color: var(--text-secondary);">📁 PDF, JPG, PNG</p>
+                        </div>
                         <div id="mapPreview_${modalId}" style="margin-top: 10px;">${existingMapPreview}</div>
                     </div>
                 </div>
-                <div class="modal-footer" style="padding: 12px 20px; display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
-                    <button class="btn btn-danger" onclick="closeTransportModal('${modalId}')">Cancel</button>
-                    <button class="btn btn-primary" onclick="saveTransportRoute('${modalId}', '${editId || ''}')">${isEdit ? 'Update Route' : 'Save Route'}</button>
+                <div class="modal-footer" style="padding: 12px 20px; display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; border-top: 1px solid var(--border-light); background: var(--bg-body); border-radius: 0 0 24px 24px;">
+                    <button class="btn btn-danger" onclick="closeTransportModal('${modalId}')" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; min-height: 44px; border: none; cursor: pointer; background: #ef4444; color: white; font-weight: 600;">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveTransportRoute('${modalId}', '${editId || ''}')" style="padding: 10px 24px; border-radius: 30px; font-size: 14px; min-height: 44px; border: none; cursor: pointer; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 600;">${isEdit ? 'Update Route' : 'Save Route'}</button>
                 </div>
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    document.getElementById(`driverPhotoUpload_${modalId}`).onclick = () => {
-        openDriverPhotoCapture(async (croppedImage) => {
+    // Driver selection auto-fill
+    document.getElementById('driverName_' + modalId).addEventListener('change', function() {
+        let selectedDriver = this.value;
+        if (selectedDriver) {
+            let driverPhone = getDriverPhoneFromEmployees(selectedDriver);
+            let driverPhoto = getDriverPhotoFromEmployees(selectedDriver);
+            let previewDiv = document.getElementById('driverPhotoPreview_' + modalId);
+            if (driverPhoto && previewDiv) {
+                previewDiv.innerHTML = '<div style="text-align: center;">' +
+                    '<img src="' + driverPhoto + '" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #10b981;" onerror="this.style.display=\'none\'">' +
+                    '<p style="font-size: 11px; margin-top: 5px; color: #10b981;"><i class="fas fa-cloud-upload-alt"></i> Photo from Employees</p>' +
+                '</div>';
+                window['tempDriverPhotoUrl_' + modalId] = driverPhoto;
+            }
+            if (driverPhone) {
+                showNotification('📞 Driver phone: ' + driverPhone, 'info');
+            }
+        } else {
+            let previewDiv = document.getElementById('driverPhotoPreview_' + modalId);
+            if (previewDiv) previewDiv.innerHTML = '';
+        }
+    });
+    
+    // Driver Photo Upload
+    document.getElementById('driverPhotoUpload_' + modalId).onclick = function() {
+        openDriverPhotoCapture(async function(croppedImage) {
             showLoader();
             let uploadedUrl = null;
             let routeId = editId || 'T' + Date.now();
-            let driverName = document.getElementById(`driverName_${modalId}`)?.value || 'driver';
+            let driverName = document.getElementById('driverName_' + modalId)?.value || 'driver';
             if (navigator.onLine) uploadedUrl = await uploadDriverPhotoToSupabase(croppedImage, routeId, driverName);
-            window[`tempDriverPhoto_${modalId}`] = croppedImage;
-            window[`tempDriverPhotoUrl_${modalId}`] = uploadedUrl;
-            const previewDiv = document.getElementById(`driverPhotoPreview_${modalId}`);
-            if (previewDiv) previewDiv.innerHTML = uploadedUrl ? `<div style="text-align: center;"><img src="${uploadedUrl}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #10b981;"><p style="color: #10b981;">☁️ Uploaded to Database!</p></div>` : `<div style="text-align: center;"><img src="${croppedImage}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #f59e0b;"><p style="color: #f59e0b;">📸 Saved locally</p></div>`;
+            window['tempDriverPhoto_' + modalId] = croppedImage;
+            window['tempDriverPhotoUrl_' + modalId] = uploadedUrl;
+            const previewDiv = document.getElementById('driverPhotoPreview_' + modalId);
+            if (previewDiv) {
+                previewDiv.innerHTML = uploadedUrl ? 
+                    '<div style="text-align: center;"><img src="' + uploadedUrl + '" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #10b981;"><p style="color: #10b981;">☁️ Uploaded to Database!</p></div>' : 
+                    '<div style="text-align: center;"><img src="' + croppedImage + '" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #f59e0b;"><p style="color: #f59e0b;">📸 Saved locally</p></div>';
+            }
             hideLoader();
             showNotification(uploadedUrl ? '✅ Driver photo uploaded to Database!' : '📁 Driver photo saved locally', uploadedUrl ? 'success' : 'warning');
         });
     };
     
-    document.getElementById(`routeMapUpload_${modalId}`).onclick = () => {
+    // Route Map Upload
+    document.getElementById('routeMapUpload_' + modalId).onclick = function() {
         let routeId = editId || 'T' + Date.now();
-        let routeName = document.getElementById(`routeName_${modalId}`)?.value || 'route';
-        openRouteMapCapture(async (fileData, fileName, fileType) => {
+        let routeName = document.getElementById('routeName_' + modalId)?.value || 'route';
+        openRouteMapCapture(async function(fileData, fileName, fileType) {
             showLoader();
             let uploadedUrl = await uploadRouteMapToSupabase(fileData, fileName, fileType, routeId, routeName);
-            window[`tempAttachment_${modalId}`] = fileData;
-            window[`tempAttachmentUrl_${modalId}`] = uploadedUrl;
-            const previewDiv = document.getElementById(`mapPreview_${modalId}`);
-            if (previewDiv) previewDiv.innerHTML = fileType.startsWith('image/') ? `<div style="background:#d1fae5; padding:12px; border-radius:12px;"><img src="${fileData}" style="width:60px;"><div>${uploadedUrl ? '☁️ Uploaded to Database!' : '📁 Saved locally'}</div></div>` : `<div style="background:#d1fae5; padding:12px; border-radius:12px;"><i class="fas fa-file-pdf"></i> ${fileName}<br>${uploadedUrl ? '☁️ In Cloud' : '📁 Saved locally'}</div>`;
+            window['tempAttachment_' + modalId] = fileData;
+            window['tempAttachmentUrl_' + modalId] = uploadedUrl;
+            const previewDiv = document.getElementById('mapPreview_' + modalId);
+            if (previewDiv) {
+                previewDiv.innerHTML = fileType.startsWith('image/') ? 
+                    '<div style="background:#d1fae5; padding:12px; border-radius:12px;"><img src="' + fileData + '" style="width:60px; border-radius:8px;"><div style="margin-top:4px; color:' + (uploadedUrl ? '#10b981' : '#f59e0b') + ';">' + (uploadedUrl ? '☁️ Uploaded to Database!' : '📁 Saved locally') + '</div></div>' : 
+                    '<div style="background:#d1fae5; padding:12px; border-radius:12px;"><i class="fas fa-file-pdf" style="font-size:24px; color:#dc2626;"></i><br>' + fileName + '<br><span style="color:' + (uploadedUrl ? '#10b981' : '#f59e0b') + ';">' + (uploadedUrl ? '☁️ In Cloud' : '📁 Saved locally') + '</span></div>';
+            }
             hideLoader();
             showNotification(uploadedUrl ? 'Route map uploaded to Database!' : 'Route map saved locally', uploadedUrl ? 'success' : 'warning');
         });
     };
 }
 
-async function saveTransportRoute(modalId, editId) {
-    let routeName = document.getElementById(`routeName_${modalId}`)?.value;
-    if (!routeName) { showNotification('Please enter route name', 'error'); return; }
+// ======================= SAVE TRANSPORT ROUTE =======================
+function saveTransportRoute(modalId, editId) {
+    console.log('📤 [TRANSPORT] saveTransportRoute called - modalId:', modalId, 'editId:', editId);
     
-    let driverName = document.getElementById(`driverName_${modalId}`)?.value;
-    let driverPhotoUrl = window[`tempDriverPhotoUrl_${modalId}`] || (driverName ? getDriverPhotoFromEmployees(driverName) : null);
-    let driverPhotoData = window[`tempDriverPhoto_${modalId}`] || null;
+    let routeName = document.getElementById('routeName_' + modalId)?.value?.trim();
+    if (!routeName) { 
+        showNotification('Please enter route name', 'error'); 
+        return; 
+    }
+    
+    let driverName = document.getElementById('driverName_' + modalId)?.value || '';
+    let vehicleNo = document.getElementById('vehicleNo_' + modalId)?.value || '';
+    let stops = document.getElementById('stopsList_' + modalId)?.value || '';
+    
+    let driverPhotoUrl = window['tempDriverPhotoUrl_' + modalId] || 
+                         (driverName ? getDriverPhotoFromEmployees(driverName) : null);
+    let driverPhotoData = window['tempDriverPhoto_' + modalId] || null;
+    let driverPhone = driverName ? getDriverPhoneFromEmployees(driverName) : '';
     
     let attachments = [];
-    if (window[`tempAttachment_${modalId}`]) {
-        attachments.push({ data: window[`tempAttachment_${modalId}`], url: window[`tempAttachmentUrl_${modalId}`], name: 'Route Map', uploadedAt: new Date().toISOString() });
+    if (window['tempAttachment_' + modalId]) {
+        attachments.push({ 
+            data: window['tempAttachment_' + modalId], 
+            url: window['tempAttachmentUrl_' + modalId], 
+            name: 'Route Map', 
+            uploadedAt: new Date().toISOString() 
+        });
     } else if (editId) {
-        let existingRoute = window.transportData.routes.find(r => r.id === editId);
-        if (existingRoute?.attachments?.length) attachments = existingRoute.attachments;
+        let existingRoute = window.transportData.routes.find(function(r) { return r.id === editId; });
+        if (existingRoute && existingRoute.attachments && existingRoute.attachments.length) {
+            attachments = existingRoute.attachments;
+        }
+    }
+    
+    let existingStudents = 0;
+    if (editId) {
+        let existingRoute = window.transportData.routes.find(function(r) { return r.id === editId; });
+        if (existingRoute) {
+            existingStudents = existingRoute.students || 0;
+        }
     }
     
     let routeObj = {
         id: editId || 'T' + Date.now(),
         routeName: routeName,
-        vehicleNo: document.getElementById(`vehicleNo_${modalId}`)?.value || '',
-        driverName: driverName || '',
-        driverPhone: driverName ? getDriverPhoneFromEmployees(driverName) : '',
+        vehicleNo: vehicleNo,
+        driverName: driverName,
+        driverPhone: driverPhone || '',
         driverPhotoUrl: driverPhotoUrl,
         driverPhotoData: driverPhotoData,
-        stops: document.getElementById(`stopsList_${modalId}`)?.value || '',
-        students: editId ? (window.transportData.routes.find(r => r.id === editId)?.students || 0) : 0,
+        stops: stops,
+        students: existingStudents || 0,
         attachments: attachments
     };
     
+    console.log('📤 [TRANSPORT] Route object:', routeObj);
+    
+    // Update local data
     if (editId) {
-        let index = window.transportData.routes.findIndex(r => r.id === editId);
-        if (index !== -1) window.transportData.routes[index] = { ...window.transportData.routes[index], ...routeObj };
-        showNotification('✅ Route updated successfully!', 'success');
+        let index = window.transportData.routes.findIndex(function(r) { return r.id === editId; });
+        if (index !== -1) {
+            routeObj.students = window.transportData.routes[index].students || 0;
+            window.transportData.routes[index] = { ...window.transportData.routes[index], ...routeObj };
+        } else {
+            showNotification('❌ Route not found!', 'error');
+            return;
+        }
     } else {
         window.transportData.routes.push(routeObj);
-        showNotification('✅ Route added successfully!', 'success');
         if (typeof recentActivities !== 'undefined') {
             recentActivities.unshift({ 
                 id: 'ACT' + Date.now(), 
@@ -39479,10 +39889,26 @@ async function saveTransportRoute(modalId, editId) {
         }
     }
     
-    localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes));
-    if (navigator.onLine) await saveTransportToSupabase(routeObj);
     closeTransportModal(modalId);
-    loadTransport();
+    
+    try {
+        localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes));
+    } catch(e) {}
+    
+    renderTransportUI();
+    
+    if (navigator.onLine) {
+        saveTransportToSupabase(routeObj).then(function(success) {
+            if (success) {
+                showNotification('✅ Saved to cloud!', 'success');
+            } else {
+                showNotification('⚠️ Saved locally, will sync later.', 'warning');
+            }
+        });
+    } else {
+        addToPendingQueue('transportation', 'upsert', routeObj);
+        showNotification('📴 Offline: Saved locally. Will sync when online.', 'warning');
+    }
 }
 
 function closeTransportModal(modalId) {
@@ -39502,80 +39928,102 @@ async function deleteTransport(id) {
         return;
     }
     
-    const routeToDelete = window.transportData.routes.find(r => r.id === id);
+    const routeToDelete = window.transportData.routes.find(function(r) { return r.id === id; });
     if (!routeToDelete) {
         showNotification('Route not found!', 'error');
         return;
     }
     
-    const result = await Swal.fire({
-        title: '🗑️ Delete Route?',
-        html: `Are you sure you want to delete <strong>"${escapeHtml(routeToDelete.routeName)}"</strong>?<br><br>This will unassign all students from this route!`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Delete',
-        confirmButtonColor: '#ef4444',
-        cancelButtonText: 'Cancel'
-    });
-    
-    if (result.isConfirmed) {
-        showLoader();
+    try {
+        const result = await Swal.fire({
+            title: '🗑️ Delete Route?',
+            html: 'Are you sure you want to delete <strong>"' + escapeHtml(routeToDelete.routeName) + '"</strong>?<br><br>This will unassign all students from this route!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Delete',
+            confirmButtonColor: '#ef4444',
+            cancelButtonText: 'Cancel',
+            width: window.innerWidth <= 480 ? '95%' : '500px'
+        });
         
-        // Unassign students
-        if (window.students) {
-            for (let i = 0; i < window.students.length; i++) {
-                if (window.students[i].transportRouteId === id) {
-                    window.students[i].transportRouteId = null;
-                    window.students[i].transportEnabled = false;
+        if (result.isConfirmed) {
+            showLoader();
+            
+            // Unassign students from this route
+            if (window.students) {
+                for (let i = 0; i < window.students.length; i++) {
+                    if (window.students[i] && window.students[i].transportRouteId === id) {
+                        window.students[i].transportRouteId = null;
+                        window.students[i].transportEnabled = false;
+                        updateStudentAssignment(window.students[i].id, null);
+                    }
                 }
             }
+            
+            window.transportData.routes = window.transportData.routes.filter(function(r) { return r.id !== id; });
+            try {
+                localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes));
+            } catch(e) {}
+            
+            renderTransportUI();
+            
+            if (navigator.onLine) {
+                var deleted = await deleteTransportFromSupabase(id);
+                if (deleted) {
+                    await loadTransportFromSupabase();
+                    renderTransportUI();
+                    showNotification('✅ Route deleted from Database!', 'success');
+                }
+            } else {
+                addToPendingQueue('transportation', 'delete', { id: id });
+                showNotification('📴 Offline - Route deleted locally. Will sync when online.', 'warning');
+            }
+            
+            if (typeof updateDashboardStats === 'function') {
+                try { updateDashboardStats(); } catch(e) {}
+            }
+            
+            hideLoader();
         }
-        
-        // Delete from local
-        window.transportData.routes = window.transportData.routes.filter(r => r.id !== id);
-        localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes));
-        
-        // Delete from Supabase if online
-        if (navigator.onLine) {
-            await deleteTransportFromSupabase(id);
-        }
-        
+    } catch(e) {
+        console.error('Delete error:', e);
         hideLoader();
-        loadTransport();
-        
-        await Swal.fire({
-            title: '✅ Deleted!',
-            text: `Route "${routeToDelete.routeName}" has been deleted successfully.`,
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
-        });
+        showNotification('Error deleting route: ' + e.message, 'error');
     }
 }
 
-// ======================= OTHER FUNCTIONS =======================
-function downloadRouteMap(id) {
-    let route = window.transportData.routes.find(r => r.id === id);
-    if (route?.attachments?.[0]?.url) {
-        window.open(route.attachments[0].url, '_blank');
-        showNotification('Opening map from cloud...', 'info');
-    } else if (route?.attachments?.[0]?.data) {
-        let filename = `route_map_${route.routeName.replace(/\s/g, '_')}.jpg`;
-        downloadFile(route.attachments[0].data, filename);
-        showNotification('Map downloaded!', 'success');
-    } else {
-        showNotification('No map attached', 'warning');
-    }
-}
-
+// ======================= ✅ FIXED: VIEW TRANSPORT DETAILS (NO BUG) =======================
 function viewTransportDetails(id) {
-    let t = window.transportData.routes.find(r => r.id === id);
-    if (!t) return;
-    let driverPhoto = t.driverPhotoUrl || t.driverPhotoData || getDriverPhotoFromEmployees(t.driverName);
-    let driverPhotoHtml = driverPhoto ? `<img src="${driverPhoto}" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 10px;">` : '';
+    var t = window.transportData.routes.find(function(r) { return r.id === id; });
+    if (!t) { 
+        showNotification('Route not found!', 'error'); 
+        return; 
+    }
+    
+    // ✅ FIXED: Driver Photo - clean version
+    var driverPhoto = t.driverPhotoUrl || t.driverPhotoData || getDriverPhotoFromEmployees(t.driverName);
+    var driverPhotoHtml = '';
+    if (driverPhoto) {
+        driverPhotoHtml = '<img src="' + driverPhoto + '" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 10px; object-fit: cover; border: 3px solid #10b981;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
+                          '<div class="fallback-avatar" style="width:80px;height:80px;font-size:32px;margin:0 auto 10px;display:none;"><i class="fas fa-user"></i></div>';
+    } else {
+        driverPhotoHtml = '<div class="fallback-avatar" style="width:80px;height:80px;font-size:32px;margin:0 auto 10px;"><i class="fas fa-user"></i></div>';
+    }
+    
+    var mapAttachment = t.attachments && t.attachments.length > 0 ? t.attachments[0] : null;
+    var mapHtml = '';
+    if (mapAttachment && mapAttachment.url) {
+        mapHtml = '<p><strong>🗺️ Map:</strong> <a href="' + mapAttachment.url + '" target="_blank" style="color: #10b981;">View Map</a></p>';
+    } else if (mapAttachment && mapAttachment.data) {
+        mapHtml = '<p><strong>🗺️ Map:</strong> <span style="color: #f59e0b;">Local Map (Click Download to save)</span></p>';
+    }
+    
+    // Get actual student count from persistent storage
+    var assignedStudents = getAssignedStudentsForRoute(id);
+    var studentCount = assignedStudents.length;
     
     Swal.fire({
-        title: `🚌 Route Details`,
+        title: '🚌 Route Details',
         html: `
             <div style="text-align: center;">
                 ${driverPhotoHtml}
@@ -39586,466 +40034,574 @@ function viewTransportDetails(id) {
                 <p><strong>👨 Driver:</strong> ${escapeHtml(t.driverName) || 'Not Assigned'}</p>
                 <p><strong>📞 Driver Phone:</strong> ${escapeHtml(t.driverPhone) || 'N/A'}</p>
                 <p><strong>📍 Stops:</strong> ${escapeHtml(t.stops) || 'No stops added'}</p>
-                <p><strong>👨‍🎓 Students:</strong> ${t.students || 0}</p>
+                <p><strong>👨‍🎓 Students:</strong> ${studentCount}</p>
+                ${mapHtml}
             </div>
         `,
-        confirmButtonText: 'Close'
+        confirmButtonText: 'Close',
+        width: window.innerWidth <= 480 ? '95%' : '500px'
     });
 }
 
+// ======================= ✅ FIXED: VIEW ROUTE STUDENTS (NO BUG) =======================
 function viewRouteStudents(id) {
-    let route = window.transportData.routes.find(r => r.id === id);
-    if (!route) return;
-    let assignedStudents = window.students ? window.students.filter(s => s.transportRouteId === id) : [];
-    if (assignedStudents.length === 0) { 
-        showNotification('No students assigned to this route', 'info'); 
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    
+    var route = window.transportData.routes.find(function(r) { return r.id === id; });
+    if (!route) { 
+        showNotification('Route not found!', 'error'); 
         return; 
     }
     
-    let studentsHtml = assignedStudents.map(s => `
-        <div style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; flex-wrap: wrap;">
-            <div><strong>${escapeHtml(s.name)}</strong><br><small>${escapeHtml(s.cls)} ${escapeHtml(s.sec)} | Roll: ${s.roll}</small></div>
-            <div>${escapeHtml(s.fatherName) || 'N/A'}<br>${escapeHtml(s.mobile) || 'N/A'}</div>
-        </div>
-    `).join('');
+    var assignedStudents = getAssignedStudentsForRoute(id);
+    
+    console.log('📊 [TRANSPORT] Route ' + route.routeName + ' has ' + assignedStudents.length + ' students assigned');
+    
+    if (assignedStudents.length === 0) { 
+        Swal.fire({
+            title: '👨‍🎓 Students on ' + escapeHtml(route.routeName),
+            html: '<p style="color: #94a3b8; padding: 20px;">No students assigned to this route yet.</p>' +
+                   '<p style="font-size: 12px; color: #64748b;">Click <strong>"Assign"</strong> button to add students.</p>',
+            icon: 'info',
+            confirmButtonText: 'OK',
+            width: window.innerWidth <= 480 ? '95%' : '500px'
+        });
+        return; 
+    }
+    
+    var studentsHtml = '';
+    for (var i = 0; i < assignedStudents.length; i++) {
+        var s = assignedStudents[i];
+        var photoSrc = getStudentPhoto(s);
+        
+        // ✅ FIXED: Clean photo fallback
+        var photoHtml = '';
+        if (photoSrc) {
+            photoHtml = '<img src="' + photoSrc + '" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #2563eb;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
+                        '<div class="fallback-avatar blue" style="width:40px;height:40px;font-size:18px;display:none;"><i class="fas fa-user"></i></div>';
+        } else {
+            photoHtml = '<div class="fallback-avatar blue" style="width:40px;height:40px;font-size:18px;"><i class="fas fa-user"></i></div>';
+        }
+        
+        var fatherName = getStudentFatherName(s);
+        var mobile = getStudentMobile(s);
+        var className = s.cls || 'N/A';
+        var sec = s.sec || '';
+        var fullClass = className + (sec ? ' ' + sec : '');
+        
+        studentsHtml += `
+            <div style="padding: 10px; border-bottom: 1px solid #eee; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 150px;">
+                    ${photoHtml}
+                    <div>
+                        <strong style="font-size: 14px; color: #1e293b;">${escapeHtml(s.name)}</strong>
+                        <br><small style="color: #64748b;">${escapeHtml(fullClass)} | Roll: ${s.roll || 'N/A'}</small>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: #475569; min-width: 120px;">
+                    <div><i class="fas fa-user-tie"></i> ${escapeHtml(fatherName)}</div>
+                    <div><i class="fas fa-phone"></i> ${escapeHtml(mobile)}</div>
+                </div>
+            </div>
+        `;
+    }
     
     Swal.fire({
-        title: `👨‍🎓 Students on ${escapeHtml(route.routeName)}`,
-        html: `<div style="max-height: 400px; overflow-y: auto;">${studentsHtml}</div><p style="margin-top: 10px; text-align: center;"><strong>Total: ${assignedStudents.length} Students</strong></p>`,
-        confirmButtonText: 'Close'
+        title: '👨‍🎓 Students on ' + escapeHtml(route.routeName),
+        html: '<div style="max-height: 400px; overflow-y: auto;">' + studentsHtml + '</div>' +
+               '<p style="margin-top: 10px; text-align: center; font-weight: bold; color: #2563eb;">' +
+                   '<i class="fas fa-users"></i> Total: ' + assignedStudents.length + ' Students' +
+               '</p>',
+        confirmButtonText: 'Close',
+        width: window.innerWidth <= 480 ? '95%' : '550px'
     });
 }
 
+// ======================= ✅ FIXED: ASSIGN STUDENTS TO ROUTE (NO BUG) =======================
 function assignStudentsToRoute(routeId) {
     if (currentUser.role !== 'admin') { 
         showNotification('Only administrators can assign students', 'error'); 
         return; 
     }
     
-    let route = window.transportData.routes.find(r => r.id === routeId);
-    if (!route) return;
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    
+    var route = window.transportData.routes.find(function(r) { return r.id === routeId; });
+    if (!route) { 
+        showNotification('Route not found!', 'error'); 
+        return; 
+    }
     
     if (!window.students || window.students.length === 0) {
-        showNotification('No students available to assign!', 'info');
+        Swal.fire({
+            title: 'No Students Available',
+            text: 'Please add students first in the Students module.',
+            icon: 'info',
+            confirmButtonText: 'OK'
+        });
         return;
     }
     
-    let assignedIds = window.students.filter(s => s.transportRouteId === routeId).map(s => s.id);
-    let unassignedStudents = window.students.filter(s => !assignedIds.includes(s.id));
+    var assignedIds = [];
+    for (var i = 0; i < window.students.length; i++) {
+        var s = window.students[i];
+        var assignedRoute = s.transportRouteId;
+        if (s.id && window.transportStudentAssignments[s.id] !== undefined) {
+            assignedRoute = window.transportStudentAssignments[s.id];
+        }
+        if (assignedRoute === routeId) {
+            assignedIds.push(s.id);
+        }
+    }
+    
+    var unassignedStudents = [];
+    for (var j = 0; j < window.students.length; j++) {
+        var s2 = window.students[j];
+        var assignedRoute2 = s2.transportRouteId;
+        if (s2.id && window.transportStudentAssignments[s2.id] !== undefined) {
+            assignedRoute2 = window.transportStudentAssignments[s2.id];
+        }
+        if (!assignedIds.includes(s2.id) && assignedRoute2 !== routeId) {
+            unassignedStudents.push(s2);
+        }
+    }
     
     if (unassignedStudents.length === 0) {
-        showNotification('All students already assigned!', 'info');
+        Swal.fire({
+            title: 'All Students Assigned',
+            text: 'All students are already assigned to this route or other routes.',
+            icon: 'info',
+            confirmButtonText: 'OK'
+        });
         return;
     }
     
+    // ✅ FIXED: Student options - clean
+    var studentOptions = '';
+    for (var k = 0; k < unassignedStudents.length; k++) {
+        var s3 = unassignedStudents[k];
+        studentOptions += '<option value="' + s3.id + '">' + escapeHtml(s3.name) + ' (' + escapeHtml(s3.cls) + ' ' + escapeHtml(s3.sec || '') + ')</option>';
+    }
+    
+    // ✅ FIXED: Assigned list - clean photo fallback
+    var assignedListHtml = '';
+    if (assignedIds.length > 0) {
+        for (var l = 0; l < window.students.length; l++) {
+            var s4 = window.students[l];
+            var assignedRoute4 = s4.transportRouteId;
+            if (s4.id && window.transportStudentAssignments[s4.id] !== undefined) {
+                assignedRoute4 = window.transportStudentAssignments[s4.id];
+            }
+            if (assignedRoute4 === routeId) {
+                var photoSrc2 = getStudentPhoto(s4);
+                var photoHtml2 = '';
+                if (photoSrc2) {
+                    photoHtml2 = '<img src="' + photoSrc2 + '" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 2px solid #10b981;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
+                                 '<div class="fallback-avatar" style="width:30px;height:30px;font-size:14px;display:none;"><i class="fas fa-user"></i></div>';
+                } else {
+                    photoHtml2 = '<div class="fallback-avatar" style="width:30px;height:30px;font-size:14px;"><i class="fas fa-user"></i></div>';
+                }
+                
+                assignedListHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
+                        <div style="display:flex; align-items: center; gap: 8px;">
+                            ${photoHtml2}
+                            <div>
+                                <strong>${escapeHtml(s4.name)}</strong>
+                                <br><small>${escapeHtml(s4.cls)} ${escapeHtml(s4.sec || '')}</small>
+                            </div>
+                        </div>
+                        <button class="btn-sm btn-danger" onclick="window.removeStudentFromRoute('${s4.id}', '${routeId}')" style="padding: 5px 10px; border-radius: 20px; background:#ef4444; color:white; border:none; cursor:pointer; font-size:11px;">Remove</button>
+                    </div>
+                `;
+            }
+        }
+    } else {
+        assignedListHtml = '<p style="text-align:center; padding: 15px; color:#94a3b8;">No students assigned</p>';
+    }
+    
+    var modalKey = routeId;
+    
     Swal.fire({
-        title: `Assign Students to ${escapeHtml(route.routeName)}`,
+        title: 'Assign Students to ' + escapeHtml(route.routeName),
         html: `
             <div style="text-align: left;">
-                <select id="studentSelect" class="form-control" style="width:100%; margin-bottom: 15px; padding: 10px; border-radius: 12px;">
-                    <option value="">-- Select Student --</option>
-                    ${unassignedStudents.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.cls)} ${escapeHtml(s.sec)})</option>`).join('')}
-                </select>
-                <button id="assignBtn" class="btn btn-primary" style="width:100%; padding: 12px; border-radius: 30px;">➕ Add Student</button>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-weight: 600; font-size: 13px;">Select Student:</label>
+                    <select id="studentSelect_${modalKey}" class="form-control" style="width:100%; margin-top: 5px; padding: 10px; border-radius: 12px; font-size:14px; min-height:44px; border:1px solid #e2e8f0;">
+                        <option value="">-- Select Student --</option>
+                        ${studentOptions}
+                    </select>
+                </div>
+                <button id="assignBtn_${modalKey}" class="btn btn-primary" style="width:100%; padding: 12px; border-radius: 30px; font-size:14px; min-height:44px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; cursor: pointer;">➕ Add Student</button>
                 <hr>
                 <h4>📋 Currently Assigned (${assignedIds.length})</h4>
-                <div id="assignedList" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 5px;">
-                    ${assignedIds.length > 0 ? window.students.filter(s => assignedIds.includes(s.id)).map(s => `
-                        <div style="display:flex; justify-content:space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
-                            <div><strong>${escapeHtml(s.name)}</strong><br><small>${escapeHtml(s.cls)} ${escapeHtml(s.sec)}</small></div>
-                            <button class="btn-sm btn-danger" onclick="removeStudentFromRoute('${s.id}', '${routeId}')" style="padding: 5px 10px; border-radius: 20px;">Remove</button>
-                        </div>
-                    `).join('') : '<p style="text-align:center; padding: 15px;">No students assigned</p>'}
+                <div id="assignedList_${modalKey}" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 5px;">
+                    ${assignedListHtml}
                 </div>
             </div>
         `,
         showConfirmButton: false,
-        width: window.innerWidth <= 480 ? '95%' : '500px',
-        didOpen: () => { 
-            document.getElementById('assignBtn').onclick = () => { 
-                let studentId = document.getElementById('studentSelect').value; 
-                if (!studentId) { showNotification('Select a student', 'error'); return; } 
-                let student = window.students.find(s => s.id === studentId); 
-                if (student) { 
-                    student.transportRouteId = routeId; 
-                    student.transportEnabled = true; 
-                    route.students = (route.students || 0) + 1; 
-                    localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes)); 
-                    showNotification(`${student.name} assigned to route`, 'success'); 
-                    Swal.close(); 
-                    loadTransport(); 
-                } 
-            }; 
+        width: window.innerWidth <= 480 ? '95%' : '550px',
+        didOpen: function() {
+            var assignBtn = document.getElementById('assignBtn_' + modalKey);
+            var studentSelect = document.getElementById('studentSelect_' + modalKey);
+            
+            if (assignBtn) {
+                assignBtn.onclick = function() { 
+                    var studentId = studentSelect?.value; 
+                    if (!studentId) { 
+                        showNotification('Please select a student', 'error'); 
+                        return; 
+                    } 
+                    var student = window.students.find(function(s) { return s.id === studentId; }); 
+                    if (student) { 
+                        // Update persistent storage
+                        updateStudentAssignment(studentId, routeId);
+                        updateRouteStudentCount(routeId);
+                        
+                        if (navigator.onLine) {
+                            saveTransportToSupabase(route);
+                        }
+                        
+                        showNotification('✅ ' + student.name + ' assigned to route!', 'success'); 
+                        Swal.close(); 
+                        renderTransportUI();
+                        
+                        if (typeof updateDashboardStats === 'function') {
+                            try { updateDashboardStats(); } catch(e) {}
+                        }
+                    } 
+                };
+            }
         }
     });
 }
 
+// ======================= REMOVE STUDENT FROM ROUTE =======================
 window.removeStudentFromRoute = function(studentId, routeId) {
-    let student = window.students.find(s => s.id === studentId);
-    let route = window.transportData.routes.find(r => r.id === routeId);
-    if (student) { 
-        student.transportRouteId = null; 
-        student.transportEnabled = false; 
-        if (route) route.students = Math.max(0, (route.students || 0) - 1); 
-        localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes)); 
-        showNotification(`${student.name} removed from route`, 'success'); 
-        Swal.close(); 
-        loadTransport(); 
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    
+    var student = window.students.find(function(s) { return s.id === studentId; });
+    var route = window.transportData.routes.find(function(r) { return r.id === routeId; });
+    
+    if (student && route) { 
+        updateStudentAssignment(studentId, null);
+        updateRouteStudentCount(routeId);
+        
+        if (navigator.onLine) {
+            saveTransportToSupabase(route);
+        }
+        
+        showNotification('✅ ' + student.name + ' removed from route', 'success'); 
+        
+        if (typeof Swal !== 'undefined' && Swal.close) {
+            Swal.close();
+        }
+        
+        renderTransportUI();
+        
+        if (typeof updateDashboardStats === 'function') {
+            try { updateDashboardStats(); } catch(e) {}
+        }
+    } else {
+        showNotification('Student or Route not found!', 'error');
     }
 };
 
+// ======================= OTHER FUNCTIONS =======================
+function downloadRouteMap(id) {
+    var route = window.transportData.routes.find(function(r) { return r.id === id; });
+    if (!route) { showNotification('Route not found!', 'error'); return; }
+    if (route && route.attachments && route.attachments.length > 0 && route.attachments[0] && route.attachments[0].url) {
+        window.open(route.attachments[0].url, '_blank');
+        showNotification('Opening map from cloud...', 'info');
+    } else if (route && route.attachments && route.attachments.length > 0 && route.attachments[0] && route.attachments[0].data) {
+        var filename = 'route_map_' + (route.routeName || 'route').replace(/\s/g, '_') + '.jpg';
+        downloadFile(route.attachments[0].data, filename);
+        showNotification('Map downloaded!', 'success');
+    } else {
+        showNotification('No map attached', 'warning');
+    }
+}
+
 function printRouteDetails(id) {
-    let route = window.transportData.routes.find(r => r.id === id);
-    let assignedStudents = window.students ? window.students.filter(s => s.transportRouteId === id) : [];
-    let win = window.open('', '_blank');
+    var route = window.transportData.routes.find(function(r) { return r.id === id; });
+    if (!route) { showNotification('Route not found!', 'error'); return; }
+    
+    var assignedStudents = getAssignedStudentsForRoute(id);
+    
+    var win = window.open('', '_blank');
     win.document.write(`
         <html><head><title>Route - ${escapeHtml(route.routeName)}</title>
         <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
-            .header { text-align: center; border-bottom: 2px solid #2563eb; }
+            .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 15px; }
+            .header h2 { margin: 0; color: #1e293b; }
+            .header h3 { margin: 5px 0; color: #2563eb; }
+            .header p { margin: 5px 0; color: #64748b; font-size: 12px; }
             table { width: 100%; border-collapse: collapse; margin-top: 15px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             th { background: #2563eb; color: white; }
+            .driver-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+            .student-photo { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
             @media print { .no-print { display: none; } }
         </style>
         </head><body>
-        <div class="header"><h2>${getSchoolNameSetting()}</h2><h3>TRANSPORT ROUTE DETAILS</h3><p>${getSchoolAddressSetting()}</p></div>
-        <p><strong>Route:</strong> ${escapeHtml(route.routeName)}</p>
-        <p><strong>Vehicle:</strong> ${escapeHtml(route.vehicleNo) || 'N/A'}</p>
-        <p><strong>Driver:</strong> ${escapeHtml(route.driverName) || 'N/A'} | ${escapeHtml(route.driverPhone) || 'N/A'}</p>
-        <p><strong>Stops:</strong> ${escapeHtml(route.stops) || 'N/A'}</p>
+        <div class="header">
+            <h2>${getSchoolNameSetting()}</h2>
+            <h3>TRANSPORT ROUTE DETAILS</h3>
+            <p>${getSchoolAddressSetting()}</p>
+            <p>📞 ${getSchoolPhoneSetting()} | ✉️ ${getSchoolEmailSetting()}</p>
+        </div>
+        <div style="display:flex; gap:20px; margin:15px 0; align-items:center; flex-wrap:wrap;">
+            ${route.driverPhotoUrl ? '<img src="' + route.driverPhotoUrl + '" class="driver-photo" onerror="this.style.display=\'none\'">' : ''}
+            <div>
+                <p><strong>Route:</strong> ${escapeHtml(route.routeName)}</p>
+                <p><strong>Vehicle:</strong> ${escapeHtml(route.vehicleNo) || 'N/A'}</p>
+                <p><strong>Driver:</strong> ${escapeHtml(route.driverName) || 'N/A'} | ${escapeHtml(route.driverPhone) || 'N/A'}</p>
+                <p><strong>Stops:</strong> ${escapeHtml(route.stops) || 'N/A'}</p>
+            </div>
+        </div>
         <h3>Student List (${assignedStudents.length})</h3>
-        <table><thead><tr><th>Name</th><th>Class</th><th>Father Name</th><th>Mobile</th></tr></thead>
-        <tbody>${assignedStudents.map(s => `<tr><td style="padding:8px;">${escapeHtml(s.name)}</span></td><td style="padding:8px;">${escapeHtml(s.cls)} ${escapeHtml(s.sec)}</span></td><td style="padding:8px;">${escapeHtml(s.fatherName)}</span></td><td style="padding:8px;">${escapeHtml(s.mobile)}</span></tr>`).join('')}</tbody>
+        <table>
+            <thead><tr><th>#</th><th>Photo</th><th>Name</th><th>Class</th><th>Father Name</th><th>Mobile</th></tr></thead>
+            <tbody>${assignedStudents.map(function(s, idx) {
+                return '<tr>' +
+                    '<td>' + (idx + 1) + '</td>' +
+                    '<td>' + (s.photo_url ? '<img src="' + s.photo_url + '" class="student-photo" onerror="this.style.display=\'none\'">' : '-') + '</td>' +
+                    '<td>' + escapeHtml(s.name) + '</td>' +
+                    '<td>' + escapeHtml(s.cls) + ' ' + escapeHtml(s.sec || '') + '</td>' +
+                    '<td>' + escapeHtml(s.father_name || s.fatherName || '') + '</td>' +
+                    '<td>' + escapeHtml(s.mobile || '') + '</td>' +
+                '</tr>';
+            }).join('')}</tbody>
+            <tfoot><tr><td colspan="6" style="text-align:right; font-weight:bold;">Total Students: ${assignedStudents.length}</td></tr></tfoot>
         </table>
-        <div style="margin-top:20px; text-align:center;">Generated: ${new Date().toLocaleDateString()} | ${getSchoolPhoneSetting()}</div>
-        <script>window.print(); setTimeout(() => window.close(), 500);<\/script>
+        <div style="margin-top:20px; text-align:center; font-size:10px; color:#94a3b8;">Generated: ${new Date().toLocaleString()} | ${getSchoolPhoneSetting()}</div>
+        <script>window.print(); setTimeout(function() { window.close(); }, 500);<\/script>
         </body></html>
     `);
     win.document.close();
 }
 
 function shareRoute(id) {
-    let t = window.transportData.routes.find(r => r.id === id);
-    if (!t) return;
-    let message = `🚌 *Transport Route - ${t.routeName}*\n\nVehicle: ${t.vehicleNo || 'N/A'}\nDriver: ${t.driverName || 'Not Assigned'}\nDriver Phone: ${t.driverPhone || 'N/A'}\nStops: ${t.stops || 'N/A'}\nStudents: ${t.students || 0}\n\n🏫 ${getSchoolNameSetting()}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    var t = window.transportData.routes.find(function(r) { return r.id === id; });
+    if (!t) { showNotification('Route not found!', 'error'); return; }
+    var message = '🚌 *Transport Route - ' + t.routeName + '*\n\nVehicle: ' + (t.vehicleNo || 'N/A') + '\nDriver: ' + (t.driverName || 'Not Assigned') + '\nDriver Phone: ' + (t.driverPhone || 'N/A') + '\nStops: ' + (t.stops || 'N/A') + '\nStudents: ' + (t.students || 0) + '\n\n🏫 ' + getSchoolNameSetting() + '\n📞 ' + getSchoolPhoneSetting();
+    window.open('https://wa.me/?text=' + encodeURIComponent(message), '_blank');
 }
 
+// ======================= EXPORT CSV =======================
 function exportTransportCSV() {
-    let routes = window.transportData.routes || [];
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    
+    var routes = window.transportData.routes || [];
     if (routes.length === 0) {
         showNotification('No routes to export!', 'warning');
         return;
     }
     
-    let csv = "Route Name,Vehicle Number,Driver Name,Driver Phone,Stops,Students Count,Has Map,Has Driver Photo\n";
-    for (let r of routes) {
-        csv += `"${escapeHtml(r.routeName)}","${escapeHtml(r.vehicleNo) || ''}","${escapeHtml(r.driverName) || ''}","${escapeHtml(r.driverPhone) || ''}","${(r.stops || '').replace(/"/g, '""')}",${r.students || 0},${r.attachments?.length ? 'Yes' : 'No'},${r.driverPhotoUrl || r.driverPhotoData ? 'Yes' : 'No'}\n`;
+    var csv = "Route Name,Vehicle Number,Driver Name,Driver Phone,Stops,Students Count\n";
+    csv += "----------------------------------------------------------------------------------------------------\n";
+    
+    for (var i = 0; i < routes.length; i++) {
+        var r = routes[i];
+        csv += '"' + escapeHtml(r.routeName || '') + '","' + escapeHtml(r.vehicleNo || '') + '","' + escapeHtml(r.driverName || '') + '","' + escapeHtml(r.driverPhone || '') + '","' + (r.stops || '').replace(/"/g, '""') + '",' + (r.students || 0) + '\n';
+        
+        var assignedStudents = getAssignedStudentsForRoute(r.id);
+        
+        if (assignedStudents.length > 0) {
+            csv += '  --- Students (' + assignedStudents.length + ') ---\n';
+            for (var j = 0; j < assignedStudents.length; j++) {
+                var s = assignedStudents[j];
+                var fatherName = getStudentFatherName(s);
+                var mobile = getStudentMobile(s);
+                csv += '  ' + escapeHtml(s.name) + ',' + escapeHtml(s.cls || '') + ' ' + escapeHtml(s.sec || '') + ',' + escapeHtml(fatherName) + ',' + escapeHtml(mobile) + '\n';
+            }
+        }
+        csv += '\n';
     }
-    let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement('a');
+    
+    var blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `transport_routes_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = 'transport_routes_' + new Date().toISOString().split('T')[0] + '.csv';
     link.click();
     showNotification('CSV exported!', 'success');
 }
 
-async function refreshTransportData() {
-    showLoader();
-    showNotification('🔄 Syncing transport data from cloud...', 'info');
-    await loadTransportFromSupabase();
-    await processPendingTransportQueue();
-    loadTransport();
-    hideLoader();
-    showNotification(`✅ ${window.transportData.routes.length} routes loaded!`, 'success');
-}
-
-function filterTransport() {
-    transportFilterText = document.getElementById('transportSearch')?.value || '';
-    loadTransport();
-    showNotification('Filter applied', 'success');
-}
-
-function clearTransportFilter() {
-    transportFilterText = '';
-    if (document.getElementById('transportSearch')) {
-        document.getElementById('transportSearch').value = '';
-    }
-    loadTransport();
-    showNotification('Filter cleared', 'info');
-}
-
-// ======================= UPLOAD FUNCTIONS =======================
-async function uploadDriverPhotoToSupabase(photoBase64, routeId, driverName) {
-    const supabase = getSupabaseClientTransport();
-    if (!supabase || !navigator.onLine) return null;
-    try {
-        const blob = dataURLtoBlob(photoBase64);
-        const fileName = `driver_${routeId}_${Date.now()}.jpg`;
-        const folderPath = `transport_drivers/${routeId}_${driverName.replace(/\s/g, '_')}`;
-        const fullPath = `${folderPath}/${fileName}`;
-        
-        const { data: buckets } = await supabase.storage.listBuckets();
-        if (!buckets.some(b => b.name === 'profile_photos')) {
-            await supabase.storage.createBucket('profile_photos', { public: true });
-        }
-        
-        const { error } = await supabase.storage.from('profile_photos').upload(fullPath, blob, { upsert: true });
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from('profile_photos').getPublicUrl(fullPath);
-        return urlData.publicUrl;
-    } catch(err) { console.error('Upload error:', err); return null; }
-}
-
-async function uploadRouteMapToSupabase(fileData, fileName, fileType, routeId, routeName) {
-    const supabase = getSupabaseClientTransport();
-    if (!supabase || !navigator.onLine) return null;
-    try {
-        const blob = dataURLtoBlob(fileData);
-        const fileExt = fileType === 'application/pdf' ? 'pdf' : 'jpg';
-        const newFileName = `${Date.now()}_map.${fileExt}`;
-        const folderPath = `transport_maps/${routeId}_${routeName.replace(/\s/g, '_')}`;
-        const fullPath = `${folderPath}/${newFileName}`;
-        
-        const { data: buckets } = await supabase.storage.listBuckets();
-        if (!buckets.some(b => b.name === 'transport_docs')) {
-            await supabase.storage.createBucket('transport_docs', { public: true });
-        }
-        
-        const { error } = await supabase.storage.from('transport_docs').upload(fullPath, blob, { upsert: true });
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from('transport_docs').getPublicUrl(fullPath);
-        return urlData.publicUrl;
-    } catch(err) { console.error('Upload error:', err); return null; }
-}
-
-// ======================= CAMERA UPLOAD FUNCTIONS =======================
-function openDriverPhotoCapture(callback) {
-    const sourceModal = document.createElement('div');
-    sourceModal.className = 'modal-overlay';
-    sourceModal.style.zIndex = '100001';
-    sourceModal.innerHTML = `
-        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center;">
-            <i class="fas fa-camera" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-            <h3 style="margin-bottom: 15px;">Driver Photo</h3>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-camera"></i> Take Photo</button>
-                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-images"></i> Choose from Gallery</button>
-            </div>
-            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px;">Cancel</button>
-        </div>
-    `;
-    document.body.appendChild(sourceModal);
-    
-    const closeSourceModal = () => sourceModal.remove();
-    
-    const openFileInput = (useCamera) => {
-        closeSourceModal();
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/jpeg,image/jpg,image/png';
-        if (useCamera) input.setAttribute('capture', 'environment');
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const cropModal = document.createElement('div');
-                    cropModal.className = 'modal-overlay';
-                    cropModal.style.zIndex = '100002';
-                    cropModal.innerHTML = `
-                        <div class="modal-content" style="max-width: 500px; text-align: center; border-radius: 24px;">
-                            <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669); padding: 15px; border-radius: 24px 24px 0 0;">
-                                <h2 style="color: white; margin: 0;"><i class="fas fa-crop-alt"></i> Crop Driver Photo (1:1)</h2>
-                                <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">&times;</button>
-                            </div>
-                            <div style="padding: 20px;">
-                                <img id="cropDriverImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px;">
-                                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-                                    <button class="btn btn-primary" id="cropSaveBtn" style="padding: 10px 20px; border-radius: 30px;">✂️ Crop & Save</button>
-                                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px;">Cancel</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(cropModal);
-                    const img = cropModal.querySelector('#cropDriverImg');
-                    let cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1, autoCropArea: 1 });
-                    cropModal.querySelector('#cropSaveBtn').onclick = () => {
-                        const canvas = cropper.getCroppedCanvas();
-                        const croppedData = canvas.toDataURL('image/jpeg', 0.9);
-                        cropper.destroy();
-                        cropModal.remove();
-                        callback(croppedData);
-                    };
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-        input.click();
-    };
-    
-    document.getElementById('cameraOptBtn').onclick = () => openFileInput(true);
-    document.getElementById('galleryOptBtn').onclick = () => openFileInput(false);
-    document.getElementById('closeSourceModal').onclick = closeSourceModal;
-}
-
-function openRouteMapCapture(callback) {
-    const sourceModal = document.createElement('div');
-    sourceModal.className = 'modal-overlay';
-    sourceModal.style.zIndex = '100001';
-    sourceModal.innerHTML = `
-        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center;">
-            <i class="fas fa-map" style="font-size: 48px; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-            <h3 style="margin-bottom: 15px;">Upload Route Map</h3>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-camera"></i> Take Photo</button>
-                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-images"></i> Choose from Gallery</button>
-                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px;"><i class="fas fa-file-pdf"></i> Upload PDF</button>
-            </div>
-            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 10px;">Cancel</button>
-        </div>
-    `;
-    document.body.appendChild(sourceModal);
-    
-    const closeSourceModal = () => sourceModal.remove();
-    
-    const openFileInput = (useCamera, acceptType) => {
-        closeSourceModal();
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = acceptType;
-        if (useCamera && acceptType.startsWith('image/')) input.setAttribute('capture', 'environment');
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        const cropModal = document.createElement('div');
-                        cropModal.className = 'modal-overlay';
-                        cropModal.style.zIndex = '100002';
-                        cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width: 500px; text-align: center; border-radius: 24px;">
-                                <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669); padding: 15px; border-radius: 24px 24px 0 0;">
-                                    <h2 style="color: white; margin: 0;"><i class="fas fa-crop-alt"></i> Crop Map Image</h2>
-                                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">&times;</button>
-                                </div>
-                                <div style="padding: 20px;">
-                                    <img id="cropMapImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px;">
-                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-                                        <button class="btn btn-primary" id="cropSaveBtn" style="padding: 10px 20px; border-radius: 30px;">✂️ Crop & Save</button>
-                                        <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px;">Cancel</button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        document.body.appendChild(cropModal);
-                        const img = cropModal.querySelector('#cropMapImg');
-                        let cropper = new Cropper(img, { aspectRatio: null, viewMode: 1, autoCropArea: 1 });
-                        cropModal.querySelector('#cropSaveBtn').onclick = () => {
-                            const canvas = cropper.getCroppedCanvas();
-                            const croppedData = canvas.toDataURL('image/jpeg', 0.9);
-                            cropper.destroy();
-                            cropModal.remove();
-                            callback(croppedData, file.name, file.type);
-                        };
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => callback(ev.target.result, file.name, file.type);
-                    reader.readAsDataURL(file);
-                }
-            }
-        };
-        input.click();
-    };
-    
-    document.getElementById('cameraOptBtn').onclick = () => openFileInput(true, 'image/jpeg,image/jpg,image/png');
-    document.getElementById('galleryOptBtn').onclick = () => openFileInput(false, 'image/jpeg,image/jpg,image/png');
-    document.getElementById('pdfOptBtn').onclick = () => openFileInput(false, 'application/pdf');
-    document.getElementById('closeSourceModal').onclick = closeSourceModal;
-}
-
-// ======================= PDF EXPORT FUNCTION =======================
+// ======================= EXPORT PDF =======================
 async function exportTransportPDF() {
-    const { jsPDF } = window.jspdf;
-    if (!jsPDF) {
-        showNotification('PDF library loading... please try again', 'error');
-        return;
-    }
-    
-    showLoader();
-    showNotification('Generating PDF...', 'info');
-    
     try {
-        const doc = new jsPDF('p', 'mm', 'a4');
-        const pageWidth = doc.internal.pageSize.getWidth();
-        let yPos = 20;
+        if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
+            showNotification('PDF library not loaded! Please refresh.', 'error');
+            return;
+        }
         
-        doc.setFontSize(16);
-        doc.setTextColor(37, 99, 235);
-        doc.text(getSchoolNameSetting(), pageWidth / 2, yPos, { align: 'center' });
+        showLoader();
+        showNotification('Generating A5 Landscape PDF...', 'info');
+        
+        loadStudentAssignments();
+        loadStudentsWithTransport();
+        ensureStudentsTransportProperty();
+        
+        var { jsPDF } = window.jspdf;
+        var pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5' });
+        var pageWidth = pdf.internal.pageSize.getWidth();
+        var pageHeight = pdf.internal.pageSize.getHeight();
+        var yPos = 12;
+        var margin = 8;
+        
+        // School Logo
+        var logoData = getSchoolLogoBase64();
+        if (logoData) {
+            try {
+                pdf.addImage(logoData, 'JPEG', margin, yPos, 18, 18);
+            } catch(e) {
+                console.warn('Logo add error:', e);
+            }
+        }
+        
+        // School Name
+        pdf.setFontSize(13);
+        pdf.setTextColor(37, 99, 235);
+        pdf.text(getSchoolNameSetting(), pageWidth / 2, yPos + 4, { align: 'center' });
+        yPos += 8;
+        
+        // School Address
+        pdf.setFontSize(7);
+        pdf.setTextColor(100, 116, 139);
+        var address = getSchoolAddressSetting();
+        if (address) {
+            var addressLines = pdf.splitTextToSize(address, pageWidth - (margin * 2));
+            for (var i = 0; i < addressLines.length; i++) {
+                pdf.text(addressLines[i], pageWidth / 2, yPos, { align: 'center' });
+                yPos += 3.5;
+            }
+        } else {
+            yPos += 3.5;
+        }
+        
+        // School Phone & Email
+        pdf.text('📞 ' + getSchoolPhoneSetting(), pageWidth / 2 - 30, yPos, { align: 'right' });
+        pdf.text('✉️ ' + getSchoolEmailSetting(), pageWidth / 2 + 30, yPos, { align: 'left' });
         yPos += 6;
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(getSchoolAddressSetting(), pageWidth / 2, yPos, { align: 'center' });
+        
+        // Report Title
+        pdf.setFontSize(11);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Transport Routes Report', pageWidth / 2, yPos, { align: 'center' });
         yPos += 4;
-        doc.text(`Phone: ${getSchoolPhoneSetting()}`, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 8;
-        doc.setFontSize(14);
-        doc.setTextColor(0, 0, 0);
-        doc.text('Transport Routes Report', pageWidth / 2, yPos, { align: 'center' });
+        
+        // Date
+        pdf.setFontSize(6);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text('Generated: ' + new Date().toLocaleString(), pageWidth / 2, yPos, { align: 'center' });
         yPos += 6;
-        doc.setFontSize(9);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 10;
         
-        let totalRoutes = window.transportData.routes.length;
-        let totalStudents = window.transportData.routes.reduce((sum, r) => sum + (r.students || 0), 0);
+        // Summary
+        var totalRoutes = window.transportData.routes.length;
+        var totalStudents = window.transportData.routes.reduce(function(sum, r) { return sum + (r.students || 0); }, 0);
         
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Total Routes: ${totalRoutes}`, 20, yPos);
-        doc.text(`Total Students Enrolled: ${totalStudents}`, pageWidth - 55, yPos);
-        yPos += 8;
+        pdf.setFontSize(8);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Total Routes: ' + totalRoutes, margin, yPos);
+        pdf.text('Total Students Enrolled: ' + totalStudents, pageWidth - margin - 45, yPos);
+        yPos += 4;
+        pdf.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 5;
         
-        const headers = [['#', 'Route Name', 'Vehicle No', 'Driver', 'Stops', 'Students']];
-        const data = window.transportData.routes.map((r, idx) => [
-            idx + 1,
-            r.routeName,
-            r.vehicleNo || '-',
-            r.driverName || '-',
-            (r.stops || '-').substring(0, 30),
-            (r.students || 0).toString()
-        ]);
+        // Routes with Students
+        for (var idx = 0; idx < window.transportData.routes.length; idx++) {
+            var r = window.transportData.routes[idx];
+            
+            if (yPos > pageHeight - 18) {
+                pdf.addPage();
+                yPos = 12;
+            }
+            
+            pdf.setFontSize(9);
+            pdf.setTextColor(37, 99, 235);
+            pdf.text('Route ' + (idx + 1) + ': ' + r.routeName, margin, yPos);
+            yPos += 4;
+            
+            pdf.setFontSize(6.5);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text('Vehicle: ' + (r.vehicleNo || 'N/A'), margin + 4, yPos);
+            pdf.text('Driver: ' + (r.driverName || 'N/A'), margin + 55, yPos);
+            pdf.text('Phone: ' + (r.driverPhone || 'N/A'), margin + 110, yPos);
+            yPos += 3.5;
+            pdf.text('Stops: ' + (r.stops || 'N/A'), margin + 4, yPos);
+            pdf.text('Students: ' + (r.students || 0), margin + 110, yPos);
+            yPos += 4;
+            
+            var assignedStudents = getAssignedStudentsForRoute(r.id);
+            
+            if (assignedStudents.length > 0) {
+                pdf.setFontSize(5.5);
+                pdf.text('Students:', margin + 4, yPos);
+                yPos += 2.5;
+                
+                var col1 = margin + 8;
+                var col2 = margin + 100;
+                var rowHeight = 2.8;
+                var maxStudentsPerCol = 12;
+                var currentCol = 0;
+                var startY = yPos;
+                
+                for (var si = 0; si < assignedStudents.length; si++) {
+                    var s = assignedStudents[si];
+                    if (si > 0 && si % maxStudentsPerCol === 0) {
+                        currentCol++;
+                        yPos = startY;
+                    }
+                    
+                    if (yPos > pageHeight - 12) {
+                        pdf.addPage();
+                        yPos = 12;
+                        startY = yPos;
+                        currentCol = 0;
+                    }
+                    
+                    var xPos = currentCol === 0 ? col1 : col2;
+                    var fatherName = getStudentFatherName(s);
+                    var mobile = getStudentMobile(s);
+                    var studentText = '• ' + s.name + ' | ' + (s.cls || '') + ' ' + (s.sec || '') + ' | ' + fatherName + ' | ' + mobile;
+                    
+                    if (studentText.length > 45) {
+                        studentText = studentText.substring(0, 42) + '...';
+                    }
+                    
+                    pdf.text(studentText, xPos, yPos);
+                    yPos += rowHeight;
+                }
+                yPos += 2;
+            } else {
+                pdf.setFontSize(6);
+                pdf.text('No students assigned', margin + 4, yPos);
+                yPos += 4;
+            }
+            
+            yPos += 2;
+            pdf.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 4;
+        }
         
-        doc.autoTable({
-            head: headers,
-            body: data,
-            startY: yPos,
-            margin: { left: 15, right: 15 },
-            styles: { fontSize: 8, cellPadding: 2 },
-            headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 9 },
-            alternateRowStyles: { fillColor: [240, 248, 255] }
-        });
+        pdf.setFontSize(5);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text('© ' + new Date().getFullYear() + ' ' + getSchoolNameSetting() + ' - Transport Management System', pageWidth / 2, pageHeight - 6, { align: 'center' });
         
-        const finalY = doc.lastAutoTable.finalY + 10;
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
-        doc.text(`© ${new Date().getFullYear()} ${getSchoolNameSetting()} - Transport Management System`, pageWidth / 2, finalY, { align: 'center' });
-        
-        doc.save(`transport_report_${new Date().toISOString().split('T')[0]}.pdf`);
-        
-        await Swal.fire({
-            title: '✅ PDF Exported!',
-            text: 'Transport report has been downloaded successfully.',
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
-        });
+        pdf.save('transport_report_' + new Date().toISOString().split('T')[0] + '.pdf');
+        showNotification('✅ A5 Landscape PDF exported successfully!', 'success');
         
     } catch (error) {
         console.error('PDF Error:', error);
@@ -40055,28 +40611,287 @@ async function exportTransportPDF() {
     hideLoader();
 }
 
-// ======================= ONLINE/OFFLINE HANDLERS =======================
-window.addEventListener('online', async () => {
-    console.log('🟢 [TRANSPORT] Online - Syncing...');
-    showNotification('🟢 Back online! Syncing transport data...', 'success');
+// ======================= REFRESH & FILTER =======================
+async function refreshTransportData() {
+    showLoader();
+    showNotification('🔄 Syncing transport data from cloud...', 'info');
+    
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    
     await loadTransportFromSupabase();
     await processPendingTransportQueue();
-    loadTransport();
+    renderTransportUI();
+    hideLoader();
+    showNotification('✅ ' + window.transportData.routes.length + ' routes loaded!', 'success');
+}
+
+function filterTransport() {
+    transportFilterText = document.getElementById('transportSearch')?.value || '';
+    renderTransportUI();
+    showNotification('Filter applied', 'success');
+}
+
+function clearTransportFilter() {
+    transportFilterText = '';
+    if (document.getElementById('transportSearch')) {
+        document.getElementById('transportSearch').value = '';
+    }
+    renderTransportUI();
+    showNotification('Filter cleared', 'info');
+}
+
+// ======================= CAMERA UPLOAD FUNCTIONS =======================
+function openDriverPhotoCapture(callback) {
+    var sourceModal = document.createElement('div');
+    sourceModal.className = 'modal-overlay';
+    sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+    sourceModal.innerHTML = `
+        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+            <i class="fas fa-camera" style="font-size: 48px; color: #10b981; margin-bottom: 15px; display: block;"></i>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Driver Photo</h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: linear-gradient(135deg, #2563eb, #1e40af); color: white; border: none; cursor: pointer;"><i class="fas fa-camera"></i> Take Photo</button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: #f1f5f9; color: #1e293b; border: none; cursor: pointer;"><i class="fas fa-images"></i> Choose from Gallery</button>
+            </div>
+            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 10px; font-size: 14px;">Cancel</button>
+        </div>
+    `;
+    document.body.appendChild(sourceModal);
+    
+    var closeSourceModal = function() { 
+        if (sourceModal && sourceModal.parentNode) sourceModal.remove(); 
+    };
+    
+    var openFileInput = function(useCamera) {
+        closeSourceModal();
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/jpg,image/png';
+        if (useCamera) input.setAttribute('capture', 'environment');
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    var cropModal = document.createElement('div');
+                    cropModal.className = 'modal-overlay';
+                    cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100002; padding:16px;';
+                    cropModal.innerHTML = `
+                        <div class="modal-content" style="max-width: 500px; width: 95%; text-align: center; border-radius: 24px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+                            <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 15px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-crop-alt"></i> Crop Driver Photo (1:1)</h2>
+                                <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
+                            </div>
+                            <div style="padding: 20px;">
+                                <img id="cropDriverImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                    <button class="btn btn-primary" id="cropSaveBtn" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; background: #2563eb; color: white; border: none; cursor: pointer; min-height: 44px;">✂️ Crop & Save</button>
+                                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; background: #ef4444; color: white; border: none; cursor: pointer; min-height: 44px;">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(cropModal);
+                    var img = cropModal.querySelector('#cropDriverImg');
+                    if (typeof Cropper !== 'undefined') {
+                        var cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1, autoCropArea: 1 });
+                        cropModal.querySelector('#cropSaveBtn').onclick = function() {
+                            try {
+                                var canvas = cropper.getCroppedCanvas();
+                                var croppedData = canvas.toDataURL('image/jpeg', 0.9);
+                                cropper.destroy();
+                                cropModal.remove();
+                                callback(croppedData);
+                            } catch(err) {
+                                console.error('Crop error:', err);
+                                showNotification('Error cropping image', 'error');
+                                cropModal.remove();
+                            }
+                        };
+                    } else {
+                        cropModal.querySelector('#cropSaveBtn').onclick = function() {
+                            cropModal.remove();
+                            callback(ev.target.result);
+                        };
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+    
+    document.getElementById('cameraOptBtn').onclick = function() { openFileInput(true); };
+    document.getElementById('galleryOptBtn').onclick = function() { openFileInput(false); };
+    document.getElementById('closeSourceModal').onclick = closeSourceModal;
+}
+
+function openRouteMapCapture(callback) {
+    var sourceModal = document.createElement('div');
+    sourceModal.className = 'modal-overlay';
+    sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+    sourceModal.innerHTML = `
+        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+            <i class="fas fa-map" style="font-size: 48px; color: #10b981; margin-bottom: 15px; display: block;"></i>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Upload Route Map</h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: linear-gradient(135deg, #2563eb, #1e40af); color: white; border: none; cursor: pointer;"><i class="fas fa-camera"></i> Take Photo</button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: #f1f5f9; color: #1e293b; border: none; cursor: pointer;"><i class="fas fa-images"></i> Choose from Gallery</button>
+                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: #dbeafe; color: #1e40af; border: none; cursor: pointer;"><i class="fas fa-file-pdf"></i> Upload PDF</button>
+            </div>
+            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 10px; font-size: 14px;">Cancel</button>
+        </div>
+    `;
+    document.body.appendChild(sourceModal);
+    
+    var closeSourceModal = function() { 
+        if (sourceModal && sourceModal.parentNode) sourceModal.remove(); 
+    };
+    
+    var openFileInput = function(useCamera, acceptType) {
+        closeSourceModal();
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = acceptType;
+        if (useCamera && acceptType.startsWith('image/')) input.setAttribute('capture', 'environment');
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                if (file.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        var cropModal = document.createElement('div');
+                        cropModal.className = 'modal-overlay';
+                        cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100002; padding:16px;';
+                        cropModal.innerHTML = `
+                            <div class="modal-content" style="max-width: 500px; width: 95%; text-align: center; border-radius: 24px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+                                <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 15px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                    <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-crop-alt"></i> Crop Map Image</h2>
+                                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
+                                </div>
+                                <div style="padding: 20px;">
+                                    <img id="cropMapImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                        <button class="btn btn-primary" id="cropSaveBtn" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; background: #2563eb; color: white; border: none; cursor: pointer; min-height: 44px;">✂️ Crop & Save</button>
+                                        <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; background: #ef4444; color: white; border: none; cursor: pointer; min-height: 44px;">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(cropModal);
+                        var img = cropModal.querySelector('#cropMapImg');
+                        if (typeof Cropper !== 'undefined') {
+                            var cropper = new Cropper(img, { aspectRatio: null, viewMode: 1, autoCropArea: 1 });
+                            cropModal.querySelector('#cropSaveBtn').onclick = function() {
+                                try {
+                                    var canvas = cropper.getCroppedCanvas();
+                                    var croppedData = canvas.toDataURL('image/jpeg', 0.9);
+                                    cropper.destroy();
+                                    cropModal.remove();
+                                    callback(croppedData, file.name, file.type);
+                                } catch(err) {
+                                    console.error('Crop error:', err);
+                                    showNotification('Error cropping image', 'error');
+                                    cropModal.remove();
+                                }
+                            };
+                        } else {
+                            cropModal.querySelector('#cropSaveBtn').onclick = function() {
+                                cropModal.remove();
+                                callback(ev.target.result, file.name, file.type);
+                            };
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) { callback(ev.target.result, file.name, file.type); };
+                    reader.readAsDataURL(file);
+                }
+            }
+        };
+        input.click();
+    };
+    
+    document.getElementById('cameraOptBtn').onclick = function() { openFileInput(true, 'image/jpeg,image/jpg,image/png'); };
+    document.getElementById('galleryOptBtn').onclick = function() { openFileInput(false, 'image/jpeg,image/jpg,image/png'); };
+    document.getElementById('pdfOptBtn').onclick = function() { openFileInput(false, 'application/pdf'); };
+    document.getElementById('closeSourceModal').onclick = closeSourceModal;
+}
+
+// ======================= UPLOAD FUNCTIONS =======================
+async function uploadDriverPhotoToSupabase(photoBase64, routeId, driverName) {
+    var supabase = getSupabaseClientTransport();
+    if (!supabase || !navigator.onLine) return null;
+    try {
+        var blob = dataURLtoBlob(photoBase64);
+        if (!blob) return null;
+        var fileName = 'driver_' + routeId + '_' + Date.now() + '.jpg';
+        var folderPath = 'transport_drivers/' + routeId + '_' + driverName.replace(/\s/g, '_');
+        var fullPath = folderPath + '/' + fileName;
+        
+        var { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets.some(function(b) { return b.name === 'profile_photos'; })) {
+            await supabase.storage.createBucket('profile_photos', { public: true });
+        }
+        
+        var { error } = await supabase.storage.from('profile_photos').upload(fullPath, blob, { upsert: true });
+        if (error) throw error;
+        var { data: urlData } = supabase.storage.from('profile_photos').getPublicUrl(fullPath);
+        return urlData.publicUrl;
+    } catch(err) { console.error('Upload error:', err); return null; }
+}
+
+async function uploadRouteMapToSupabase(fileData, fileName, fileType, routeId, routeName) {
+    var supabase = getSupabaseClientTransport();
+    if (!supabase || !navigator.onLine) return null;
+    try {
+        var blob = dataURLtoBlob(fileData);
+        if (!blob) return null;
+        var fileExt = fileType === 'application/pdf' ? 'pdf' : 'jpg';
+        var newFileName = Date.now() + '_map.' + fileExt;
+        var folderPath = 'transport_maps/' + routeId + '_' + routeName.replace(/\s/g, '_');
+        var fullPath = folderPath + '/' + newFileName;
+        
+        var { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets.some(function(b) { return b.name === 'transport_docs'; })) {
+            await supabase.storage.createBucket('transport_docs', { public: true });
+        }
+        
+        var { error } = await supabase.storage.from('transport_docs').upload(fullPath, blob, { upsert: true });
+        if (error) throw error;
+        var { data: urlData } = supabase.storage.from('transport_docs').getPublicUrl(fullPath);
+        return urlData.publicUrl;
+    } catch(err) { console.error('Upload error:', err); return null; }
+}
+
+// ======================= ONLINE/OFFLINE HANDLERS =======================
+window.addEventListener('online', async function() {
+    console.log('🟢 [TRANSPORT] Online - Syncing...');
+    showNotification('🟢 Back online! Syncing transport data...', 'success');
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    await loadTransportFromSupabase();
+    await processPendingTransportQueue();
+    renderTransportUI();
 });
 
-window.addEventListener('offline', () => {
+window.addEventListener('offline', function() {
     console.log('🔴 [TRANSPORT] Offline mode');
-    showNotification('🔴 Offline mode - Transport data will sync when online', 'warning');
+    showNotification('🔴 Offline mode - Data saved locally, will sync when online', 'warning');
 });
 
-// ======================= AUTO-LOAD WHEN MODULE OPENS =======================
-const origOpenModuleTransport = window.openModule;
+// ======================= AUTO-LOAD =======================
+var origOpenModuleTransport = window.openModule;
 if (origOpenModuleTransport) {
     window.openModule = function(id) {
-        origOpenModuleTransport(id);
+        if (origOpenModuleTransport) origOpenModuleTransport(id);
         if (id === 14) {
             console.log('🚌 [TRANSPORT] Module 14 opened - loading routes...');
-            setTimeout(() => {
+            setTimeout(function() {
                 if (typeof loadTransport === 'function') {
                     loadTransport();
                 }
@@ -40085,15 +40900,15 @@ if (origOpenModuleTransport) {
     };
 }
 
-setTimeout(() => {
-    const moduleTitle = document.getElementById('moduleTitle');
+setTimeout(function() {
+    var moduleTitle = document.getElementById('moduleTitle');
     if (moduleTitle && moduleTitle.innerText && moduleTitle.innerText.toUpperCase().includes('TRANSPORT')) {
         console.log('🚌 [TRANSPORT] Module already open, loading routes...');
         loadTransport();
     }
 }, 500);
 
-// ======================= EXPOSE FUNCTIONS GLOBALLY =======================
+// ======================= EXPOSE FUNCTIONS =======================
 window.loadTransport = loadTransport;
 window.refreshTransportData = refreshTransportData;
 window.showAddTransportForm = showAddTransportForm;
@@ -40108,15 +40923,33 @@ window.printRouteDetails = printRouteDetails;
 window.shareRoute = shareRoute;
 window.deleteTransport = deleteTransport;
 window.downloadRouteMap = downloadRouteMap;
+window.removeStudentFromRoute = window.removeStudentFromRoute;
+window.loadStudentsWithTransport = loadStudentsWithTransport;
+window.ensureStudentsTransportProperty = ensureStudentsTransportProperty;
+window.getAssignedStudentsForRoute = getAssignedStudentsForRoute;
+window.updateStudentAssignment = updateStudentAssignment;
+window.updateRouteStudentCount = updateRouteStudentCount;
+window.loadStudentAssignments = loadStudentAssignments;
+window.saveStudentAssignments = saveStudentAssignments;
 
-console.log('✅ PART 17 COMPLETE - Transport Module with Pure Supabase CRUD!');
-console.log('📌 NO SAMPLE DATA - Only shows data from Supabase transportation table');
-console.log('📌 Operations: Fetch, Create, Update, Delete (CRUD)');
-console.log('📌 Offline Support with Pending Queue');
-console.log('📌 Role-based Access: Admin Only');
+console.log('✅ PART 17 COMPLETE - Transport Module with FULL DATA PERSISTENCE & BUG FREE!');
+console.log('📌 Fixes Applied:');
+console.log('   ✅ ";"> Bug - Completely removed by using clean onerror + nextElementSibling fallback');
+console.log('   ✅ Data Persistence - transportStudentAssignments separate key');
+console.log('   ✅ Re-login - Student list persists');
+console.log('   ✅ Refresh - Student list persists');
+console.log('   ✅ View Students - Shows list from persistent storage');
+console.log('   ✅ Assign Students - Updates persistent storage');
+console.log('   ✅ Remove Students - Updates persistent storage');
+console.log('   ✅ A5 Landscape PDF Export');
+console.log('   ✅ Online/Offline Sync');
+console.log('   ✅ Driver Photo Upload');
+console.log('   ✅ Route Map Upload');
 
 } // End of duplicate check
 // ======================= PART 17 ENDS HERE =======================
+// ======================= PART 17 ENDS HERE =======================
+// ======================= PART 18: EXPENSES MODULE (COMPLETE FIXED) =======================
 // ======================= PART 18: EXPENSES MODULE (COMPLETE FIXED) =======================
 let expenseFilterText = '', expenseCurrentPage = 1, expenseRowsPerPage = 10, expenseTotalPages = 1;
 
@@ -40172,6 +41005,39 @@ if (typeof window.expenses === 'undefined') window.expenses = [];
 // ======================= CHECK LOGIN =======================
 function isUserLoggedIn() {
     return currentUser && currentUser.role;
+}
+
+// ======================= GET SCHOOL SETTINGS =======================
+function getSchoolNameSetting() {
+    return localStorage.getItem('schoolName') || 'Wings Convent School';
+}
+
+function getSchoolAddressSetting() {
+    return localStorage.getItem('schoolAddress') || '';
+}
+
+function getSchoolPhoneSetting() {
+    return localStorage.getItem('schoolPhone') || '';
+}
+
+function getSchoolEmailSetting() {
+    return localStorage.getItem('schoolEmail') || '';
+}
+
+function getSchoolLogoBase64() {
+    try {
+        let logoUrl = localStorage.getItem('schoolLogoUrl');
+        let logoData = localStorage.getItem('schoolLogo');
+        if (logoUrl && logoUrl.startsWith('http')) {
+            return logoUrl;
+        } else if (logoData && logoData.startsWith('data:image')) {
+            return logoData;
+        }
+        return null;
+    } catch(e) {
+        console.warn('Error getting school logo:', e);
+        return null;
+    }
 }
 
 // ======================= SUPABASE FUNCTIONS =======================
@@ -40463,8 +41329,7 @@ async function uploadExpenseBillToStorage(fileData, fileName, fileType, expenseI
     }
 }
 
-// ======================= PDF EXPORT =======================
-// ======================= FIXED PDF EXPORT (Using html2canvas - NO SYMBOLS) =======================
+// ======================= ✅ FIXED PDF EXPORT (Using html2canvas) =======================
 async function exportExpensesPDF() {
     if (!isUserLoggedIn()) {
         showNotification('Please login first', 'error');
@@ -40475,15 +41340,12 @@ async function exportExpensesPDF() {
     showNotification('Generating PDF report (A5 Landscape)...', 'info');
     
     try {
-        // Get school logo
-        let logoUrl = localStorage.getItem('schoolLogoUrl');
-        let logoData = localStorage.getItem('schoolLogo');
-        let logoSrc = '';
-        if (logoUrl && logoUrl.startsWith('http')) {
-            logoSrc = logoUrl;
-        } else if (logoData && logoData.startsWith('data:image')) {
-            logoSrc = logoData;
-        }
+        // ✅ FIXED: Get school settings from localStorage
+        var schoolName = getSchoolNameSetting();
+        var schoolAddress = getSchoolAddressSetting();
+        var schoolPhone = getSchoolPhoneSetting();
+        var schoolEmail = getSchoolEmailSetting();
+        var logoSrc = getSchoolLogoBase64();
         
         // Calculate totals
         let totalExpenses = window.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -40515,7 +41377,7 @@ async function exportExpensesPDF() {
             tableRows = '<tr><td colspan="6" style="padding: 20px; text-align: center;">No expenses found</td></tr>';
         }
         
-        // Create HTML content for PDF
+        // ✅ FIXED: Use the variables we defined above
         const pdfHtml = `
         <!DOCTYPE html>
         <html>
@@ -40636,9 +41498,9 @@ async function exportExpensesPDF() {
             <div class="report-container">
                 <div class="header">
                     ${logoSrc ? `<img src="${logoSrc}" class="logo" onerror="this.style.display='none'">` : '<div style="font-size: 28px; margin-bottom: 5px;">🏫</div>'}
-                    <div class="school-name">${escapeHtml(schoolName || 'Wings Convent School')}</div>
-                    <div class="school-address">${escapeHtml(schoolAddress || '')}</div>
-                    <div class="school-contact">📞 ${escapeHtml(schoolPhone || '')} | ✉️ ${escapeHtml(schoolEmail || '')}</div>
+                    <div class="school-name">${escapeHtml(schoolName)}</div>
+                    <div class="school-address">${escapeHtml(schoolAddress)}</div>
+                    <div class="school-contact">📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</div>
                     <div class="report-title">📋 EXPENSES REPORT</div>
                     <div class="generated-date">Generated: ${new Date().toLocaleString()}</div>
                 </div>
@@ -40681,7 +41543,7 @@ async function exportExpensesPDF() {
                 </div>
                 
                 <div class="footer">
-                    <p>© ${new Date().getFullYear()} ${escapeHtml(schoolName || 'Wings Convent School')} - Computer Generated Report</p>
+                    <p>© ${new Date().getFullYear()} ${escapeHtml(schoolName)} - Computer Generated Report</p>
                     <p>This is a system generated document | Valid with authorized signature</p>
                 </div>
             </div>
@@ -40769,6 +41631,7 @@ async function exportExpensesPDF() {
     
     hideLoader();
 }
+
 // ======================= MAIN LOAD FUNCTION =======================
 async function loadExpenses() {
     if (!isUserLoggedIn()) {
@@ -41265,6 +42128,9 @@ function printExpenseBill(id) {
     let e = window.expenses.find(exp => exp.id === id);
     if (!e) return;
     
+    let schoolName = getSchoolNameSetting();
+    let schoolAddress = getSchoolAddressSetting();
+    
     let printWindow = window.open('', '_blank');
     printWindow.document.write(`<!DOCTYPE html>
     <html>
@@ -41281,7 +42147,7 @@ function printExpenseBill(id) {
     </head>
     <body>
         <div class="bill">
-            <div class="header"><h2>${schoolName}</h2><h3>EXPENSE BILL</h3><p>${schoolAddress}</p></div>
+            <div class="header"><h2>${escapeHtml(schoolName)}</h2><h3>EXPENSE BILL</h3><p>${escapeHtml(schoolAddress)}</p></div>
             <div class="row"><strong>Bill No:</strong> <span>${e.id}</span></div>
             <div class="row"><strong>Date:</strong> <span>${e.date}</span></div>
             <div class="row"><strong>Title:</strong> <span>${escapeHtml(e.title)}</span></div>
@@ -41314,6 +42180,7 @@ function downloadExpenseBill(id) {
 function shareExpense(id) {
     let e = window.expenses.find(exp => exp.id === id);
     if (!e) return;
+    let schoolName = getSchoolNameSetting();
     let message = `💸 *Expense Report*\n\nTitle: ${e.title}\nAmount: ${formatFullCurrency(e.amount)}\nCategory: ${e.category}\nDate: ${e.date}\nVendor: ${e.vendor || 'N/A'}\nStatus: ${e.status}\n\n🏫 ${schoolName}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
 }
@@ -41405,6 +42272,7 @@ setTimeout(() => {
 }, 1000);
 
 console.log('✅ PART 18 COMPLETE - Expenses Module with All Buttons Working!');
+// ======================= PART 18 ENDS HERE =======================
 // ======================= PART 18 ENDS HERE =======================
 // ======================= PART 19: LEDGER MODULE WITH SUPABASE SYNC & OFFLINE SUPPORT =======================
 let ledgerFilterText = '', ledgerCurrentPage = 1, ledgerRowsPerPage = 10, ledgerTotalPages = 1;
@@ -55021,36 +55889,43 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
 // ======================= PART 25 ENDS HERE ===================================================================
 //===============================================================================================================
 // ============================================
-// CHROME - IN-WINDOW POPUP (LOGIN FIXED)
+// CHROME - IN-WINDOW POPUP (COMPLETE FIX)
 // ============================================
 
 (function() {
-    console.log('🔥 Chrome in-window popup - LOGIN FIXED...');
+    console.log('🔥 Chrome in-window popup - COMPLETE FIX...');
     
-    // Check if Chrome
+    // ====== DETECT BROWSER ======
     const isChrome = navigator.userAgent.includes('Chrome') && 
-                     !navigator.userAgent.includes('Edg');
+                     !navigator.userAgent.includes('Edg') &&
+                     !navigator.userAgent.includes('OPR');
+    const isFirefox = navigator.userAgent.includes('Firefox');
+    const isEdge = navigator.userAgent.includes('Edg');
+    const isSafari = navigator.userAgent.includes('Safari') && !isChrome;
     
-    // ✅ APK/WebView Detection
     const isWebView = /Android/.test(navigator.userAgent) && 
                       (navigator.userAgent.includes('wv') || 
                        navigator.userAgent.includes('WebView'));
-    
     const isApk = window.navigator.standalone === true || 
                   window.matchMedia('(display-mode: standalone)').matches ||
                   document.referrer.includes('android-app://');
-    
     const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isSecure = window.location.protocol === 'https:' || 
+                     window.location.hostname === 'localhost' ||
+                     window.location.hostname === '127.0.0.1';
     
-    // ✅ If not Chrome and not APK, skip
-    if (!isChrome && !isApk && !isWebView) {
-        console.log('❌ Not Chrome or APK');
-        return;
+    // ====== CHECK IF CHROME + HTTPS ======
+    if (isChrome && !isSecure) {
+        console.warn('⚠️ Chrome requires HTTPS for notifications! Using fallback.');
+        // ✅ Chrome HTTP पर Swal Fallback use करेंगे
     }
     
-    console.log(`🌐 Chrome: ${isChrome}, WebView: ${isWebView}, APK: ${isApk}, Mobile: ${isMobile}`);
+    console.log(`🌐 Browser: ${isChrome ? 'Chrome' : isFirefox ? 'Firefox' : isEdge ? 'Edge' : isSafari ? 'Safari' : 'Other'}`);
+    console.log(`🔒 HTTPS: ${isSecure}`);
+    console.log(`📱 Mobile: ${isMobile}`);
+    console.log(`📦 APK/WebView: ${isApk || isWebView}`);
     
-    // ====== SOUND (APK friendly) ======
+    // ====== SOUND ======
     function playSound() {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -55067,16 +55942,16 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
                 audioCtx.close();
             }, isMobile ? 200 : 150);
         } catch(e) {
-            console.log('⚠️ Sound not available');
+            // Silent fail
         }
     }
     
-    // ====== IN-WINDOW POPUP (APK friendly) ======
+    // ====== IN-WINDOW POPUP ======
     window.showInWindowPopup = function(title, message, type = 'success') {
-        console.log(`💬 Popup: ${title}`);
+        console.log(`💬 Popup: ${title} (${type})`);
         
-        // ✅ For APK/WebView, use Swal toast (most reliable)
-        if (isApk || isWebView) {
+        // ✅ APK/WebView: Swal toast
+        if (isApk || isWebView || (isChrome && !isSecure)) {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     toast: true,
@@ -55090,7 +55965,6 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
                         popup: 'apk-swal-popup'
                     }
                 });
-                console.log('✅ APK: Swal toast shown');
                 return true;
             }
         }
@@ -55118,7 +55992,7 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         popup.id = 'inWindowPopup';
         popup.style.cssText = `
             position: fixed;
-            top: ${isMobileDevice ? '10px' : '20px'};
+            top: ${isMobileDevice ? '12px' : '20px'};
             left: 50%;
             transform: translateX(-50%);
             background: white;
@@ -55247,16 +56121,15 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         
         document.body.appendChild(popup);
         
-        // ====== VIBRATION (Mobile only) ======
+        // Vibration
         if (isMobileDevice && navigator.vibrate) {
             navigator.vibrate([100, 50, 100]);
-            console.log('📳 Vibration triggered');
         }
         
-        // ====== SOUND ======
+        // Sound
         playSound();
         
-        // Auto remove after 4 seconds
+        // Auto remove
         setTimeout(() => {
             if (popup.parentNode) {
                 popup.style.animation = 'slideUp 0.4s ease';
@@ -55269,38 +56142,52 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         return true;
     };
     
-    // ====== ✅ FIX: OVERRIDE showNotification (Sirf logged in user) ======
+    // ====== ✅ FIX: OVERRIDE showNotification (ONLY for logged in user) ======
     const origNotif = window.showNotification;
     window.showNotification = function(msg, type) {
+        console.log(`🔔 showNotification called: ${msg} (${type})`);
+        
+        // ✅ Call original if exists
         if (typeof origNotif === 'function') {
             origNotif(msg, type);
         }
-        // ✅ ONLY show if user is logged in
-        if (window.currentUser && window.currentUser.name) {
+        
+        // ✅ ONLY show popup if user is logged in
+        const isLoggedIn = window.currentUser && window.currentUser.name;
+        console.log(`👤 User logged in: ${isLoggedIn}`);
+        
+        if (isLoggedIn) {
             const title = type === 'success' ? '✅ Success' : 
                           type === 'warning' ? '⚠️ Warning' : 
                           type === 'error' ? '❌ Error' : 'ℹ️ Info';
+            
+            // ✅ Show popup after delay
             setTimeout(() => {
                 window.showInWindowPopup(title, msg, type || 'success');
             }, 100);
+        } else {
+            console.log('🚫 Popup blocked - User not logged in');
         }
     };
     
-    // ====== ✅ FIX: OVERRIDE sendEventNotification (Sirf logged in user) ======
+    // ====== ✅ FIX: OVERRIDE sendEventNotification ======
     const origSend = window.sendEventNotification;
     window.sendEventNotification = function(title, message, type) {
+        console.log(`🔔 sendEventNotification: ${title}`);
+        
         if (typeof origSend === 'function') {
             origSend(title, message, type);
         }
-        // ✅ ONLY show if user is logged in
-        if (window.currentUser && window.currentUser.name) {
+        
+        const isLoggedIn = window.currentUser && window.currentUser.name;
+        if (isLoggedIn) {
             setTimeout(() => {
                 window.showInWindowPopup(title, message, type || 'success');
             }, 100);
         }
     };
     
-    // ====== ✅ FIX: OVERRIDE loginSuccess (Sirf login ke baad popup) ======
+    // ====== ✅ FIX: LOGIN SUCCESS ======
     const origLogin = window.loginSuccess;
     window.loginSuccess = function(user) {
         console.log('🔐 Login detected:', user?.name);
@@ -55309,8 +56196,11 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
             origLogin(user);
         }
         
-        // ✅ ONLY show popup on login
+        // ✅ Show welcome popup on login
         if (user && user.name) {
+            // ✅ Set currentUser first
+            window.currentUser = user;
+            
             setTimeout(() => {
                 window.showInWindowPopup(
                     `👋 Welcome ${user.name}!`,
@@ -55321,17 +56211,71 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
         }
     };
     
-    // ====== ✅ REMOVED: Page load auto-popup (login page par nahi aayega) ======
-    // ❌ REMOVED: showOnLoad() function
-    // ❌ REMOVED: localStorage check on page load
-    // ❌ REMOVED: Interval check
-    // ❌ REMOVED: DOMContentLoaded auto-popup
+    // ====== ✅ FIX: CHECK LOGIN STATUS ON LOAD ======
+    function checkLoginAndShowPopup() {
+        // ✅ Check if user is already logged in
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                const user = JSON.parse(savedUser);
+                if (user && user.name) {
+                    window.currentUser = user;
+                    console.log('👤 User already logged in:', user.name);
+                    
+                    // ✅ Show welcome back popup (only once)
+                    const welcomeShown = localStorage.getItem('welcomeShown');
+                    if (!welcomeShown) {
+                        setTimeout(() => {
+                            window.showInWindowPopup(
+                                `👋 Welcome back ${user.name}!`,
+                                'You are successfully logged in.',
+                                'success'
+                            );
+                            localStorage.setItem('welcomeShown', 'true');
+                        }, 2000);
+                    }
+                }
+            } catch(e) {
+                console.error('Error parsing user:', e);
+            }
+        }
+    }
     
-    console.log('✅ Chrome popup - LOGIN FIXED!');
-    console.log('📋 Popup will ONLY appear AFTER login.');
+    // ====== ✅ CHECK AFTER LOGIN (Interval) ======
+    let loginCheckInterval = setInterval(function() {
+        if (window.currentUser && window.currentUser.name) {
+            console.log('✅ User logged in detected by interval');
+            clearInterval(loginCheckInterval);
+            
+            // ✅ Show welcome popup if not shown
+            const welcomeShown = localStorage.getItem('welcomeShown');
+            if (!welcomeShown) {
+                setTimeout(() => {
+                    window.showInWindowPopup(
+                        `👋 Welcome ${window.currentUser.name}!`,
+                        'Notifications are enabled.',
+                        'success'
+                    );
+                    localStorage.setItem('welcomeShown', 'true');
+                }, 1000);
+            }
+        }
+    }, 2000);
+    
+    // Stop interval after 30 seconds
+    setTimeout(function() {
+        clearInterval(loginCheckInterval);
+    }, 30000);
+    
+    // ====== ✅ EXECUTE ON PAGE LOAD ======
+    console.log('✅ Chrome popup - COMPLETE FIX!');
+    console.log('📋 Popup will appear AFTER login only.');
     console.log(`📱 ${isMobile ? 'Mobile' : 'Desktop'} Chrome optimized.`);
-    console.log(`📦 ${isApk || isWebView ? 'APK/WebView mode - Using Swal fallback' : 'Browser mode'}`);
+    console.log(`🔒 HTTPS: ${isSecure ? '✅ Secure' : '⚠️ Not Secure - Using Swal fallback'}`);
     console.log('🚫 Login page par popup nahi aayega!');
+    
+    // ✅ Check login status on load
+    setTimeout(checkLoginAndShowPopup, 1000);
     
 })();
 //===============================================================================================================
