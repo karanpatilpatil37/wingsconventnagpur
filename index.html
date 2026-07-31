@@ -38651,7 +38651,8 @@ console.log('📌 Admin: FULL ACCESS - Can add/edit/delete all timetables');
 // ======================= PART 16 ENDS HERE =======================
 // ======================= PART 16 ENDS HERE =======================
 // ======================= PART 17: COMPLETE TRANSPORT MODULE =======================
-// ======================= PART 17: TRANSPORT MODULE (COMPLETE - BUG FREE) =======================
+// ======================= PART 17: TRANSPORT MODULE (STUDENT FETCH FIXED) =======================
+// ======================= PART 17: TRANSPORT MODULE (COMPLETE - FULLY FIXED) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.transportModuleLoaded === 'undefined') {
     window.transportModuleLoaded = true;
@@ -38673,7 +38674,7 @@ function loadStudentAssignments() {
         const saved = localStorage.getItem('transportStudentAssignments');
         if (saved) {
             window.transportStudentAssignments = JSON.parse(saved);
-            console.log('📦 [TRANSPORT] Loaded student assignments from localStorage');
+            console.log('📦 [TRANSPORT] Loaded student assignments from localStorage →', Object.keys(window.transportStudentAssignments).length, 'assignments');
             return true;
         }
     } catch(e) {
@@ -38695,41 +38696,38 @@ function saveStudentAssignments() {
 
 function loadStudentsWithTransport() {
     try {
-        loadStudentAssignments();
+        loadStudentAssignments(); // Always load first
+        
         const saved = localStorage.getItem('studentsData');
         if (saved) {
             const parsed = JSON.parse(saved);
             if (parsed && parsed.length > 0) {
                 window.students = parsed;
+                
+                // Apply transport assignments to every student
                 for (let student of window.students) {
                     if (student.id && window.transportStudentAssignments[student.id] !== undefined) {
                         student.transportRouteId = window.transportStudentAssignments[student.id];
                         student.transportEnabled = student.transportRouteId !== null;
                     } else {
-                        if (student.transportRouteId === undefined) {
-                            student.transportRouteId = null;
-                        }
-                        if (student.transportEnabled === undefined) {
-                            student.transportEnabled = false;
-                        }
+                        if (student.transportRouteId === undefined) student.transportRouteId = null;
+                        if (student.transportEnabled === undefined) student.transportEnabled = false;
                     }
                 }
-                console.log(`📦 [TRANSPORT] Loaded ${window.students.length} students with transport properties`);
+                console.log(`📦 [TRANSPORT] Loaded ${window.students.length} students + applied transport properties`);
                 return true;
             }
         }
+        
+        // Fallback if students already in memory
         if (typeof window.students !== 'undefined' && window.students.length > 0) {
             for (let student of window.students) {
                 if (student.id && window.transportStudentAssignments[student.id] !== undefined) {
                     student.transportRouteId = window.transportStudentAssignments[student.id];
                     student.transportEnabled = student.transportRouteId !== null;
                 } else {
-                    if (student.transportRouteId === undefined) {
-                        student.transportRouteId = null;
-                    }
-                    if (student.transportEnabled === undefined) {
-                        student.transportEnabled = false;
-                    }
+                    if (student.transportRouteId === undefined) student.transportRouteId = null;
+                    if (student.transportEnabled === undefined) student.transportEnabled = false;
                 }
             }
             try {
@@ -38744,18 +38742,27 @@ function loadStudentsWithTransport() {
 }
 
 function ensureStudentsTransportProperty() {
-    if (typeof window.students === 'undefined' || window.students.length === 0) {
+    // First ensure students are loaded
+    if (typeof window.students === 'undefined' || !window.students || window.students.length === 0) {
         const saved = localStorage.getItem('studentsData');
         if (saved) {
             try {
                 window.students = JSON.parse(saved);
-            } catch(e) {}
+            } catch(e) {
+                console.warn('Failed to parse studentsData', e);
+            }
         }
     }
+    
     if (window.students && window.students.length > 0) {
         let updated = false;
+        
+        // Always load latest assignments
+        loadStudentAssignments();
+        
         for (let student of window.students) {
             if (student.id && window.transportStudentAssignments[student.id] !== undefined) {
+                // Force apply from persistent store
                 student.transportRouteId = window.transportStudentAssignments[student.id];
                 student.transportEnabled = student.transportRouteId !== null;
                 updated = true;
@@ -38768,17 +38775,20 @@ function ensureStudentsTransportProperty() {
                     student.transportEnabled = false;
                     updated = true;
                 }
+                // Keep assignment store in sync
                 if (student.id) {
                     window.transportStudentAssignments[student.id] = student.transportRouteId;
                 }
             }
         }
+        
         if (updated) {
             try {
                 localStorage.setItem('studentsData', JSON.stringify(window.students));
                 saveStudentAssignments();
             } catch(e) {}
         }
+        console.log('✅ [TRANSPORT] ensureStudentsTransportProperty completed');
         return true;
     }
     return false;
@@ -38803,8 +38813,12 @@ function getAssignedStudentsForRoute(routeId) {
 
 function updateStudentAssignment(studentId, routeId) {
     if (!studentId) return false;
+    
+    // Update persistent store
     window.transportStudentAssignments[studentId] = routeId;
     saveStudentAssignments();
+    
+    // Update in-memory students
     if (window.students) {
         for (let s of window.students) {
             if (s.id === studentId) {
@@ -38817,6 +38831,12 @@ function updateStudentAssignment(studentId, routeId) {
             localStorage.setItem('studentsData', JSON.stringify(window.students));
         } catch(e) {}
     }
+    
+    // Also update route student count
+    if (routeId) {
+        updateRouteStudentCount(routeId);
+    }
+    
     return true;
 }
 
@@ -39030,6 +39050,11 @@ async function loadTransportFromSupabase() {
     console.log('🚌 [TRANSPORT] loadTransportFromSupabase called...');
     const supabase = getSupabaseClientTransport();
     
+    // Always ensure student assignments are loaded first
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    
     if (!supabase || !navigator.onLine) {
         console.log('📴 [TRANSPORT] Offline - Loading from cache');
         const cached = localStorage.getItem('cache_transportation');
@@ -39037,11 +39062,16 @@ async function loadTransportFromSupabase() {
             try {
                 const parsed = JSON.parse(cached);
                 window.transportData.routes = parsed;
+                
+                // Recalculate real student counts from assignments
                 for (let route of window.transportData.routes) {
                     if (route.driverName) {
                         route.driverPhone = getDriverPhoneFromEmployees(route.driverName) || route.driverPhone;
                         route.driverPhotoUrl = getDriverPhotoFromEmployees(route.driverName) || route.driverPhotoUrl;
                     }
+                    // Force real count
+                    const realAssigned = getAssignedStudentsForRoute(route.id);
+                    route.students = realAssigned.length;
                 }
                 return true;
             } catch(e) {
@@ -39081,6 +39111,10 @@ async function loadTransportFromSupabase() {
                 let driverPhoto = item.driver_photo_url || getDriverPhotoFromEmployees(item.driver_name);
                 let driverPhone = item.driver_phone || getDriverPhoneFromEmployees(item.driver_name);
                 
+                // Real student count from local persistent assignments (most reliable)
+                const realAssigned = getAssignedStudentsForRoute(item.id);
+                const realCount = realAssigned.length;
+                
                 window.transportData.routes.push({
                     id: item.id,
                     routeName: item.route_name || '',
@@ -39090,13 +39124,13 @@ async function loadTransportFromSupabase() {
                     driverPhotoUrl: driverPhoto || null,
                     driverPhotoData: null,
                     stops: item.stops || '',
-                    students: item.students_count || 0,
+                    students: realCount > 0 ? realCount : (item.students_count || 0),
                     attachments: attachments || []
                 });
             }
             
             localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes));
-            console.log('✅ [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from Supabase');
+            console.log('✅ [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from Supabase + applied real student counts');
             return true;
         } else {
             console.log('📭 [TRANSPORT] No routes found in Supabase');
@@ -39107,6 +39141,11 @@ async function loadTransportFromSupabase() {
                     const parsed = JSON.parse(cached);
                     if (parsed && parsed.length > 0) {
                         window.transportData.routes = parsed;
+                        // Still apply real counts
+                        for (let route of window.transportData.routes) {
+                            const realAssigned = getAssignedStudentsForRoute(route.id);
+                            route.students = realAssigned.length;
+                        }
                         return true;
                     }
                 } catch(e) {}
@@ -39121,6 +39160,10 @@ async function loadTransportFromSupabase() {
                 const parsed = JSON.parse(cached);
                 if (parsed && parsed.length > 0) {
                     window.transportData.routes = parsed;
+                    for (let route of window.transportData.routes) {
+                        const realAssigned = getAssignedStudentsForRoute(route.id);
+                        route.students = realAssigned.length;
+                    }
                     return true;
                 }
             } catch(err) {}
@@ -39142,6 +39185,10 @@ async function saveTransportToSupabase(routeData) {
     }
     
     try {
+        // Always use real current count
+        const realAssigned = getAssignedStudentsForRoute(routeData.id);
+        routeData.students = realAssigned.length;
+        
         const dbData = {
             id: routeData.id,
             route_name: routeData.routeName,
@@ -39329,6 +39376,7 @@ async function loadTransport() {
     `;
     
     try {
+        // ========== CRITICAL: Always load assignments first ==========
         loadStudentAssignments();
         loadStudentsWithTransport();
         ensureStudentsTransportProperty();
@@ -39341,16 +39389,27 @@ async function loadTransport() {
             if (cached) {
                 try {
                     window.transportData.routes = JSON.parse(cached);
+                    // Apply real counts even offline
+                    for (let route of window.transportData.routes) {
+                        const realAssigned = getAssignedStudentsForRoute(route.id);
+                        route.students = realAssigned.length;
+                    }
                     console.log('📦 [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from cache (offline)');
                 } catch(e) {}
             }
         }
+        
+        // Final pass - make sure everything is applied
+        ensureStudentsTransportProperty();
         
         for (let route of window.transportData.routes) {
             if (route.driverName) {
                 route.driverPhone = getDriverPhoneFromEmployees(route.driverName) || route.driverPhone;
                 route.driverPhotoUrl = getDriverPhotoFromEmployees(route.driverName) || route.driverPhotoUrl;
             }
+            // Final real count
+            const realAssigned = getAssignedStudentsForRoute(route.id);
+            route.students = realAssigned.length;
         }
         
         renderTransportUI();
@@ -39377,11 +39436,12 @@ async function loadTransport() {
 function renderTransportUI() {
     console.log('🎨 [TRANSPORT] renderTransportUI called - routes count:', window.transportData.routes.length);
     
+    // Always ensure data is fresh
     loadStudentAssignments();
     loadStudentsWithTransport();
     ensureStudentsTransportProperty();
     
-    // Update student counts for all routes
+    // Update student counts for all routes from real assignments
     for (var i = 0; i < window.transportData.routes.length; i++) {
         var route = window.transportData.routes[i];
         var assigned = getAssignedStudentsForRoute(route.id);
@@ -39563,7 +39623,7 @@ function renderTransportUI() {
     }, 400);
 }
 
-// ======================= ✅ FIXED: RENDER TRANSPORT LIST (NO BUG) =======================
+// ======================= ✅ FIXED: RENDER TRANSPORT LIST =======================
 function renderTransportList(routesToRender) { 
     var html = '';
     
@@ -39585,7 +39645,7 @@ function renderTransportList(routesToRender) {
         var studentCount = actualStudents.length;
         t.students = studentCount;
         
-        // ✅ FIXED: Driver Photo - clean onerror (no quote bug)
+        // Clean driver photo with fallback
         var driverPhoto = t.driverPhotoUrl || t.driverPhotoData || getDriverPhotoFromEmployees(t.driverName);
         var driverPhotoHtml = '';
         if (driverPhoto) {
@@ -39594,8 +39654,6 @@ function renderTransportList(routesToRender) {
         } else {
             driverPhotoHtml = '<div class="fallback-avatar" style="width:50px;height:50px;font-size:20px;"><i class="fas fa-user"></i></div>';
         }
-        
-        var mapAttachment = t.attachments && t.attachments.length > 0 ? t.attachments[0] : null;
         
         html += `
         <div class="data-card" style="margin-bottom: 12px; border-radius: 20px; background: var(--bg-surface); border: 1px solid var(--border-light); overflow: hidden;">
@@ -39714,7 +39772,7 @@ function showAddTransportForm(editId) {
                     </div>
                     <div class="form-group" style="margin-bottom: 16px;">
                         <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;"><i class="fas fa-camera"></i> Driver Photo (Optional)</label>
-                        <div id="driverPhotoUpload_${modalId}" class="upload-area" style="border: 2px dashed var(--border-light); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
+                        <div id="driverPhotoUpload_${modalId}" class="upload-area">
                             <i class="fas fa-camera" style="font-size: 28px; color: #10b981;"></i>
                             <p style="margin: 8px 0 0; font-size: 13px;">Click to upload Driver Photo (1:1)</p>
                             <p style="font-size: 11px; color: var(--text-secondary);">📸 Camera or Gallery</p>
@@ -39727,7 +39785,7 @@ function showAddTransportForm(editId) {
                     </div>
                     <div class="form-group" style="margin-bottom: 16px;">
                         <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 4px;"><i class="fas fa-map-marked-alt"></i> Route Map (Optional)</label>
-                        <div id="routeMapUpload_${modalId}" class="upload-area" style="border: 2px dashed var(--border-light); border-radius: 16px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
+                        <div id="routeMapUpload_${modalId}" class="upload-area">
                             <i class="fas fa-map" style="font-size: 28px; color: #10b981;"></i>
                             <p style="margin: 8px 0 0; font-size: 13px;">Click to upload Route Map</p>
                             <p style="font-size: 11px; color: var(--text-secondary);">📁 PDF, JPG, PNG</p>
@@ -39864,8 +39922,6 @@ function saveTransportRoute(modalId, editId) {
         attachments: attachments
     };
     
-    console.log('📤 [TRANSPORT] Route object:', routeObj);
-    
     // Update local data
     if (editId) {
         let index = window.transportData.routes.findIndex(function(r) { return r.id === editId; });
@@ -39949,7 +40005,7 @@ async function deleteTransport(id) {
         if (result.isConfirmed) {
             showLoader();
             
-            // Unassign students from this route
+            // Unassign all students from this route + save
             if (window.students) {
                 for (let i = 0; i < window.students.length; i++) {
                     if (window.students[i] && window.students[i].transportRouteId === id) {
@@ -39992,7 +40048,7 @@ async function deleteTransport(id) {
     }
 }
 
-// ======================= ✅ FIXED: VIEW TRANSPORT DETAILS (NO BUG) =======================
+// ======================= VIEW TRANSPORT DETAILS =======================
 function viewTransportDetails(id) {
     var t = window.transportData.routes.find(function(r) { return r.id === id; });
     if (!t) { 
@@ -40000,7 +40056,6 @@ function viewTransportDetails(id) {
         return; 
     }
     
-    // ✅ FIXED: Driver Photo - clean version
     var driverPhoto = t.driverPhotoUrl || t.driverPhotoData || getDriverPhotoFromEmployees(t.driverName);
     var driverPhotoHtml = '';
     if (driverPhoto) {
@@ -40015,10 +40070,9 @@ function viewTransportDetails(id) {
     if (mapAttachment && mapAttachment.url) {
         mapHtml = '<p><strong>🗺️ Map:</strong> <a href="' + mapAttachment.url + '" target="_blank" style="color: #10b981;">View Map</a></p>';
     } else if (mapAttachment && mapAttachment.data) {
-        mapHtml = '<p><strong>🗺️ Map:</strong> <span style="color: #f59e0b;">Local Map (Click Download to save)</span></p>';
+        mapHtml = '<p><strong>🗺️ Map:</strong> <span style="color: #f59e0b;">Local Map</span></p>';
     }
     
-    // Get actual student count from persistent storage
     var assignedStudents = getAssignedStudentsForRoute(id);
     var studentCount = assignedStudents.length;
     
@@ -40043,7 +40097,7 @@ function viewTransportDetails(id) {
     });
 }
 
-// ======================= ✅ FIXED: VIEW ROUTE STUDENTS (NO BUG) =======================
+// ======================= VIEW ROUTE STUDENTS =======================
 function viewRouteStudents(id) {
     loadStudentAssignments();
     loadStudentsWithTransport();
@@ -40076,7 +40130,6 @@ function viewRouteStudents(id) {
         var s = assignedStudents[i];
         var photoSrc = getStudentPhoto(s);
         
-        // ✅ FIXED: Clean photo fallback
         var photoHtml = '';
         if (photoSrc) {
             photoHtml = '<img src="' + photoSrc + '" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #2563eb;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
@@ -40119,7 +40172,7 @@ function viewRouteStudents(id) {
     });
 }
 
-// ======================= ✅ FIXED: ASSIGN STUDENTS TO ROUTE (NO BUG) =======================
+// ======================= ASSIGN STUDENTS TO ROUTE =======================
 function assignStudentsToRoute(routeId) {
     if (currentUser.role !== 'admin') { 
         showNotification('Only administrators can assign students', 'error'); 
@@ -40180,14 +40233,12 @@ function assignStudentsToRoute(routeId) {
         return;
     }
     
-    // ✅ FIXED: Student options - clean
     var studentOptions = '';
     for (var k = 0; k < unassignedStudents.length; k++) {
         var s3 = unassignedStudents[k];
         studentOptions += '<option value="' + s3.id + '">' + escapeHtml(s3.name) + ' (' + escapeHtml(s3.cls) + ' ' + escapeHtml(s3.sec || '') + ')</option>';
     }
     
-    // ✅ FIXED: Assigned list - clean photo fallback
     var assignedListHtml = '';
     if (assignedIds.length > 0) {
         for (var l = 0; l < window.students.length; l++) {
@@ -40260,7 +40311,7 @@ function assignStudentsToRoute(routeId) {
                     } 
                     var student = window.students.find(function(s) { return s.id === studentId; }); 
                     if (student) { 
-                        // Update persistent storage
+                        // Critical: Update persistent storage
                         updateStudentAssignment(studentId, routeId);
                         updateRouteStudentCount(routeId);
                         
@@ -40461,7 +40512,6 @@ async function exportTransportPDF() {
         var yPos = 12;
         var margin = 8;
         
-        // School Logo
         var logoData = getSchoolLogoBase64();
         if (logoData) {
             try {
@@ -40471,13 +40521,11 @@ async function exportTransportPDF() {
             }
         }
         
-        // School Name
         pdf.setFontSize(13);
         pdf.setTextColor(37, 99, 235);
         pdf.text(getSchoolNameSetting(), pageWidth / 2, yPos + 4, { align: 'center' });
         yPos += 8;
         
-        // School Address
         pdf.setFontSize(7);
         pdf.setTextColor(100, 116, 139);
         var address = getSchoolAddressSetting();
@@ -40491,24 +40539,20 @@ async function exportTransportPDF() {
             yPos += 3.5;
         }
         
-        // School Phone & Email
         pdf.text('📞 ' + getSchoolPhoneSetting(), pageWidth / 2 - 30, yPos, { align: 'right' });
         pdf.text('✉️ ' + getSchoolEmailSetting(), pageWidth / 2 + 30, yPos, { align: 'left' });
         yPos += 6;
         
-        // Report Title
         pdf.setFontSize(11);
         pdf.setTextColor(0, 0, 0);
         pdf.text('Transport Routes Report', pageWidth / 2, yPos, { align: 'center' });
         yPos += 4;
         
-        // Date
         pdf.setFontSize(6);
         pdf.setTextColor(100, 116, 139);
         pdf.text('Generated: ' + new Date().toLocaleString(), pageWidth / 2, yPos, { align: 'center' });
         yPos += 6;
         
-        // Summary
         var totalRoutes = window.transportData.routes.length;
         var totalStudents = window.transportData.routes.reduce(function(sum, r) { return sum + (r.students || 0); }, 0);
         
@@ -40520,7 +40564,6 @@ async function exportTransportPDF() {
         pdf.line(margin, yPos, pageWidth - margin, yPos);
         yPos += 5;
         
-        // Routes with Students
         for (var idx = 0; idx < window.transportData.routes.length; idx++) {
             var r = window.transportData.routes[idx];
             
@@ -40932,19 +40975,13 @@ window.updateRouteStudentCount = updateRouteStudentCount;
 window.loadStudentAssignments = loadStudentAssignments;
 window.saveStudentAssignments = saveStudentAssignments;
 
-console.log('✅ PART 17 COMPLETE - Transport Module with FULL DATA PERSISTENCE & BUG FREE!');
+console.log('✅ PART 17 COMPLETE - Transport Module FULLY FIXED');
 console.log('📌 Fixes Applied:');
-console.log('   ✅ ";"> Bug - Completely removed by using clean onerror + nextElementSibling fallback');
-console.log('   ✅ Data Persistence - transportStudentAssignments separate key');
-console.log('   ✅ Re-login - Student list persists');
-console.log('   ✅ Refresh - Student list persists');
-console.log('   ✅ View Students - Shows list from persistent storage');
-console.log('   ✅ Assign Students - Updates persistent storage');
-console.log('   ✅ Remove Students - Updates persistent storage');
-console.log('   ✅ A5 Landscape PDF Export');
-console.log('   ✅ Online/Offline Sync');
-console.log('   ✅ Driver Photo Upload');
-console.log('   ✅ Route Map Upload');
+console.log('   1. Re-login Student List → force loadStudentAssignments + loadStudentsWithTransport + ensureStudentsTransportProperty');
+console.log('   2. transportRouteId missing → ensureStudentsTransportProperty strengthened');
+console.log('   3. Supabase data + real counts → loadTransportFromSupabase now always recalculates from assignments');
+console.log('   4. localStorage Persistence → saveStudentAssignments called on every assign/remove/update');
+console.log('   ✅ ";"> Bug already fixed with clean onerror + nextElementSibling');
 
 } // End of duplicate check
 // ======================= PART 17 ENDS HERE =======================
@@ -42275,6 +42312,7 @@ console.log('✅ PART 18 COMPLETE - Expenses Module with All Buttons Working!');
 // ======================= PART 18 ENDS HERE =======================
 // ======================= PART 18 ENDS HERE =======================
 // ======================= PART 19: LEDGER MODULE WITH SUPABASE SYNC & OFFLINE SUPPORT =======================
+// ======================= PART 19: LEDGER MODULE WITH SUPABASE SYNC & OFFLINE SUPPORT =======================
 let ledgerFilterText = '', ledgerCurrentPage = 1, ledgerRowsPerPage = 10, ledgerTotalPages = 1;
 let currentLedgerEditId = null;
 
@@ -42316,8 +42354,49 @@ function downloadFile(dataURL, fileName) {
 function showLoader() { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'flex'; }
 function hideLoader() { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'none'; }
 
+function showNotification(msg, type) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({ toast: true, position: 'top-end', icon: type, title: msg, showConfirmButton: false, timer: 3000 });
+    } else {
+        alert(msg);
+    }
+}
+
 // Make sure ledger array exists globally
 if (typeof window.ledger === 'undefined') window.ledger = [];
+
+// ======================= GET SCHOOL SETTINGS =======================
+function getSchoolNameSetting() {
+    return localStorage.getItem('schoolName') || 'Wings Convent School';
+}
+
+function getSchoolAddressSetting() {
+    return localStorage.getItem('schoolAddress') || '';
+}
+
+function getSchoolPhoneSetting() {
+    return localStorage.getItem('schoolPhone') || '';
+}
+
+function getSchoolEmailSetting() {
+    return localStorage.getItem('schoolEmail') || '';
+}
+
+function getSchoolLogoBase64() {
+    try {
+        let logoUrl = localStorage.getItem('schoolLogoUrl');
+        let logoData = localStorage.getItem('schoolLogo');
+        if (logoUrl && logoUrl.startsWith('http')) {
+            return logoUrl;
+        } else if (logoData && logoData.startsWith('data:image')) {
+            return logoData;
+        }
+        return null;
+    } catch(e) {
+        console.warn('Error getting school logo:', e);
+        return null;
+    }
+}
 
 // ======================= SUPABASE FUNCTIONS =======================
 async function loadLedgerFromSupabase() {
@@ -42606,8 +42685,7 @@ async function uploadLedgerDocToStorage(fileData, fileName, fileType, ledgerId, 
     }
 }
 
-// ======================= PDF EXPORT =================================
-// ======================= FIXED PDF EXPORT FUNCTION (USING HTML2CANVAS) =======================
+// ======================= ✅ FIXED PDF EXPORT FUNCTION (USING HTML2CANVAS) =======================
 async function exportLedgerPDF() {
     if (typeof html2canvas === 'undefined') {
         showNotification('html2canvas library not loaded! Please refresh.', 'error');
@@ -42618,6 +42696,13 @@ async function exportLedgerPDF() {
     showNotification('Generating PDF, please wait...', 'info');
     
     try {
+        // ✅ FIXED: Get school settings from localStorage
+        var schoolName = getSchoolNameSetting();
+        var schoolAddress = getSchoolAddressSetting();
+        var schoolPhone = getSchoolPhoneSetting();
+        var schoolEmail = getSchoolEmailSetting();
+        var logoSrc = getSchoolLogoBase64();
+        
         // Create a temporary div for PDF content
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
@@ -42630,12 +42715,8 @@ async function exportLedgerPDF() {
         
         // Get school logo
         let logoHtml = '';
-        let logoUrl = localStorage.getItem('schoolLogoUrl');
-        let logoData = localStorage.getItem('schoolLogo');
-        if (logoUrl && logoUrl.startsWith('http')) {
-            logoHtml = `<img src="${logoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;">`;
-        } else if (logoData && logoData.startsWith('data:image')) {
-            logoHtml = `<img src="${logoData}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;">`;
+        if (logoSrc) {
+            logoHtml = `<img src="${logoSrc}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;" onerror="this.style.display='none';">`;
         } else {
             logoHtml = '<div style="font-size: 40px; margin-bottom: 10px;">🏫</div>';
         }
@@ -42665,13 +42746,13 @@ async function exportLedgerPDF() {
             tableRows = `<tr><td colspan="5" style="padding: 40px; text-align: center;">No ledger entries found</td></tr>`;
         }
         
-        // Build HTML content
+        // ✅ FIXED: Use the variables we defined above
         tempDiv.innerHTML = `
             <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #2563eb; padding-bottom: 15px;">
                 ${logoHtml}
-                <h2 style="margin: 5px 0; color: #1e293b; font-size: 20px;">${escapeHtml(schoolName || 'Wings Convent School')}</h2>
-                <p style="margin: 2px 0; font-size: 11px; color: #64748b;">${escapeHtml(schoolAddress || '')}</p>
-                <p style="margin: 2px 0; font-size: 10px; color: #64748b;">📞 ${escapeHtml(schoolPhone || '')} | ✉️ ${escapeHtml(schoolEmail || '')}</p>
+                <h2 style="margin: 5px 0; color: #1e293b; font-size: 20px;">${escapeHtml(schoolName)}</h2>
+                <p style="margin: 2px 0; font-size: 11px; color: #64748b;">${escapeHtml(schoolAddress)}</p>
+                <p style="margin: 2px 0; font-size: 10px; color: #64748b;">📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</p>
                 <h3 style="margin: 12px 0 5px; font-size: 16px; color: #2563eb;">📋 LEDGER REPORT</h3>
                 <p style="font-size: 10px; color: #64748b;">Generated on: ${new Date().toLocaleString()}</p>
             </div>
@@ -42722,7 +42803,7 @@ async function exportLedgerPDF() {
             
             <div style="margin-top: 25px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 8px; color: #94a3b8;">
                 <p>This is a computer generated report | Valid with school stamp</p>
-                <p>${escapeHtml(schoolName || 'Wings Convent School')} - Empowering Education</p>
+                <p>${escapeHtml(schoolName)} - Empowering Education</p>
             </div>
         `;
         
@@ -42773,6 +42854,15 @@ async function exportLedgerPDF() {
             heightLeft -= pdfHeight;
         }
         
+        // Add page numbers
+        const pageCount = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            pdf.setPage(i);
+            pdf.setFontSize(7);
+            pdf.setTextColor(148, 163, 184);
+            pdf.text(`Page ${i} of ${pageCount}`, pdfWidth - 15, pdfHeight - 5);
+        }
+        
         pdf.save(`ledger_report_${new Date().toISOString().split('T')[0]}.pdf`);
         showNotification('✅ PDF exported successfully!', 'success');
         
@@ -42785,6 +42875,7 @@ async function exportLedgerPDF() {
     
     hideLoader();
 }
+
 // ======================= MAIN LOAD FUNCTION =======================
 async function loadLedger() {
     if (currentUser.role !== 'admin' && currentUser.role !== 'accountant') {
@@ -43224,7 +43315,8 @@ async function saveLedgerEntry() {
 function shareLedger(id) {
     let l = window.ledger.find(entry => entry.id === id);
     if (!l) return;
-    let message = `📒 *Ledger Entry*\n\n📅 Date: ${l.date}\n📝 Description: ${l.description}\n📉 Debit: ${formatFullCurrency(l.debit || 0)}\n📈 Credit: ${formatFullCurrency(l.credit || 0)}\n💰 Balance: ${formatFullCurrency(l.balance || 0)}`;
+    let schoolName = getSchoolNameSetting();
+    let message = `📒 *Ledger Entry*\n\n📅 Date: ${l.date}\n📝 Description: ${l.description}\n📉 Debit: ${formatFullCurrency(l.debit || 0)}\n📈 Credit: ${formatFullCurrency(l.credit || 0)}\n💰 Balance: ${formatFullCurrency(l.balance || 0)}\n\n🏫 ${schoolName}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
 }
 
@@ -43292,6 +43384,9 @@ function printLedgerEntry(id) {
     let l = window.ledger.find(entry => entry.id === id);
     if (!l) return;
     
+    let schoolName = getSchoolNameSetting();
+    let schoolAddress = getSchoolAddressSetting();
+    
     let printWindow = window.open('', '_blank');
     printWindow.document.write(`<!DOCTYPE html>
     <html>
@@ -43308,7 +43403,7 @@ function printLedgerEntry(id) {
     </head>
     <body>
         <div class="entry">
-            <div class="header"><h2>${schoolName}</h2><h3>LEDGER ENTRY</h3><p>${schoolAddress}</p></div>
+            <div class="header"><h2>${escapeHtml(schoolName)}</h2><h3>LEDGER ENTRY</h3><p>${escapeHtml(schoolAddress)}</p></div>
             <div class="row"><strong>Entry ID:</strong> <span>${l.id}</span></div>
             <div class="row"><strong>Date:</strong> <span>${l.date}</span></div>
             <div class="row"><strong>Description:</strong> <span>${escapeHtml(l.description)}</span></div>
@@ -43325,6 +43420,10 @@ function printLedgerEntry(id) {
 }
 
 function printLedgerReport() {
+    let schoolName = getSchoolNameSetting();
+    let schoolAddress = getSchoolAddressSetting();
+    let schoolPhone = getSchoolPhoneSetting();
+    
     let printWindow = window.open('', '_blank');
     let tableRows = '';
     for (let l of window.ledger) {
@@ -43349,7 +43448,7 @@ function printLedgerReport() {
     </style>
     </head>
     <body>
-        <div class="header"><h2>${schoolName}</h2><h3>LEDGER REPORT</h3><p>${schoolAddress} | 📞 ${schoolPhone}</p><p>Generated: ${new Date().toLocaleString()}</p></div>
+        <div class="header"><h2>${escapeHtml(schoolName)}</h2><h3>LEDGER REPORT</h3><p>${escapeHtml(schoolAddress)} | 📞 ${escapeHtml(schoolPhone)}</p><p>Generated: ${new Date().toLocaleString()}</p></div>
         <table><thead><tr><th>Date</th><th>Description</th><th>Debit (₹)</th><th>Credit (₹)</th><th>Balance (₹)</th></tr></thead>
         <tbody>${tableRows || '<tr><td colspan="5" style="text-align:center">No entries found</td></tr>'}</tbody>
         <tfoot><tr class="total-row"><td colspan="2"><strong>TOTAL</strong></td><td style="text-align:right"><strong>${formatFullCurrency(totalDebit)}</strong></td><td style="text-align:right"><strong>${formatFullCurrency(totalCredit)}</strong></td><td style="text-align:right"><strong>${formatFullCurrency(balance)}</strong></td></tr></tfoot>
@@ -43412,7 +43511,9 @@ setTimeout(() => {
 
 console.log('✅ PART 19 COMPLETE - Ledger Module with Supabase Sync, PDF Export, and Offline Support!');
 // ======================= PART 19 ENDS HERE =======================
+// ======================= PART 19 ENDS HERE =======================
 // ======================= PART 20: EVENTS MODULE WITH SUPABASE SYNC & OFFLINE SUPPORT =======================
+// ======================= PART 20: EVENTS MODULE WITH COMPLETE CACHE + PENDING QUEUE =======================
 let eventFilterText = '';
 
 // ======================= HELPER FUNCTIONS =======================
@@ -43432,49 +43533,134 @@ function formatFullCurrency(amount) {
 }
 
 function dataURLtoBlob(dataURL) {
-    const arr = dataURL.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    const n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
-    return new Blob([u8arr], { type: mime });
+    try {
+        const arr = dataURL.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        const n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+        return new Blob([u8arr], { type: mime });
+    } catch(e) {
+        console.error('Blob conversion error:', e);
+        return null;
+    }
 }
 
 function downloadFile(dataURL, fileName) {
-    const link = document.createElement('a');
-    link.href = dataURL;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+        const link = document.createElement('a');
+        link.href = dataURL;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return true;
+    } catch(e) {
+        console.error('Download error:', e);
+        return false;
+    }
 }
 
 function showLoader() { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'flex'; }
 function hideLoader() { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'none'; }
 
+function showNotification(msg, type) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({ toast: true, position: 'top-end', icon: type, title: msg, showConfirmButton: false, timer: 3000 });
+    } else {
+        alert(msg);
+    }
+}
+
+// ======================= GET SCHOOL SETTINGS =======================
+function getSchoolNameSetting() {
+    return localStorage.getItem('schoolName') || 'Wings Convent School';
+}
+
+function getSchoolAddressSetting() {
+    return localStorage.getItem('schoolAddress') || '';
+}
+
+function getSchoolPhoneSetting() {
+    return localStorage.getItem('schoolPhone') || '';
+}
+
+function getSchoolEmailSetting() {
+    return localStorage.getItem('schoolEmail') || '';
+}
+
+function getSchoolLogoBase64() {
+    try {
+        let logoUrl = localStorage.getItem('schoolLogoUrl');
+        let logoData = localStorage.getItem('schoolLogo');
+        if (logoUrl && logoUrl.startsWith('http')) {
+            return logoUrl;
+        } else if (logoData && logoData.startsWith('data:image')) {
+            return logoData;
+        }
+        return null;
+    } catch(e) {
+        console.warn('Error getting school logo:', e);
+        return null;
+    }
+}
+
 // Make sure events array exists globally
 if (typeof window.events === 'undefined') window.events = [];
+
+// ======================= PENDING QUEUE FUNCTIONS =======================
+function addToPendingEventsQueue(operation, data) {
+    try {
+        let queue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
+        queue.push({
+            id: 'PEQ_' + Date.now(),
+            operation: operation,
+            data: data,
+            timestamp: new Date().toISOString(),
+            retryCount: 0
+        });
+        localStorage.setItem('pendingEventsQueue', JSON.stringify(queue));
+        console.log(`📴 [EVENTS] Added to pending queue: ${operation} - ${data.title || data.id}`);
+        return true;
+    } catch(e) {
+        console.error('Queue add error:', e);
+        return false;
+    }
+}
+
+function getPendingEventsCount() {
+    try {
+        let queue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
+        return queue.length;
+    } catch(e) {
+        return 0;
+    }
+}
 
 // ======================= SUPABASE FUNCTIONS =======================
 async function loadEventsFromSupabase() {
     const supabase = getSupabaseClient();
+    
     if (!supabase || !navigator.onLine) {
-        console.log('📴 Offline - Loading events from cache');
+        console.log('📴 [EVENTS] Offline - Loading from cache');
         const cached = localStorage.getItem('cache_events');
         if (cached) {
             try {
                 const parsed = JSON.parse(cached);
                 window.events.length = 0;
                 for (let event of parsed) window.events.push(event);
-                console.log(`📦 Loaded ${window.events.length} events from cache`);
-            } catch(e) {}
+                console.log(`📦 [EVENTS] Loaded ${window.events.length} events from cache`);
+                return true;
+            } catch(e) {
+                console.error('Cache parse error:', e);
+            }
         }
         return false;
     }
     
     try {
-        console.log('🔄 Loading events from Supabase table: events');
+        console.log('🔄 [EVENTS] Loading from Supabase...');
         const { data, error } = await supabase
             .from('events')
             .select('*')
@@ -43482,11 +43668,13 @@ async function loadEventsFromSupabase() {
         
         if (error) throw error;
         
-        console.log(`📊 Supabase returned ${data ? data.length : 0} events`);
+        console.log(`📊 [EVENTS] Supabase returned ${data ? data.length : 0} events`);
         
         if (data && data.length > 0) {
+            // Merge with existing local data (preserve poster data)
             const existingEvents = [...window.events];
             window.events.length = 0;
+            
             for (let event of data) {
                 let existing = existingEvents.find(e => e.id === event.id);
                 window.events.push({
@@ -43499,29 +43687,35 @@ async function loadEventsFromSupabase() {
                     status: event.status || 'Upcoming',
                     posterUrl: event.poster_url,
                     poster: existing?.poster || null,
-                    created_at: event.created_at
+                    created_at: event.created_at,
+                    updated_at: event.updated_at
                 });
             }
-            localStorage.setItem('cache_events', JSON.stringify(window.events));
-            console.log(`✅ Loaded ${window.events.length} events from Supabase`);
+            
+            // Save to cache
+            try {
+                localStorage.setItem('cache_events', JSON.stringify(window.events));
+            } catch(e) {}
+            
+            console.log(`✅ [EVENTS] Loaded ${window.events.length} events from Supabase`);
             return true;
         }
         return false;
     } catch(e) {
-        console.error('Error loading events from Supabase:', e);
+        console.error('❌ [EVENTS] Supabase load error:', e);
         return false;
     }
 }
 
+// ======================= ✅ FIXED: SAVE WITH CACHE + PENDING QUEUE =======================
 async function saveEventToSupabase(eventData) {
     const supabase = getSupabaseClient();
     if (!supabase) return false;
     
+    // If offline, add to pending queue
     if (!navigator.onLine) {
-        let pendingQueue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
-        pendingQueue.push({ id: Date.now().toString(), operation: 'upsert', data: eventData, timestamp: Date.now() });
-        localStorage.setItem('pendingEventsQueue', JSON.stringify(pendingQueue));
-        console.log('📴 Added to pending queue');
+        console.log('📴 [EVENTS] Offline - Adding to pending queue');
+        addToPendingEventsQueue('upsert', eventData);
         return false;
     }
     
@@ -43538,50 +43732,77 @@ async function saveEventToSupabase(eventData) {
             updated_at: new Date().toISOString()
         };
         
-        console.log('📤 Saving event to Supabase:', dbData);
+        console.log('📤 [EVENTS] Saving to Supabase:', dbData.title);
         
         const { error } = await supabase.from('events').upsert(dbData, { onConflict: 'id' });
-        if (error) throw error;
-        console.log(`✅ Event ${eventData.title} saved to Supabase`);
+        
+        if (error) {
+            console.error('❌ [EVENTS] Supabase save error:', error);
+            // Save to pending queue on error
+            addToPendingEventsQueue('upsert', eventData);
+            return false;
+        }
+        
+        console.log(`✅ [EVENTS] Event "${eventData.title}" saved to Supabase`);
         return true;
+        
     } catch(e) {
-        console.error('Supabase error:', e);
+        console.error('❌ [EVENTS] Save error:', e);
+        // Save to pending queue on error
+        addToPendingEventsQueue('upsert', eventData);
         return false;
     }
 }
 
+// ======================= DELETE WITH PENDING QUEUE =======================
 async function deleteEventFromSupabase(eventId) {
     const supabase = getSupabaseClient();
     if (!supabase || !navigator.onLine) {
-        let pendingQueue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
-        pendingQueue.push({ id: Date.now().toString(), operation: 'delete', data: { id: eventId }, timestamp: Date.now() });
-        localStorage.setItem('pendingEventsQueue', JSON.stringify(pendingQueue));
+        addToPendingEventsQueue('delete', { id: eventId });
         return false;
     }
     
     try {
         const { error } = await supabase.from('events').delete().eq('id', eventId);
         if (error) throw error;
-        console.log(`✅ Event ${eventId} deleted from Supabase`);
+        console.log(`✅ [EVENTS] Event ${eventId} deleted from Supabase`);
         return true;
     } catch(e) {
-        console.error('Delete error:', e);
+        console.error('❌ [EVENTS] Delete error:', e);
+        addToPendingEventsQueue('delete', { id: eventId });
         return false;
     }
 }
 
+// ======================= ✅ FIXED: PROCESS PENDING QUEUE =======================
 async function processPendingEventsQueue() {
-    if (!navigator.onLine) return;
+    if (!navigator.onLine) {
+        console.log('📴 [EVENTS] Offline - Cannot process queue');
+        return;
+    }
+    
     const supabase = getSupabaseClient();
-    if (!supabase) return;
+    if (!supabase) {
+        console.log('❌ [EVENTS] No Supabase client');
+        return;
+    }
     
-    let pendingQueue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
-    if (pendingQueue.length === 0) return;
+    let allPending = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
+    let pendingItems = allPending.filter(function(item) { 
+        return item.operation === 'upsert' || item.operation === 'delete';
+    });
     
-    console.log(`🔄 Processing ${pendingQueue.length} pending event operations...`);
+    if (pendingItems.length === 0) {
+        console.log('📭 [EVENTS] No pending items');
+        return;
+    }
+    
+    console.log(`🔄 [EVENTS] Processing ${pendingItems.length} pending operations...`);
     let completedIds = [];
+    let successCount = 0;
+    let failCount = 0;
     
-    for (let item of pendingQueue) {
+    for (let item of pendingItems) {
         try {
             if (item.operation === 'upsert') {
                 const dbData = {
@@ -43592,31 +43813,88 @@ async function processPendingEventsQueue() {
                     venue: item.data.venue || 'TBA',
                     description: item.data.description || '',
                     status: item.data.status || 'Upcoming',
-                    poster_url: item.data.posterUrl || null
+                    poster_url: item.data.posterUrl || null,
+                    updated_at: new Date().toISOString()
                 };
+                
                 const { error } = await supabase.from('events').upsert(dbData, { onConflict: 'id' });
-                if (!error) completedIds.push(item.id);
+                if (!error) {
+                    completedIds.push(item.id);
+                    successCount++;
+                    console.log(`✅ [EVENTS] Synced: ${item.data.title}`);
+                } else {
+                    item.retryCount = (item.retryCount || 0) + 1;
+                    if (item.retryCount > 3) {
+                        completedIds.push(item.id);
+                        failCount++;
+                        console.error(`❌ [EVENTS] Failed after 3 retries: ${item.data.title}`);
+                    }
+                }
             }
             else if (item.operation === 'delete') {
                 const { error } = await supabase.from('events').delete().eq('id', item.data.id);
-                if (!error) completedIds.push(item.id);
+                if (!error) {
+                    completedIds.push(item.id);
+                    successCount++;
+                    console.log(`✅ [EVENTS] Deleted: ${item.data.id}`);
+                } else {
+                    item.retryCount = (item.retryCount || 0) + 1;
+                    if (item.retryCount > 3) {
+                        completedIds.push(item.id);
+                        failCount++;
+                        console.error(`❌ [EVENTS] Failed after 3 retries: ${item.data.id}`);
+                    }
+                }
             }
-        } catch(err) { console.error('Pending error:', err); }
+        } catch(err) {
+            console.error('❌ [EVENTS] Pending error:', err);
+            item.retryCount = (item.retryCount || 0) + 1;
+            if (item.retryCount > 3) {
+                completedIds.push(item.id);
+                failCount++;
+            }
+        }
+        await new Promise(function(r) { setTimeout(r, 100); });
     }
     
-    pendingQueue = pendingQueue.filter(item => !completedIds.includes(item.id));
-    localStorage.setItem('pendingEventsQueue', JSON.stringify(pendingQueue));
-    if (completedIds.length > 0) console.log(`✅ Synced ${completedIds.length} pending operations`);
+    // Update queue
+    allPending = allPending.filter(function(item) { 
+        return !completedIds.includes(item.id); 
+    });
+    localStorage.setItem('pendingEventsQueue', JSON.stringify(allPending));
+    
+    if (successCount > 0) {
+        showNotification(`✅ ${successCount} events synced to Database!`, 'success');
+    }
+    if (failCount > 0) {
+        showNotification(`⚠️ ${failCount} events failed to sync`, 'warning');
+    }
+    
+    console.log(`📊 [EVENTS] Queue processed: ${successCount} success, ${failCount} failed`);
 }
 
+// ======================= REFRESH FUNCTION =======================
 async function refreshEventsData() {
     showLoader();
     showNotification('🔄 Syncing events from cloud...', 'info');
+    
+    // Load from Supabase
     await loadEventsFromSupabase();
+    
+    // Process any pending operations
     await processPendingEventsQueue();
+    
+    // Reload UI
     loadEvents();
+    
     hideLoader();
-    showNotification(`✅ ${window.events.length} events loaded from Database!`, 'success');
+    
+    let pendingCount = getPendingEventsCount();
+    if (pendingCount > 0) {
+        showNotification(`✅ ${window.events.length} events loaded! ${pendingCount} pending sync`, 'info');
+    } else {
+        showNotification(`✅ ${window.events.length} events loaded from Database!`, 'success');
+    }
 }
 
 // ======================= CAMERA UPLOAD FOR EVENT POSTERS =======================
@@ -43701,6 +43979,8 @@ async function uploadEventPosterToStorage(posterBase64, eventId, eventTitle) {
         }
         
         const blob = dataURLtoBlob(compressed);
+        if (!blob) return null;
+        
         const fileName = `poster_${Date.now()}.jpg`;
         const folderPath = `events/${eventId}_${eventTitle.replace(/\s/g, '_')}`;
         const fullPath = `${folderPath}/${fileName}`;
@@ -43731,7 +44011,7 @@ async function uploadEventPosterToStorage(posterBase64, eventId, eventTitle) {
     }
 }
 
-// ======================= PDF EXPORT WITH LOGO =======================
+// ======================= ✅ FIXED PDF EXPORT =======================
 async function exportEventsPDF() {
     if (typeof html2canvas === 'undefined') {
         showNotification('html2canvas library not loaded! Please refresh.', 'error');
@@ -43742,6 +44022,12 @@ async function exportEventsPDF() {
     showNotification('Generating PDF, please wait...', 'info');
     
     try {
+        var schoolName = getSchoolNameSetting();
+        var schoolAddress = getSchoolAddressSetting();
+        var schoolPhone = getSchoolPhoneSetting();
+        var schoolEmail = getSchoolEmailSetting();
+        var logoSrc = getSchoolLogoBase64();
+        
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
         tempDiv.style.left = '-9999px';
@@ -43752,12 +44038,8 @@ async function exportEventsPDF() {
         tempDiv.style.fontFamily = "'Segoe UI', Arial, sans-serif";
         
         let logoHtml = '';
-        let logoUrl = localStorage.getItem('schoolLogoUrl');
-        let logoData = localStorage.getItem('schoolLogo');
-        if (logoUrl && logoUrl.startsWith('http')) {
-            logoHtml = `<img src="${logoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;">`;
-        } else if (logoData && logoData.startsWith('data:image')) {
-            logoHtml = `<img src="${logoData}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;">`;
+        if (logoSrc) {
+            logoHtml = `<img src="${logoSrc}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;" onerror="this.style.display='none';">`;
         } else {
             logoHtml = '<div style="font-size: 40px; margin-bottom: 10px;">🏫</div>';
         }
@@ -43779,7 +44061,7 @@ async function exportEventsPDF() {
                     <strong style="font-size: 14px; color: #2563eb;">${escapeHtml(e.title)}</strong><br>
                     📅 ${e.date} | ⏰ ${e.time || 'TBA'} | 📍 ${e.venue || 'TBA'}<br>
                     <span style="font-size: 12px; color: #64748b;">${escapeHtml((e.description || '').substring(0, 100))}</span>
-                    ${e.posterUrl ? `<div style="margin-top:5px;"><a href="${e.posterUrl}" target="_blank">📸 View Poster</a></div>` : ''}
+                    ${e.posterUrl ? `<div style="margin-top:5px;"><a href="${e.posterUrl}" target="_blank" style="color:#10b981;">📸 View Poster</a></div>` : ''}
                 </div>`;
             }
             calendarHtml += `</div>`;
@@ -43792,9 +44074,9 @@ async function exportEventsPDF() {
         tempDiv.innerHTML = `
             <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #2563eb; padding-bottom: 15px;">
                 ${logoHtml}
-                <h2 style="margin: 5px 0; color: #1e293b; font-size: 20px;">${escapeHtml(schoolName || 'Wings Convent School')}</h2>
-                <p style="margin: 2px 0; font-size: 11px; color: #64748b;">${escapeHtml(schoolAddress || '')}</p>
-                <p style="margin: 2px 0; font-size: 10px; color: #64748b;">📞 ${escapeHtml(schoolPhone || '')} | ✉️ ${escapeHtml(schoolEmail || '')}</p>
+                <h2 style="margin: 5px 0; color: #1e293b; font-size: 20px;">${escapeHtml(schoolName)}</h2>
+                <p style="margin: 2px 0; font-size: 11px; color: #64748b;">${escapeHtml(schoolAddress)}</p>
+                <p style="margin: 2px 0; font-size: 10px; color: #64748b;">📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</p>
                 <h3 style="margin: 12px 0 5px; font-size: 16px; color: #2563eb;">📋 EVENT CALENDAR</h3>
                 <p style="font-size: 10px; color: #64748b;">Generated on: ${new Date().toLocaleString()}</p>
             </div>
@@ -43818,11 +44100,11 @@ async function exportEventsPDF() {
                 </div>
             </div>
             
-            ${calendarHtml || '<p style="text-align:center; padding:40px;">No events scheduled</p>'}
+            ${calendarHtml || '<p style="text-align:center; padding:40px; color:#94a3b8;">No events scheduled</p>'}
             
             <div style="margin-top: 25px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 8px; color: #94a3b8;">
                 <p>This is a computer generated report | Valid with school stamp</p>
-                <p>${escapeHtml(schoolName || 'Wings Convent School')} - Empowering Education</p>
+                <p>${escapeHtml(schoolName)} - Empowering Education</p>
             </div>
         `;
         
@@ -43840,12 +44122,23 @@ async function exportEventsPDF() {
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         
         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        
+        const pageCount = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            pdf.setPage(i);
+            pdf.setFontSize(7);
+            pdf.setTextColor(148, 163, 184);
+            pdf.text(`Page ${i} of ${pageCount}`, pdfWidth - 15, pdf.internal.pageSize.getHeight() - 5);
+        }
+        
         pdf.save(`events_calendar_${new Date().toISOString().split('T')[0]}.pdf`);
         showNotification('✅ PDF exported successfully!', 'success');
         
     } catch(error) {
         console.error('PDF Error:', error);
         showNotification('❌ Error generating PDF: ' + error.message, 'error');
+        const tempDivExists = document.querySelector('div[style*="left: -9999px"]');
+        if (tempDivExists) tempDivExists.remove();
     }
     
     hideLoader();
@@ -43858,19 +44151,23 @@ async function loadEvents() {
         return; 
     }
     
+    // Load from cache first (immediate UI)
+    const cached = localStorage.getItem('cache_events');
+    if (cached) {
+        try {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.length > 0) {
+                window.events.length = 0;
+                for (let event of parsed) window.events.push(event);
+                console.log(`📦 [EVENTS] Loaded ${window.events.length} events from cache`);
+            }
+        } catch(e) {}
+    }
+    
+    // Then load from Supabase (background sync)
     if (navigator.onLine) {
         await loadEventsFromSupabase();
         await processPendingEventsQueue();
-    } else {
-        const cached = localStorage.getItem('cache_events');
-        if (cached) {
-            try {
-                const parsed = JSON.parse(cached);
-                window.events.length = 0;
-                for (let event of parsed) window.events.push(event);
-                console.log(`📦 Loaded ${window.events.length} events from cache`);
-            } catch(e) {}
-        }
     }
     
     let filteredEvents = window.events.filter(e => {
@@ -43897,6 +44194,7 @@ async function loadEvents() {
     
     let sortedEvents = [...filteredEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
     let canAddEditDelete = (currentUser.role === 'admin');
+    let pendingCount = getPendingEventsCount();
     
     let content = `
     <style>
@@ -43910,6 +44208,7 @@ async function loadEvents() {
         }
         .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .offline-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
+        .pending-badge { background: #f59e0b; color: #1e293b; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .custom-event-modal {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
@@ -43972,7 +44271,8 @@ async function loadEvents() {
     <div style="text-align: right; margin-bottom: 10px;">
         <span class="${navigator.onLine ? 'online-badge' : 'offline-badge'}">
             <i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i>
-            ${navigator.onLine ? 'Connected to Cloud' : 'Offline Mode'} | <strong>${window.events.length}</strong> Events
+            ${navigator.onLine ? '🟢 Online' : '🔴 Offline'} | <strong>${window.events.length}</strong> Events
+            ${pendingCount > 0 ? `<span class="pending-badge" style="margin-left:8px;"><i class="fas fa-clock"></i> ${pendingCount} Pending</span>` : ''}
         </span>
     </div>
     
@@ -44016,7 +44316,7 @@ function renderEventList(eventsToRender) {
         html += `<div class="data-card" style="margin-bottom: 12px; border-radius: 20px;">
             <div class="card-header" style="display: flex; gap: 12px; padding: 12px; flex-wrap: wrap;">
                 <div class="card-photo" style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                    ${e.posterUrl ? `<img src="${e.posterUrl}" style="width:100%; height:100%; object-fit:cover;">` : (e.poster ? `<img src="${e.poster}" style="width:100%; height:100%; object-fit:cover;">` : '<i class="fas fa-calendar-alt" style="color: white; font-size: 24px;"></i>')}
+                    ${e.posterUrl ? `<img src="${e.posterUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-calendar-alt\\" style=\\"color: white; font-size: 24px;\\"></i>';">` : (e.poster ? `<img src="${e.poster}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-calendar-alt\\" style=\\"color: white; font-size: 24px;\\"></i>';">` : '<i class="fas fa-calendar-alt" style="color: white; font-size: 24px;"></i>')}
                 </div>
                 <div class="card-title" style="flex: 1;">
                     <h3 style="font-size: 15px;">${escapeHtml(e.title)}</h3>
@@ -44150,9 +44450,9 @@ function showAddEventModal(editId = null) {
         let previewDiv = document.getElementById(`posterPreview_${modalId}`);
         if (previewDiv) {
             if (evData.posterUrl) {
-                previewDiv.innerHTML = `<div><img src="${evData.posterUrl}" style="width:80px; border-radius:8px;"><p>Poster in Cloud</p></div>`;
+                previewDiv.innerHTML = `<div><img src="${evData.posterUrl}" style="width:80px; border-radius:8px;" onerror="this.style.display='none';"><p>Poster in Cloud</p></div>`;
             } else if (evData.poster) {
-                previewDiv.innerHTML = `<div><img src="${evData.poster}" style="width:80px; border-radius:8px;"><p>Poster saved locally</p></div>`;
+                previewDiv.innerHTML = `<div><img src="${evData.poster}" style="width:80px; border-radius:8px;" onerror="this.style.display='none';"><p>Poster saved locally</p></div>`;
             }
         }
     }
@@ -44169,7 +44469,7 @@ function showAddEventModal(editId = null) {
             
             let previewDiv = document.getElementById(`posterPreview_${modalId}`);
             if (previewDiv) {
-                previewDiv.innerHTML = `<div><img src="${uploadedUrl || croppedData}" style="width:80px; border-radius:8px;"><p>${uploadedUrl ? '☁️ Uploaded to Database!' : '📁 Saved locally'}</p></div>`;
+                previewDiv.innerHTML = `<div><img src="${uploadedUrl || croppedData}" style="width:80px; border-radius:8px;" onerror="this.style.display='none';"><p>${uploadedUrl ? '☁️ Uploaded to Database!' : '📁 Saved locally'}</p></div>`;
             }
             hideLoader();
             showNotification(uploadedUrl ? 'Poster uploaded to Database!' : 'Poster saved locally', uploadedUrl ? 'success' : 'warning');
@@ -44177,7 +44477,7 @@ function showAddEventModal(editId = null) {
     };
 }
 
-// ======================= SAVE EVENT DATA =======================
+// ======================= ✅ FIXED: SAVE WITH CACHE + PENDING QUEUE =======================
 async function saveEventData(modalId, editId) {
     let title = document.getElementById(`evTitle_${modalId}`)?.value.trim();
     if (!title) {
@@ -44197,13 +44497,14 @@ async function saveEventData(modalId, editId) {
         posterUrl: window.eventPosterUrl
     };
     
+    // STEP 1: Update Local Cache (Immediate UI)
     if (editId) {
         let idx = window.events.findIndex(e => e.id === editId);
         if (idx !== -1) window.events[idx] = { ...window.events[idx], ...evObj };
-        showNotification('Event updated successfully!', 'success');
+        showNotification('Event updated successfully! (Local cache)', 'success');
     } else {
         window.events.push(evObj);
-        showNotification(evObj.posterUrl ? '✅ Event added! Poster saved to cloud.' : '✅ Event added!', 'success');
+        showNotification(evObj.posterUrl ? '✅ Event added! Poster saved to cloud.' : '✅ Event added! (Local cache)', 'success');
         
         if (typeof recentActivities !== 'undefined') {
             recentActivities.unshift({
@@ -44216,17 +44517,33 @@ async function saveEventData(modalId, editId) {
         }
     }
     
-    localStorage.setItem('cache_events', JSON.stringify(window.events));
+    // STEP 2: Save to localStorage cache
+    try {
+        localStorage.setItem('cache_events', JSON.stringify(window.events));
+        console.log('💾 [EVENTS] Saved to localStorage cache');
+    } catch(e) {
+        console.error('Cache save error:', e);
+    }
     
+    // STEP 3: Close modal and refresh UI immediately
+    closeEventModal(modalId);
+    loadEvents();
+    
+    // STEP 4: Try to save to Supabase (background)
     if (navigator.onLine) {
-        await saveEventToSupabase(evObj);
+        let saved = await saveEventToSupabase(evObj);
+        if (saved) {
+            showNotification(`✅ "${title}" saved to cloud!`, 'success');
+        } else {
+            showNotification(`📴 "${title}" saved locally. Will sync when online.`, 'warning');
+        }
     } else {
-        showNotification('📴 Offline - Event saved locally. Will sync when online.', 'warning');
+        // Offline: Add to pending queue
+        addToPendingEventsQueue('upsert', evObj);
+        showNotification(`📴 Offline: "${title}" saved locally. Will sync when online.`, 'warning');
     }
     
     if (typeof saveAllData === 'function') saveAllData();
-    closeEventModal(modalId);
-    loadEvents();
 }
 
 function closeEventModal(modalId) {
@@ -44248,7 +44565,7 @@ function viewEventDetails(id) {
         title: `🎉 ${escapeHtml(e.title)}`,
         html: `
             <div style="text-align: center;">
-                ${e.posterUrl ? `<img src="${e.posterUrl}" style="max-width:100%; max-height:150px; border-radius:12px; margin-bottom:10px;">` : (e.poster ? `<img src="${e.poster}" style="max-width:100%; max-height:150px; border-radius:12px; margin-bottom:10px;">` : '')}
+                ${e.posterUrl ? `<img src="${e.posterUrl}" style="max-width:100%; max-height:150px; border-radius:12px; margin-bottom:10px;" onerror="this.style.display='none';">` : (e.poster ? `<img src="${e.poster}" style="max-width:100%; max-height:150px; border-radius:12px; margin-bottom:10px;" onerror="this.style.display='none';">` : '')}
             </div>
             <div style="text-align: left; margin-top: 10px;">
                 <p><strong>📅 Date:</strong> ${e.date} (${dayName})</p>
@@ -44282,17 +44599,31 @@ async function deleteEvent(id) {
         if (result.isConfirmed) {
             showLoader();
             
+            // Remove from local array
             window.events = window.events.filter(e => e.id !== id);
-            localStorage.setItem('cache_events', JSON.stringify(window.events));
             
+            // Save to cache
+            try {
+                localStorage.setItem('cache_events', JSON.stringify(window.events));
+                console.log('💾 [EVENTS] Deleted from localStorage cache');
+            } catch(e) {}
+            
+            // Try to delete from Supabase
             if (navigator.onLine) {
-                await deleteEventFromSupabase(id);
+                let deleted = await deleteEventFromSupabase(id);
+                if (deleted) {
+                    showNotification('✅ Event deleted from cloud!', 'success');
+                } else {
+                    showNotification('📴 Event deleted locally. Will sync when online.', 'warning');
+                }
+            } else {
+                addToPendingEventsQueue('delete', { id: id });
+                showNotification('📴 Offline: Event deleted locally. Will sync when online.', 'warning');
             }
             
             if (typeof saveAllData === 'function') saveAllData();
             hideLoader();
             loadEvents();
-            showNotification('Event deleted successfully!', 'success');
         }
     });
 }
@@ -44300,6 +44631,10 @@ async function deleteEvent(id) {
 function shareEvent(id) {
     let e = window.events.find(event => event.id === id);
     if (!e) return;
+    
+    let schoolName = getSchoolNameSetting();
+    let schoolPhone = getSchoolPhoneSetting();
+    
     let message = `🎉 *${e.title}* 🎉\n\n📅 Date: ${e.date}\n⏰ Time: ${e.time}\n📍 Venue: ${e.venue}\n📝 ${e.description || ''}\n\n🏫 ${schoolName}\n📞 ${schoolPhone}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
 }
@@ -44318,6 +44653,10 @@ function downloadEventPoster(id) {
 }
 
 function printEventCalendar() {
+    let schoolName = getSchoolNameSetting();
+    let schoolAddress = getSchoolAddressSetting();
+    let schoolPhone = getSchoolPhoneSetting();
+    
     let printWindow = window.open('', '_blank');
     let eventsByMonth = {};
     let sortedEvents = [...window.events].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -44356,9 +44695,9 @@ function printEventCalendar() {
     </head>
     <body>
         <div class="header">
-            <h2>${schoolName}</h2>
+            <h2>${escapeHtml(schoolName)}</h2>
             <h3>EVENT CALENDAR</h3>
-            <p>${schoolAddress} | 📞 ${schoolPhone}</p>
+            <p>${escapeHtml(schoolAddress)} | 📞 ${escapeHtml(schoolPhone)}</p>
             <p>Generated: ${new Date().toLocaleDateString()}</p>
         </div>
         ${calendarHtml || '<p>No events scheduled</p>'}
@@ -44397,18 +44736,19 @@ function clearEventFilter() {
 
 // ======================= ONLINE/OFFLINE HANDLERS =======================
 window.addEventListener('online', async () => {
-    console.log('🟢 Online - Syncing events...');
-    showNotification('🟢 Back online! Syncing events...', 'success');
+    console.log('🟢 [EVENTS] Online - Syncing...');
+    showNotification('🟢 Back online! Syncing events...', 'info');
     await loadEventsFromSupabase();
     await processPendingEventsQueue();
     loadEvents();
 });
 
 window.addEventListener('offline', () => {
-    console.log('🔴 Offline mode');
+    console.log('🔴 [EVENTS] Offline mode');
     showNotification('🔴 Offline mode - Events data saved locally', 'warning');
 });
 
+// Initialize
 setTimeout(() => {
     if (navigator.onLine) {
         loadEventsFromSupabase().then(() => processPendingEventsQueue());
@@ -44416,7 +44756,13 @@ setTimeout(() => {
     loadEvents();
 }, 1000);
 
-console.log('✅ PART 20 COMPLETE - Events Module with Supabase Sync, PDF Export, and Offline Support!');
+console.log('✅ PART 20 COMPLETE - Events Module with Cache + Pending Queue Flow');
+console.log('📌 Flow Implemented:');
+console.log('   ✅ ONLINE: Save → Cache → UI → Supabase → Success/Fail → Queue');
+console.log('   ✅ OFFLINE: Save → Cache → UI → Add to Queue → Show Offline Notification');
+console.log('   ✅ ONLINE RETURN: Auto-sync pending queue → Remove from queue → Show Sync Notification');
+console.log('   ✅ GET SCHOOL SETTINGS: Proper functions for localStorage access');
+// ======================= PART 20 ENDS HERE =======================
 // ======================= PART 20 ENDS HERE =======================
 // ======================= PART 21: FEEDBACK MODULE (COMPLETE - PRODUCTION READY) =======================
 // ======================= ALL FEATURES WORKING: =======================
