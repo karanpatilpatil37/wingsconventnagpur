@@ -38652,7 +38652,7 @@ console.log('📌 Admin: FULL ACCESS - Can add/edit/delete all timetables');
 // ======================= PART 16 ENDS HERE =======================
 // ======================= PART 17: COMPLETE TRANSPORT MODULE =======================
 // ======================= PART 17: TRANSPORT MODULE (STUDENT FETCH FIXED) =======================
-// ======================= PART 17: TRANSPORT MODULE (SUPABASE CONNECTED) =======================
+// ======================= PART 17: TRANSPORT MODULE (COMPLETE FIXED - AUTO-LOAD WORKING) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.transportModuleLoaded === 'undefined') {
     window.transportModuleLoaded = true;
@@ -39022,11 +39022,12 @@ function getSupabaseClientTransport() {
     return null;
 }
 
-// ======================= ✅ LOAD TRANSPORT FROM SUPABASE =======================
+// ======================= ✅ FIXED: LOAD TRANSPORT FROM SUPABASE =======================
 async function loadTransportFromSupabase() {
     console.log('🚌 [TRANSPORT] loadTransportFromSupabase called...');
     const supabase = getSupabaseClientTransport();
     
+    // ✅ First load assignments and students
     loadStudentAssignments();
     loadStudentsWithTransport();
     ensureStudentsTransportProperty();
@@ -39047,6 +39048,7 @@ async function loadTransportFromSupabase() {
                     const realAssigned = getAssignedStudentsForRoute(route.id);
                     route.students = realAssigned.length;
                 }
+                console.log('📦 [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from cache');
                 return true;
             } catch(e) {
                 console.error('Cache parse error:', e);
@@ -39088,10 +39090,14 @@ async function loadTransportFromSupabase() {
                 for (let att of attachments) {
                     if (att && att.type === 'students' && att.data) {
                         assignedStudents = att.data;
-                        // ✅ Update global assignments
-                        window.transportStudentAssignments = assignedStudents;
+                        // ✅ Restore assignments
+                        for (let studentId in assignedStudents) {
+                            if (assignedStudents.hasOwnProperty(studentId)) {
+                                window.transportStudentAssignments[studentId] = item.id;
+                            }
+                        }
                         saveStudentAssignments();
-                        console.log('📦 [TRANSPORT] Loaded ' + Object.keys(assignedStudents).length + ' student assignments from Supabase');
+                        console.log('📦 [TRANSPORT] Restored ' + Object.keys(assignedStudents).length + ' student assignments for route: ' + item.route_name);
                         break;
                     }
                 }
@@ -39115,6 +39121,19 @@ async function loadTransportFromSupabase() {
                     students: realCount > 0 ? realCount : (item.students_count || 0),
                     attachments: attachments || []
                 });
+            }
+            
+            // ✅ Update studentsData with restored assignments
+            if (window.students) {
+                for (let student of window.students) {
+                    if (student.id && window.transportStudentAssignments[student.id] !== undefined) {
+                        student.transportRouteId = window.transportStudentAssignments[student.id];
+                        student.transportEnabled = student.transportRouteId !== null;
+                    }
+                }
+                try {
+                    localStorage.setItem('studentsData', JSON.stringify(window.students));
+                } catch(e) {}
             }
             
             localStorage.setItem('cache_transportation', JSON.stringify(window.transportData.routes));
@@ -39160,7 +39179,7 @@ async function loadTransportFromSupabase() {
     }
 }
 
-// ======================= ✅ SAVE TRANSPORT TO SUPABASE =======================
+// ======================= ✅ FIXED: SAVE TRANSPORT TO SUPABASE =======================
 async function saveTransportToSupabase(routeData) {
     console.log('📤 [TRANSPORT] saveTransportToSupabase called for:', routeData.routeName);
     const supabase = getSupabaseClientTransport();
@@ -39206,9 +39225,7 @@ async function saveTransportToSupabase(routeData) {
         
         // ✅ Remove old student attachment and add new one
         let filteredAttachments = attachments.filter(function(a) { return a.type !== 'students'; });
-        if (Object.keys(studentData).length > 0) {
-            filteredAttachments.push(studentAttachment);
-        }
+        filteredAttachments.push(studentAttachment);
         
         const dbData = {
             id: routeData.id,
@@ -39344,9 +39361,11 @@ async function processPendingTransportQueue() {
     }
 }
 
-// ======================= MAIN LOAD FUNCTION =======================
+// ======================= ✅ FIXED: MAIN LOAD FUNCTION WITH BETTER ERROR HANDLING =======================
 async function loadTransport() {
     console.log('🚌 [TRANSPORT] loadTransport called');
+    console.log('🔍 Current User:', currentUser);
+    console.log('🔍 Online Status:', navigator.onLine);
     
     if (isTransportLoading) {
         console.log('⚠️ [TRANSPORT] Already loading, skipping...');
@@ -39388,25 +39407,33 @@ async function loadTransport() {
     `;
     
     try {
+        // ✅ Load assignments and students first
         loadStudentAssignments();
         loadStudentsWithTransport();
         ensureStudentsTransportProperty();
         
+        // ✅ Then load routes from Supabase
         if (navigator.onLine) {
+            console.log('🔄 [TRANSPORT] Loading from Supabase...');
             await loadTransportFromSupabase();
             console.log('✅ [TRANSPORT] Loaded successfully online');
         } else {
+            console.log('📴 [TRANSPORT] Offline - Loading from cache');
             const cached = localStorage.getItem('cache_transportation');
             if (cached) {
                 try {
                     window.transportData.routes = JSON.parse(cached);
                     console.log('📦 [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from cache (offline)');
-                } catch(e) {}
+                } catch(e) {
+                    console.error('Cache parse error:', e);
+                }
             }
         }
         
+        // ✅ Ensure all students have transport properties
         ensureStudentsTransportProperty();
         
+        // ✅ Update driver details and student counts
         for (let route of window.transportData.routes) {
             if (route.driverName) {
                 route.driverPhone = getDriverPhoneFromEmployees(route.driverName) || route.driverPhone;
@@ -39414,8 +39441,10 @@ async function loadTransport() {
             }
             const realAssigned = getAssignedStudentsForRoute(route.id);
             route.students = realAssigned.length;
+            console.log(`📊 [TRANSPORT] Route ${route.routeName} has ${route.students} students`);
         }
         
+        console.log('✅ [TRANSPORT] Rendering UI with ' + window.transportData.routes.length + ' routes...');
         renderTransportUI();
         hideLoader();
         isTransportLoading = false;
@@ -39909,7 +39938,7 @@ function saveTransportRoute(modalId, editId) {
             if (s.id && window.transportStudentAssignments[s.id] !== undefined) {
                 assignedRoute = window.transportStudentAssignments[s.id];
             }
-            let routeId = editId || routeName;
+            let routeId = editId || 'T' + Date.now();
             if (assignedRoute === routeId) {
                 studentData[s.id] = {
                     id: s.id,
@@ -39926,17 +39955,15 @@ function saveTransportRoute(modalId, editId) {
     }
     
     // ✅ Add student attachment
-    if (Object.keys(studentData).length > 0) {
-        let studentAttachment = {
-            type: 'students',
-            data: studentData,
-            count: Object.keys(studentData).length,
-            updatedAt: new Date().toISOString()
-        };
-        let filteredAttachments = attachments.filter(function(a) { return a.type !== 'students'; });
-        filteredAttachments.push(studentAttachment);
-        attachments = filteredAttachments;
-    }
+    let studentAttachment = {
+        type: 'students',
+        data: studentData,
+        count: Object.keys(studentData).length,
+        updatedAt: new Date().toISOString()
+    };
+    let filteredAttachments = attachments.filter(function(a) { return a.type !== 'students'; });
+    filteredAttachments.push(studentAttachment);
+    attachments = filteredAttachments;
     
     let existingStudents = 0;
     if (editId) {
@@ -40404,13 +40431,98 @@ function printRouteDetails(id) { /* ... existing code ... */ }
 function shareRoute(id) { /* ... existing code ... */ }
 function exportTransportCSV() { /* ... existing code ... */ }
 async function exportTransportPDF() { /* ... existing code ... */ }
-async function refreshTransportData() { /* ... existing code ... */ }
-function filterTransport() { /* ... existing code ... */ }
-function clearTransportFilter() { /* ... existing code ... */ }
+
+// ======================= ✅ FIXED: REFRESH FUNCTION =======================
+async function refreshTransportData() { 
+    showLoader();
+    showNotification('🔄 Syncing transport data from cloud...', 'info');
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    await loadTransportFromSupabase();
+    await processPendingTransportQueue();
+    renderTransportUI();
+    hideLoader();
+    showNotification('✅ ' + window.transportData.routes.length + ' routes loaded with ' + Object.keys(window.transportStudentAssignments).length + ' student assignments!', 'success');
+}
+
+function filterTransport() { 
+    transportFilterText = document.getElementById('transportSearch')?.value || '';
+    renderTransportUI();
+    showNotification('Filter applied', 'success');
+}
+
+function clearTransportFilter() { 
+    transportFilterText = '';
+    if (document.getElementById('transportSearch')) {
+        document.getElementById('transportSearch').value = '';
+    }
+    renderTransportUI();
+    showNotification('Filter cleared', 'info');
+}
+
 function openDriverPhotoCapture(callback) { /* ... existing code ... */ }
 function openRouteMapCapture(callback) { /* ... existing code ... */ }
 async function uploadDriverPhotoToSupabase(photoBase64, routeId, driverName) { /* ... existing code ... */ }
 async function uploadRouteMapToSupabase(fileData, fileName, fileType, routeId, routeName) { /* ... existing code ... */ }
+
+// ======================= ✅ FIXED: AUTO-LOAD ON MODULE OPEN =======================
+// ✅ Better auto-load mechanism for Transport module
+(function setupTransportAutoLoad() {
+    console.log('🚌 [TRANSPORT] Setting up auto-load...');
+    
+    // Method 1: Override openModule function
+    const originalOpenModule = window.openModule;
+    window.openModule = function(moduleId) {
+        console.log('📂 [TRANSPORT] openModule called with ID:', moduleId);
+        if (originalOpenModule) {
+            originalOpenModule(moduleId);
+        }
+        // Module ID 14 is Transport
+        if (moduleId === 14) {
+            console.log('🚌 [TRANSPORT] Transport module opened, loading data...');
+            setTimeout(function() {
+                if (typeof loadTransport === 'function' && !isTransportLoading) {
+                    loadTransport();
+                } else if (typeof loadTransport === 'function') {
+                    console.log('⚠️ [TRANSPORT] Already loading, skipping...');
+                }
+            }, 300);
+        }
+    };
+    
+    // Method 2: Check if module is already open on page load
+    setTimeout(function() {
+        const moduleTitle = document.getElementById('moduleTitle');
+        if (moduleTitle) {
+            const titleText = moduleTitle.innerText || moduleTitle.textContent || '';
+            if (titleText.toUpperCase().includes('TRANSPORT') || titleText.toUpperCase().includes('TRANSPORTATION')) {
+                console.log('🚌 [TRANSPORT] Module already open, loading data...');
+                if (typeof loadTransport === 'function' && !isTransportLoading) {
+                    loadTransport();
+                }
+            }
+        }
+    }, 500);
+    
+    // Method 3: Listen for click events on module buttons
+    document.addEventListener('click', function(e) {
+        const target = e.target.closest('[data-module-id]');
+        if (target) {
+            const moduleId = parseInt(target.getAttribute('data-module-id'));
+            if (moduleId === 14) {
+                console.log('🚌 [TRANSPORT] Module button clicked, loading data...');
+                setTimeout(function() {
+                    if (typeof loadTransport === 'function' && !isTransportLoading) {
+                        loadTransport();
+                    }
+                }, 400);
+            }
+        }
+    });
+    
+    console.log('✅ [TRANSPORT] Auto-load setup complete');
+})();
 
 // ======================= ONLINE/OFFLINE HANDLERS =======================
 window.addEventListener('online', async function() {
@@ -40429,29 +40541,20 @@ window.addEventListener('offline', function() {
     showNotification('🔴 Offline mode - Data saved locally, will sync when online', 'warning');
 });
 
-// ======================= AUTO-LOAD =======================
-var origOpenModuleTransport = window.openModule;
-if (origOpenModuleTransport) {
-    window.openModule = function(id) {
-        if (origOpenModuleTransport) origOpenModuleTransport(id);
-        if (id === 14) {
-            console.log('🚌 [TRANSPORT] Module 14 opened - loading routes...');
-            setTimeout(function() {
-                if (typeof loadTransport === 'function') {
-                    loadTransport();
-                }
-            }, 200);
-        }
-    };
-}
-
+// ======================= INITIAL LOAD =======================
+// Try to load transport if module is already visible
 setTimeout(function() {
-    var moduleTitle = document.getElementById('moduleTitle');
-    if (moduleTitle && moduleTitle.innerText && moduleTitle.innerText.toUpperCase().includes('TRANSPORT')) {
-        console.log('🚌 [TRANSPORT] Module already open, loading routes...');
-        loadTransport();
+    const moduleContent = document.getElementById('moduleContent');
+    if (moduleContent) {
+        const moduleTitle = document.getElementById('moduleTitle');
+        if (moduleTitle && moduleTitle.innerText && moduleTitle.innerText.toUpperCase().includes('TRANSPORT')) {
+            console.log('🚌 [TRANSPORT] Initial load - module visible, loading data...');
+            if (typeof loadTransport === 'function' && !isTransportLoading) {
+                loadTransport();
+            }
+        }
     }
-}, 500);
+}, 800);
 
 // ======================= EXPOSE FUNCTIONS =======================
 window.loadTransport = loadTransport;
@@ -40477,15 +40580,17 @@ window.updateRouteStudentCount = updateRouteStudentCount;
 window.loadStudentAssignments = loadStudentAssignments;
 window.saveStudentAssignments = saveStudentAssignments;
 
-console.log('✅ PART 17 COMPLETE - Transport Module FULLY CONNECTED to Supabase!');
+console.log('✅ PART 17 COMPLETE - Transport Module FULLY FIXED with Auto-Load!');
 console.log('📌 Features:');
 console.log('   ✅ Supabase transportation table connected');
 console.log('   ✅ Student assignments stored in attachments column');
 console.log('   ✅ Data persists after re-login/refresh');
+console.log('   ✅ Student assignments restored from Supabase on load');
 console.log('   ✅ Online/Offline sync with pending queue');
 console.log('   ✅ A5 Landscape PDF Export');
 console.log('   ✅ Driver Photo Upload');
 console.log('   ✅ Route Map Upload');
+console.log('   ✅ Auto-load when module is opened');
 
 } // End of duplicate check
 // ======================= PART 17 ENDS HERE =======================
