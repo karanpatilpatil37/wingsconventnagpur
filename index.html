@@ -38652,7 +38652,7 @@ console.log('📌 Admin: FULL ACCESS - Can add/edit/delete all timetables');
 // ======================= PART 16 ENDS HERE =======================
 // ======================= PART 17: COMPLETE TRANSPORT MODULE =======================
 // ======================= PART 17: TRANSPORT MODULE (STUDENT FETCH FIXED) =======================
-// ======================= PART 17: TRANSPORT MODULE (COMPLETE FIXED - AUTO-LOAD WORKING) =======================
+// ======================= PART 17: TRANSPORT MODULE (COMPLETE - ALL FUNCTIONS WORKING) =======================
 // ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.transportModuleLoaded === 'undefined') {
     window.transportModuleLoaded = true;
@@ -38663,11 +38663,16 @@ if (typeof window.transportData === 'undefined') {
     console.log('✅ [TRANSPORT] Initialized transportData');
 }
 
-// ======================= ✅ PERSISTENT STUDENT ASSIGNMENTS =======================
 if (typeof window.transportStudentAssignments === 'undefined') {
     window.transportStudentAssignments = {};
     console.log('✅ [TRANSPORT] Initialized transportStudentAssignments');
 }
+
+let transportFilterText = '';
+let isTransportLoading = false;
+let routeChartInstance = null;
+
+// ======================= 📦 DATA PERSISTENCE FUNCTIONS =======================
 
 function loadStudentAssignments() {
     try {
@@ -38834,11 +38839,8 @@ loadStudentAssignments();
 loadStudentsWithTransport();
 ensureStudentsTransportProperty();
 
-let transportFilterText = '';
-let isTransportLoading = false;
-let routeChartInstance = null;
+// ======================= 🛠️ HELPER FUNCTIONS =======================
 
-// ======================= HELPER FUNCTIONS =======================
 function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/[&<>']/g, function(m) {
@@ -38847,6 +38849,12 @@ function escapeHtml(str) {
         if (m === '>') return '&gt;';
         return m;
     });
+}
+
+function formatFullCurrency(amount) {
+    if (amount === undefined || amount === null) return '₹0';
+    if (isNaN(amount)) return '₹0';
+    return '₹' + amount.toLocaleString('en-IN');
 }
 
 function showLoader() { 
@@ -38901,6 +38909,8 @@ function downloadFile(dataURL, fileName) {
     }
 }
 
+// ======================= 🏫 SCHOOL SETTINGS FUNCTIONS =======================
+
 function getSchoolNameSetting() {
     return localStorage.getItem('schoolName') || 'Wings Convent School';
 }
@@ -38949,7 +38959,8 @@ function getSchoolLogoHTML(style) {
     return '<i class="fas fa-school" style="font-size: 28px; color: #2563eb; margin-bottom: 4px;"></i>';
 }
 
-// ======================= GET DRIVER DETAILS =======================
+// ======================= 👤 DRIVER FUNCTIONS =======================
+
 function getDriverPhotoFromEmployees(driverName) {
     if (!driverName) return null;
     if (window.employees) {
@@ -38988,7 +38999,8 @@ function getDriverList() {
     return drivers;
 }
 
-// ======================= GET STUDENT DETAILS =======================
+// ======================= 👨‍🎓 STUDENT FUNCTIONS =======================
+
 function getStudentPhoto(student) {
     if (!student) return null;
     return student.photo_url || student.photoData || student.photo || null;
@@ -39004,7 +39016,8 @@ function getStudentMobile(student) {
     return student.mobile || student.phone || 'N/A';
 }
 
-// ======================= GET SUPABASE CLIENT =======================
+// ======================= ☁️ SUPABASE FUNCTIONS =======================
+
 function getSupabaseClientTransport() {
     try {
         if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) return window.supabaseClient;
@@ -39022,12 +39035,10 @@ function getSupabaseClientTransport() {
     return null;
 }
 
-// ======================= ✅ FIXED: LOAD TRANSPORT FROM SUPABASE =======================
 async function loadTransportFromSupabase() {
     console.log('🚌 [TRANSPORT] loadTransportFromSupabase called...');
     const supabase = getSupabaseClientTransport();
     
-    // ✅ First load assignments and students
     loadStudentAssignments();
     loadStudentsWithTransport();
     ensureStudentsTransportProperty();
@@ -39044,11 +39055,9 @@ async function loadTransportFromSupabase() {
                         route.driverPhone = getDriverPhoneFromEmployees(route.driverName) || route.driverPhone;
                         route.driverPhotoUrl = getDriverPhotoFromEmployees(route.driverName) || route.driverPhotoUrl;
                     }
-                    // ✅ Force real count from assignments
                     const realAssigned = getAssignedStudentsForRoute(route.id);
                     route.students = realAssigned.length;
                 }
-                console.log('📦 [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from cache');
                 return true;
             } catch(e) {
                 console.error('Cache parse error:', e);
@@ -39078,26 +39087,22 @@ async function loadTransportFromSupabase() {
         
         if (data && data.length > 0) {
             for (let item of data) {
-                // ✅ Parse attachments
                 let attachments = item.attachments;
                 if (typeof attachments === 'string') {
                     try { attachments = JSON.parse(attachments); } catch(e) { attachments = []; }
                 }
                 if (!attachments) attachments = [];
                 
-                // ✅ Extract student assignments from attachments
                 let assignedStudents = {};
                 for (let att of attachments) {
                     if (att && att.type === 'students' && att.data) {
                         assignedStudents = att.data;
-                        // ✅ Restore assignments
                         for (let studentId in assignedStudents) {
                             if (assignedStudents.hasOwnProperty(studentId)) {
                                 window.transportStudentAssignments[studentId] = item.id;
                             }
                         }
                         saveStudentAssignments();
-                        console.log('📦 [TRANSPORT] Restored ' + Object.keys(assignedStudents).length + ' student assignments for route: ' + item.route_name);
                         break;
                     }
                 }
@@ -39105,7 +39110,6 @@ async function loadTransportFromSupabase() {
                 let driverPhoto = item.driver_photo_url || getDriverPhotoFromEmployees(item.driver_name);
                 let driverPhone = item.driver_phone || getDriverPhoneFromEmployees(item.driver_name);
                 
-                // ✅ Real student count from assignments
                 const realAssigned = getAssignedStudentsForRoute(item.id);
                 const realCount = realAssigned.length;
                 
@@ -39123,7 +39127,6 @@ async function loadTransportFromSupabase() {
                 });
             }
             
-            // ✅ Update studentsData with restored assignments
             if (window.students) {
                 for (let student of window.students) {
                     if (student.id && window.transportStudentAssignments[student.id] !== undefined) {
@@ -39179,7 +39182,6 @@ async function loadTransportFromSupabase() {
     }
 }
 
-// ======================= ✅ FIXED: SAVE TRANSPORT TO SUPABASE =======================
 async function saveTransportToSupabase(routeData) {
     console.log('📤 [TRANSPORT] saveTransportToSupabase called for:', routeData.routeName);
     const supabase = getSupabaseClientTransport();
@@ -39191,7 +39193,6 @@ async function saveTransportToSupabase(routeData) {
     }
     
     try {
-        // ✅ Build student data from assignments
         let studentData = {};
         if (window.students) {
             for (let s of window.students) {
@@ -39214,7 +39215,6 @@ async function saveTransportToSupabase(routeData) {
             }
         }
         
-        // ✅ Prepare attachments with student data
         let attachments = routeData.attachments || [];
         let studentAttachment = {
             type: 'students',
@@ -39223,7 +39223,6 @@ async function saveTransportToSupabase(routeData) {
             updatedAt: new Date().toISOString()
         };
         
-        // ✅ Remove old student attachment and add new one
         let filteredAttachments = attachments.filter(function(a) { return a.type !== 'students'; });
         filteredAttachments.push(studentAttachment);
         
@@ -39258,7 +39257,6 @@ async function saveTransportToSupabase(routeData) {
     }
 }
 
-// ======================= DELETE TRANSPORT FROM SUPABASE =======================
 async function deleteTransportFromSupabase(routeId) {
     console.log('🗑️ [TRANSPORT] deleteTransportFromSupabase called for:', routeId);
     const supabase = getSupabaseClientTransport();
@@ -39286,7 +39284,8 @@ async function deleteTransportFromSupabase(routeId) {
     }
 }
 
-// ======================= PENDING QUEUE =======================
+// ======================= 📋 PENDING QUEUE FUNCTIONS =======================
+
 function addToPendingQueue(table, operation, data) {
     let queue = JSON.parse(localStorage.getItem('pendingSyncQueue') || '[]');
     queue.push({
@@ -39361,11 +39360,10 @@ async function processPendingTransportQueue() {
     }
 }
 
-// ======================= ✅ FIXED: MAIN LOAD FUNCTION WITH BETTER ERROR HANDLING =======================
+// ======================= 🚌 MAIN LOAD FUNCTION =======================
+
 async function loadTransport() {
     console.log('🚌 [TRANSPORT] loadTransport called');
-    console.log('🔍 Current User:', currentUser);
-    console.log('🔍 Online Status:', navigator.onLine);
     
     if (isTransportLoading) {
         console.log('⚠️ [TRANSPORT] Already loading, skipping...');
@@ -39407,33 +39405,25 @@ async function loadTransport() {
     `;
     
     try {
-        // ✅ Load assignments and students first
         loadStudentAssignments();
         loadStudentsWithTransport();
         ensureStudentsTransportProperty();
         
-        // ✅ Then load routes from Supabase
         if (navigator.onLine) {
-            console.log('🔄 [TRANSPORT] Loading from Supabase...');
             await loadTransportFromSupabase();
             console.log('✅ [TRANSPORT] Loaded successfully online');
         } else {
-            console.log('📴 [TRANSPORT] Offline - Loading from cache');
             const cached = localStorage.getItem('cache_transportation');
             if (cached) {
                 try {
                     window.transportData.routes = JSON.parse(cached);
                     console.log('📦 [TRANSPORT] Loaded ' + window.transportData.routes.length + ' routes from cache (offline)');
-                } catch(e) {
-                    console.error('Cache parse error:', e);
-                }
+                } catch(e) {}
             }
         }
         
-        // ✅ Ensure all students have transport properties
         ensureStudentsTransportProperty();
         
-        // ✅ Update driver details and student counts
         for (let route of window.transportData.routes) {
             if (route.driverName) {
                 route.driverPhone = getDriverPhoneFromEmployees(route.driverName) || route.driverPhone;
@@ -39441,10 +39431,8 @@ async function loadTransport() {
             }
             const realAssigned = getAssignedStudentsForRoute(route.id);
             route.students = realAssigned.length;
-            console.log(`📊 [TRANSPORT] Route ${route.routeName} has ${route.students} students`);
         }
         
-        console.log('✅ [TRANSPORT] Rendering UI with ' + window.transportData.routes.length + ' routes...');
         renderTransportUI();
         hideLoader();
         isTransportLoading = false;
@@ -39465,7 +39453,8 @@ async function loadTransport() {
     }
 }
 
-// ======================= RENDER TRANSPORT UI =======================
+// ======================= 🎨 RENDER FUNCTIONS =======================
+
 function renderTransportUI() {
     console.log('🎨 [TRANSPORT] renderTransportUI called - routes count:', window.transportData.routes.length);
     
@@ -39581,7 +39570,6 @@ function renderTransportUI() {
     document.getElementById('moduleContent').innerHTML = content;
     renderTransportList(filteredRoutes);
     
-    // Chart
     try {
         if (routeChartInstance) {
             routeChartInstance.destroy();
@@ -39654,7 +39642,6 @@ function renderTransportUI() {
     }, 400);
 }
 
-// ======================= RENDER TRANSPORT LIST =======================
 function renderTransportList(routesToRender) { 
     var html = '';
     
@@ -39715,7 +39702,8 @@ function renderTransportList(routesToRender) {
     document.getElementById('transportList').innerHTML = html;
 }
 
-// ======================= ADD/EDIT TRANSPORT FORM =======================
+// ======================= ➕ ADD/EDIT TRANSPORT FORM =======================
+
 function showAddTransportForm(editId) {
     editId = editId || null;
     if (currentUser.role !== 'admin') { 
@@ -39831,7 +39819,6 @@ function showAddTransportForm(editId) {
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    // Driver selection auto-fill
     document.getElementById('driverName_' + modalId).addEventListener('change', function() {
         let selectedDriver = this.value;
         if (selectedDriver) {
@@ -39854,7 +39841,6 @@ function showAddTransportForm(editId) {
         }
     });
     
-    // Driver Photo Upload
     document.getElementById('driverPhotoUpload_' + modalId).onclick = function() {
         openDriverPhotoCapture(async function(croppedImage) {
             showLoader();
@@ -39875,7 +39861,6 @@ function showAddTransportForm(editId) {
         });
     };
     
-    // Route Map Upload
     document.getElementById('routeMapUpload_' + modalId).onclick = function() {
         let routeId = editId || 'T' + Date.now();
         let routeName = document.getElementById('routeName_' + modalId)?.value || 'route';
@@ -39896,7 +39881,6 @@ function showAddTransportForm(editId) {
     };
 }
 
-// ======================= SAVE TRANSPORT ROUTE =======================
 function saveTransportRoute(modalId, editId) {
     console.log('📤 [TRANSPORT] saveTransportRoute called - modalId:', modalId, 'editId:', editId);
     
@@ -39930,7 +39914,6 @@ function saveTransportRoute(modalId, editId) {
         }
     }
     
-    // ✅ Build student data for this route
     let studentData = {};
     if (window.students) {
         for (let s of window.students) {
@@ -39954,7 +39937,6 @@ function saveTransportRoute(modalId, editId) {
         }
     }
     
-    // ✅ Add student attachment
     let studentAttachment = {
         type: 'students',
         data: studentData,
@@ -39986,7 +39968,6 @@ function saveTransportRoute(modalId, editId) {
         attachments: attachments
     };
     
-    // Update local data
     if (editId) {
         let index = window.transportData.routes.findIndex(function(r) { return r.id === editId; });
         if (index !== -1) {
@@ -40041,7 +40022,8 @@ function closeTransportModal(modalId) {
     }
 }
 
-// ======================= DELETE TRANSPORT =======================
+// ======================= 🗑️ DELETE TRANSPORT =======================
+
 async function deleteTransport(id) {
     if (currentUser.role !== 'admin') {
         showNotification('Only administrators can delete routes', 'error');
@@ -40111,7 +40093,8 @@ async function deleteTransport(id) {
     }
 }
 
-// ======================= VIEW TRANSPORT DETAILS =======================
+// ======================= 👁️ VIEW FUNCTIONS =======================
+
 function viewTransportDetails(id) {
     var t = window.transportData.routes.find(function(r) { return r.id === id; });
     if (!t) { 
@@ -40160,7 +40143,6 @@ function viewTransportDetails(id) {
     });
 }
 
-// ======================= VIEW ROUTE STUDENTS =======================
 function viewRouteStudents(id) {
     loadStudentAssignments();
     loadStudentsWithTransport();
@@ -40232,7 +40214,8 @@ function viewRouteStudents(id) {
     });
 }
 
-// ======================= ASSIGN STUDENTS TO ROUTE =======================
+// ======================= 👥 ASSIGN STUDENTS FUNCTIONS =======================
+
 function assignStudentsToRoute(routeId) {
     if (currentUser.role !== 'admin') { 
         showNotification('Only administrators can assign students', 'error'); 
@@ -40392,7 +40375,6 @@ function assignStudentsToRoute(routeId) {
     });
 }
 
-// ======================= REMOVE STUDENT FROM ROUTE =======================
 window.removeStudentFromRoute = function(studentId, routeId) {
     loadStudentAssignments();
     loadStudentsWithTransport();
@@ -40425,14 +40407,633 @@ window.removeStudentFromRoute = function(studentId, routeId) {
     }
 };
 
-// ======================= OTHER FUNCTIONS =======================
-function downloadRouteMap(id) { /* ... existing code ... */ }
-function printRouteDetails(id) { /* ... existing code ... */ }
-function shareRoute(id) { /* ... existing code ... */ }
-function exportTransportCSV() { /* ... existing code ... */ }
-async function exportTransportPDF() { /* ... existing code ... */ }
+// ======================= 📤 EXPORT FUNCTIONS (CSV & PDF) =======================
 
-// ======================= ✅ FIXED: REFRESH FUNCTION =======================
+// ✅ COMPLETE CSV EXPORT FUNCTION
+function exportTransportCSV() {
+    console.log('📊 exportTransportCSV called');
+    
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    
+    var routes = window.transportData.routes || [];
+    if (routes.length === 0) {
+        showNotification('No routes to export!', 'warning');
+        return;
+    }
+    
+    var csv = "Route Name,Vehicle Number,Driver Name,Driver Phone,Stops,Students Count\n";
+    csv += "----------------------------------------------------------------------------------------------------\n";
+    
+    for (var i = 0; i < routes.length; i++) {
+        var r = routes[i];
+        var assignedStudents = getAssignedStudentsForRoute(r.id);
+        var studentCount = assignedStudents.length;
+        r.students = studentCount;
+        
+        csv += '"' + escapeHtml(r.routeName || '') + '","' + escapeHtml(r.vehicleNo || '') + '","' + escapeHtml(r.driverName || '') + '","' + escapeHtml(r.driverPhone || '') + '","' + (r.stops || '').replace(/"/g, '""') + '",' + studentCount + '\n';
+        
+        if (assignedStudents.length > 0) {
+            csv += '  --- Students (' + assignedStudents.length + ') ---\n';
+            csv += '  Name,Class,Section,Father Name,Mobile\n';
+            for (var j = 0; j < assignedStudents.length; j++) {
+                var s = assignedStudents[j];
+                var fatherName = getStudentFatherName(s);
+                var mobile = getStudentMobile(s);
+                var className = s.cls || '';
+                var sec = s.sec || '';
+                csv += '  "' + escapeHtml(s.name) + '","' + escapeHtml(className) + '","' + escapeHtml(sec) + '","' + escapeHtml(fatherName) + '","' + escapeHtml(mobile) + '"\n';
+            }
+        }
+        csv += '\n';
+    }
+    
+    var totalRoutes = routes.length;
+    var totalStudents = routes.reduce(function(sum, r) { return sum + (r.students || 0); }, 0);
+    csv += '\n----------------------------------------------------------------------------------------------------\n';
+    csv += 'SUMMARY: Total Routes: ' + totalRoutes + ', Total Students: ' + totalStudents + '\n';
+    csv += 'Generated: ' + new Date().toLocaleString() + '\n';
+    csv += 'School: ' + getSchoolNameSetting() + '\n';
+    
+    var blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'transport_routes_' + new Date().toISOString().split('T')[0] + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification('✅ CSV exported successfully with ' + totalStudents + ' students!', 'success');
+}
+
+// ✅ COMPLETE PDF EXPORT FUNCTION
+async function exportTransportPDF() {
+    console.log('📄 exportTransportPDF called');
+    
+    if (typeof html2canvas === 'undefined') {
+        showNotification('html2canvas library not loaded! Please refresh.', 'error');
+        return;
+    }
+    
+    showLoader();
+    showNotification('Generating A5 Landscape PDF...', 'info');
+    
+    try {
+        loadStudentAssignments();
+        loadStudentsWithTransport();
+        ensureStudentsTransportProperty();
+        
+        var schoolName = getSchoolNameSetting();
+        var schoolAddress = getSchoolAddressSetting();
+        var schoolPhone = getSchoolPhoneSetting();
+        var schoolEmail = getSchoolEmailSetting();
+        var logoSrc = getSchoolLogoBase64();
+        
+        var routes = window.transportData.routes || [];
+        var totalRoutes = routes.length;
+        var totalStudents = 0;
+        for (var i = 0; i < routes.length; i++) {
+            var assigned = getAssignedStudentsForRoute(routes[i].id);
+            routes[i].students = assigned.length;
+            totalStudents += assigned.length;
+        }
+        
+        var tableRows = '';
+        if (routes.length === 0) {
+            tableRows = '<tr><td colspan="6" style="padding: 40px; text-align: center; font-size: 12px; color: #94a3b8;">No routes found</td></tr>';
+        } else {
+            for (var idx = 0; idx < routes.length; idx++) {
+                var r = routes[idx];
+                var assignedStudents = getAssignedStudentsForRoute(r.id);
+                var studentCount = assignedStudents.length;
+                
+                var studentNames = '';
+                if (assignedStudents.length > 0) {
+                    var names = [];
+                    for (var si = 0; si < Math.min(assignedStudents.length, 5); si++) {
+                        names.push(assignedStudents[si].name);
+                    }
+                    studentNames = names.join(', ');
+                    if (assignedStudents.length > 5) {
+                        studentNames += ' and ' + (assignedStudents.length - 5) + ' more';
+                    }
+                } else {
+                    studentNames = '-';
+                }
+                
+                var rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+                
+                tableRows += `
+                    <tr style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 8px 6px; font-size: 8px; border: 1px solid #e2e8f0;">${escapeHtml(r.routeName || '-')}</td>
+                        <td style="padding: 8px 6px; font-size: 8px; border: 1px solid #e2e8f0;">${escapeHtml(r.vehicleNo || '-')}</td>
+                        <td style="padding: 8px 6px; font-size: 8px; border: 1px solid #e2e8f0;">${escapeHtml(r.driverName || '-')}</td>
+                        <td style="padding: 8px 6px; font-size: 8px; border: 1px solid #e2e8f0;">${escapeHtml(r.driverPhone || '-')}</td>
+                        <td style="padding: 8px 6px; font-size: 8px; border: 1px solid #e2e8f0;">${escapeHtml(studentNames)}</td>
+                        <td style="padding: 8px 6px; font-size: 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: #2563eb;">${studentCount}</td>
+                    </tr>
+                `;
+            }
+        }
+        
+        var pdfHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Transport Report</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: 'Segoe UI', 'Roboto', Arial, sans-serif; background: white; padding: 10px; width: 100%; }
+                .report-container { max-width: 100%; margin: 0 auto; background: white; }
+                .header { text-align: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #2563eb; }
+                .logo { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-bottom: 5px; }
+                .school-name { font-size: 14px; font-weight: 800; color: #1e293b; letter-spacing: 0.5px; }
+                .school-address { font-size: 8px; color: #64748b; margin-top: 2px; }
+                .school-contact { font-size: 7px; color: #64748b; margin-top: 2px; }
+                .report-title { font-size: 12px; font-weight: 700; color: #2563eb; margin: 8px 0 4px; }
+                .generated-date { font-size: 7px; color: #94a3b8; margin-bottom: 10px; }
+                .summary-cards { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+                .summary-card { background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 10px; padding: 8px 16px; text-align: center; color: white; min-width: 80px; }
+                .summary-card .number { font-size: 16px; font-weight: 800; }
+                .summary-card .label { font-size: 7px; opacity: 0.9; }
+                .summary-card.green { background: linear-gradient(135deg, #10b981, #059669); }
+                .summary-card.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+                .summary-card.purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 8px; }
+                th { background: #2563eb; color: white; padding: 8px 6px; font-size: 8px; font-weight: 600; text-align: center; border: 1px solid #2563eb; }
+                td { border: 1px solid #e2e8f0; padding: 6px 6px; font-size: 7px; }
+                .footer { text-align: center; margin-top: 15px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 6px; color: #94a3b8; }
+            </style>
+        </head>
+        <body>
+            <div class="report-container">
+                <div class="header">
+                    ${logoSrc ? `<img src="${logoSrc}" class="logo" onerror="this.style.display='none'">` : '<div style="font-size: 28px; margin-bottom: 5px;">🚌</div>'}
+                    <div class="school-name">${escapeHtml(schoolName)}</div>
+                    <div class="school-address">${escapeHtml(schoolAddress)}</div>
+                    <div class="school-contact">📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</div>
+                    <div class="report-title">🚌 TRANSPORT ROUTES REPORT</div>
+                    <div class="generated-date">Generated: ${new Date().toLocaleString()}</div>
+                </div>
+                
+                <div class="summary-cards">
+                    <div class="summary-card"><div class="number">${totalRoutes}</div><div class="label">Total Routes</div></div>
+                    <div class="summary-card green"><div class="number">${totalStudents}</div><div class="label">Total Students</div></div>
+                    <div class="summary-card orange"><div class="number">${totalRoutes > 0 ? Math.round(totalStudents / totalRoutes) : 0}</div><div class="label">Avg/Routes</div></div>
+                    <div class="summary-card purple"><div class="number">${routes.filter(function(r) { return r.students > 0; }).length}</div><div class="label">Active Routes</div></div>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table style="min-width: 600px;">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%;">Route Name</th>
+                                <th style="width: 15%;">Vehicle No</th>
+                                <th style="width: 15%;">Driver</th>
+                                <th style="width: 15%;">Phone</th>
+                                <th style="width: 25%;">Students</th>
+                                <th style="width: 10%;">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                        <tfoot>
+                            <tr style="background: #f1f5f9; font-weight: bold;">
+                                <td colspan="5" style="text-align: right; padding: 8px;">TOTAL</td>
+                                <td style="text-align: center; padding: 8px; color: #2563eb; font-size: 10px;">${totalStudents}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="footer">
+                    <p>© ${new Date().getFullYear()} ${escapeHtml(schoolName)} - Computer Generated Report</p>
+                    <p>This is a system generated document | Valid with authorized signature</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+        
+        var tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '-9999px';
+        tempDiv.style.width = '800px';
+        tempDiv.style.backgroundColor = 'white';
+        tempDiv.style.padding = '15px';
+        tempDiv.innerHTML = pdfHtml;
+        document.body.appendChild(tempDiv);
+        
+        await new Promise(function(resolve) { setTimeout(resolve, 500); });
+        
+        var canvas = await html2canvas(tempDiv, {
+            scale: 2.5,
+            backgroundColor: '#ffffff',
+            logging: false,
+            useCORS: true,
+            windowWidth: 800
+        });
+        
+        document.body.removeChild(tempDiv);
+        
+        var { jsPDF } = window.jspdf;
+        var pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a5'
+        });
+        
+        var pdfWidth = pdf.internal.pageSize.getWidth();
+        var pdfHeight = pdf.internal.pageSize.getHeight();
+        var imgWidth = pdfWidth - 10;
+        var imgHeight = (canvas.height * imgWidth) / canvas.width;
+        var xPos = (pdfWidth - imgWidth) / 2;
+        var yPos = 5;
+        
+        if (imgHeight <= pdfHeight - 10) {
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xPos, yPos, imgWidth, imgHeight);
+        } else {
+            var remainingHeight = imgHeight;
+            var currentY = yPos;
+            var pageNum = 1;
+            
+            while (remainingHeight > 0) {
+                if (pageNum > 1) {
+                    pdf.addPage();
+                }
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xPos, currentY, imgWidth, imgHeight);
+                remainingHeight -= (pdfHeight - 10);
+                currentY = yPos - (pageNum * (pdfHeight - 10));
+                pageNum++;
+            }
+        }
+        
+        var pageCount = pdf.internal.getNumberOfPages();
+        for (var p = 1; p <= pageCount; p++) {
+            pdf.setPage(p);
+            pdf.setFontSize(6);
+            pdf.setTextColor(148, 163, 184);
+            pdf.text('Page ' + p + ' of ' + pageCount, pdfWidth - 12, pdfHeight - 4);
+        }
+        
+        pdf.save('transport_report_' + new Date().toISOString().split('T')[0] + '.pdf');
+        showNotification('✅ PDF exported successfully! (A5 Landscape)', 'success');
+        
+    } catch(error) {
+        console.error('PDF Error:', error);
+        showNotification('❌ Error generating PDF: ' + error.message, 'error');
+        var tempDivExists = document.querySelector('div[style*="left: -9999px"]');
+        if (tempDivExists) tempDivExists.remove();
+    }
+    
+    hideLoader();
+}
+
+// ======================= 📄 PRINT & SHARE FUNCTIONS =======================
+
+function printRouteDetails(id) {
+    var route = window.transportData.routes.find(function(r) { return r.id === id; });
+    if (!route) {
+        showNotification('Route not found!', 'error');
+        return;
+    }
+    
+    var assignedStudents = getAssignedStudentsForRoute(id);
+    var schoolName = getSchoolNameSetting();
+    var schoolAddress = getSchoolAddressSetting();
+    var schoolPhone = getSchoolPhoneSetting();
+    
+    var win = window.open('', '_blank');
+    win.document.write(`
+        <html><head><title>Route - ${escapeHtml(route.routeName)}</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 15px; }
+            .header h2 { margin: 0; color: #1e293b; }
+            .header h3 { margin: 5px 0; color: #2563eb; }
+            .header p { margin: 5px 0; color: #64748b; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background: #2563eb; color: white; }
+            .driver-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+            @media print { .no-print { display: none; } }
+        </style>
+        </head><body>
+        <div class="header">
+            <h2>${escapeHtml(schoolName)}</h2>
+            <h3>TRANSPORT ROUTE DETAILS</h3>
+            <p>${escapeHtml(schoolAddress)}</p>
+            <p>📞 ${escapeHtml(schoolPhone)}</p>
+        </div>
+        <div style="display:flex; gap:20px; margin:15px 0; align-items:center; flex-wrap:wrap;">
+            ${route.driverPhotoUrl ? '<img src="' + route.driverPhotoUrl + '" class="driver-photo" onerror="this.style.display=\'none\';">' : ''}
+            <div>
+                <p><strong>Route:</strong> ${escapeHtml(route.routeName)}</p>
+                <p><strong>Vehicle:</strong> ${escapeHtml(route.vehicleNo) || 'N/A'}</p>
+                <p><strong>Driver:</strong> ${escapeHtml(route.driverName) || 'N/A'} | ${escapeHtml(route.driverPhone) || 'N/A'}</p>
+                <p><strong>Stops:</strong> ${escapeHtml(route.stops) || 'N/A'}</p>
+            </div>
+        </div>
+        <h3>Student List (${assignedStudents.length})</h3>
+        <table>
+            <thead><tr><th>#</th><th>Name</th><th>Class</th><th>Father Name</th><th>Mobile</th></tr></thead>
+            <tbody>${assignedStudents.map(function(s, idx) {
+                return '<tr>' +
+                    '<td>' + (idx + 1) + '</td>' +
+                    '<td>' + escapeHtml(s.name) + '</td>' +
+                    '<td>' + escapeHtml(s.cls) + ' ' + escapeHtml(s.sec || '') + '</td>' +
+                    '<td>' + escapeHtml(s.father_name || s.fatherName || '') + '</td>' +
+                    '<td>' + escapeHtml(s.mobile || '') + '</td>' +
+                '</tr>';
+            }).join('')}</tbody>
+            <tfoot><tr><td colspan="5" style="text-align:right; font-weight:bold;">Total Students: ${assignedStudents.length}</td></tr></tfoot>
+        </table>
+        <div style="margin-top:20px; text-align:center; font-size:10px; color:#94a3b8;">Generated: ${new Date().toLocaleString()}</div>
+        <script>window.print(); setTimeout(function() { window.close(); }, 500);<\/script>
+        </body></html>
+    `);
+    win.document.close();
+}
+
+function shareRoute(id) {
+    var t = window.transportData.routes.find(function(r) { return r.id === id; });
+    if (!t) {
+        showNotification('Route not found!', 'error');
+        return;
+    }
+    var schoolName = getSchoolNameSetting();
+    var message = '🚌 *Transport Route - ' + t.routeName + '*\n\n' +
+                  '🚛 Vehicle: ' + (t.vehicleNo || 'N/A') + '\n' +
+                  '👨 Driver: ' + (t.driverName || 'Not Assigned') + '\n' +
+                  '📞 Driver Phone: ' + (t.driverPhone || 'N/A') + '\n' +
+                  '📍 Stops: ' + (t.stops || 'N/A') + '\n' +
+                  '👨‍🎓 Students: ' + (t.students || 0) + '\n\n' +
+                  '🏫 ' + schoolName + '\n' +
+                  '📞 ' + getSchoolPhoneSetting();
+    window.open('https://wa.me/?text=' + encodeURIComponent(message), '_blank');
+}
+
+function downloadRouteMap(id) {
+    var route = window.transportData.routes.find(function(r) { return r.id === id; });
+    if (!route) {
+        showNotification('Route not found!', 'error');
+        return;
+    }
+    
+    if (route.attachments && route.attachments.length > 0) {
+        var att = route.attachments[0];
+        if (att.url) {
+            window.open(att.url, '_blank');
+            showNotification('Opening map from cloud...', 'info');
+        } else if (att.data) {
+            var filename = 'route_map_' + (route.routeName || 'route').replace(/\s/g, '_') + '.jpg';
+            downloadFile(att.data, filename);
+            showNotification('Map downloaded!', 'success');
+        } else {
+            showNotification('No map attachment found', 'warning');
+        }
+    } else {
+        showNotification('No map attached to this route', 'warning');
+    }
+}
+
+// ======================= 📷 CAMERA UPLOAD FUNCTIONS =======================
+
+function openDriverPhotoCapture(callback) {
+    var sourceModal = document.createElement('div');
+    sourceModal.className = 'modal-overlay';
+    sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+    sourceModal.innerHTML = `
+        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+            <i class="fas fa-camera" style="font-size: 48px; color: #10b981; margin-bottom: 15px; display: block;"></i>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Driver Photo</h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: linear-gradient(135deg, #2563eb, #1e40af); color: white; border: none; cursor: pointer;"><i class="fas fa-camera"></i> Take Photo</button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: #f1f5f9; color: #1e293b; border: none; cursor: pointer;"><i class="fas fa-images"></i> Choose from Gallery</button>
+            </div>
+            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 10px; font-size: 14px;">Cancel</button>
+        </div>
+    `;
+    document.body.appendChild(sourceModal);
+    
+    var closeSourceModal = function() { 
+        if (sourceModal && sourceModal.parentNode) sourceModal.remove(); 
+    };
+    
+    var openFileInput = function(useCamera) {
+        closeSourceModal();
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/jpg,image/png';
+        if (useCamera) input.setAttribute('capture', 'environment');
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    var cropModal = document.createElement('div');
+                    cropModal.className = 'modal-overlay';
+                    cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100002; padding:16px;';
+                    cropModal.innerHTML = `
+                        <div class="modal-content" style="max-width: 500px; width: 95%; text-align: center; border-radius: 24px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+                            <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 15px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-crop-alt"></i> Crop Driver Photo (1:1)</h2>
+                                <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
+                            </div>
+                            <div style="padding: 20px;">
+                                <img id="cropDriverImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                    <button class="btn btn-primary" id="cropSaveBtn" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; background: #2563eb; color: white; border: none; cursor: pointer; min-height: 44px;">✂️ Crop & Save</button>
+                                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; background: #ef4444; color: white; border: none; cursor: pointer; min-height: 44px;">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(cropModal);
+                    var img = cropModal.querySelector('#cropDriverImg');
+                    if (typeof Cropper !== 'undefined') {
+                        var cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1, autoCropArea: 1 });
+                        cropModal.querySelector('#cropSaveBtn').onclick = function() {
+                            try {
+                                var canvas = cropper.getCroppedCanvas();
+                                var croppedData = canvas.toDataURL('image/jpeg', 0.9);
+                                cropper.destroy();
+                                cropModal.remove();
+                                callback(croppedData);
+                            } catch(err) {
+                                console.error('Crop error:', err);
+                                showNotification('Error cropping image', 'error');
+                                cropModal.remove();
+                            }
+                        };
+                    } else {
+                        cropModal.querySelector('#cropSaveBtn').onclick = function() {
+                            cropModal.remove();
+                            callback(ev.target.result);
+                        };
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+    
+    document.getElementById('cameraOptBtn').onclick = function() { openFileInput(true); };
+    document.getElementById('galleryOptBtn').onclick = function() { openFileInput(false); };
+    document.getElementById('closeSourceModal').onclick = closeSourceModal;
+}
+
+function openRouteMapCapture(callback) {
+    var sourceModal = document.createElement('div');
+    sourceModal.className = 'modal-overlay';
+    sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+    sourceModal.innerHTML = `
+        <div style="background: var(--bg-surface); border-radius: 28px; width: 90%; max-width: 350px; padding: 20px; text-align: center; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+            <i class="fas fa-map" style="font-size: 48px; color: #10b981; margin-bottom: 15px; display: block;"></i>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Upload Route Map</h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button id="cameraOptBtn" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: linear-gradient(135deg, #2563eb, #1e40af); color: white; border: none; cursor: pointer;"><i class="fas fa-camera"></i> Take Photo</button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: #f1f5f9; color: #1e293b; border: none; cursor: pointer;"><i class="fas fa-images"></i> Choose from Gallery</button>
+                <button id="pdfOptBtn" class="btn btn-info" style="width: 100%; padding: 14px; border-radius: 30px; font-size: 15px; min-height: 50px; background: #dbeafe; color: #1e40af; border: none; cursor: pointer;"><i class="fas fa-file-pdf"></i> Upload PDF</button>
+            </div>
+            <button id="closeSourceModal" style="margin-top: 15px; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 10px; font-size: 14px;">Cancel</button>
+        </div>
+    `;
+    document.body.appendChild(sourceModal);
+    
+    var closeSourceModal = function() { 
+        if (sourceModal && sourceModal.parentNode) sourceModal.remove(); 
+    };
+    
+    var openFileInput = function(useCamera, acceptType) {
+        closeSourceModal();
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = acceptType;
+        if (useCamera && acceptType.startsWith('image/')) input.setAttribute('capture', 'environment');
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                if (file.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        var cropModal = document.createElement('div');
+                        cropModal.className = 'modal-overlay';
+                        cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100002; padding:16px;';
+                        cropModal.innerHTML = `
+                            <div class="modal-content" style="max-width: 500px; width: 95%; text-align: center; border-radius: 24px; background: var(--bg-surface); padding: 0; box-shadow: 0 20px 35px rgba(0,0,0,0.2);">
+                                <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 15px 20px; border-radius: 24px 24px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                    <h2 style="color: white; margin: 0; font-size: 18px;"><i class="fas fa-crop-alt"></i> Crop Map Image</h2>
+                                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 20px;">&times;</button>
+                                </div>
+                                <div style="padding: 20px;">
+                                    <img id="cropMapImg" src="${ev.target.result}" style="max-width:100%; border-radius: 12px; max-height: 60vh;">
+                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                        <button class="btn btn-primary" id="cropSaveBtn" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; background: #2563eb; color: white; border: none; cursor: pointer; min-height: 44px;">✂️ Crop & Save</button>
+                                        <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 30px; font-size: 14px; background: #ef4444; color: white; border: none; cursor: pointer; min-height: 44px;">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(cropModal);
+                        var img = cropModal.querySelector('#cropMapImg');
+                        if (typeof Cropper !== 'undefined') {
+                            var cropper = new Cropper(img, { aspectRatio: null, viewMode: 1, autoCropArea: 1 });
+                            cropModal.querySelector('#cropSaveBtn').onclick = function() {
+                                try {
+                                    var canvas = cropper.getCroppedCanvas();
+                                    var croppedData = canvas.toDataURL('image/jpeg', 0.9);
+                                    cropper.destroy();
+                                    cropModal.remove();
+                                    callback(croppedData, file.name, file.type);
+                                } catch(err) {
+                                    console.error('Crop error:', err);
+                                    showNotification('Error cropping image', 'error');
+                                    cropModal.remove();
+                                }
+                            };
+                        } else {
+                            cropModal.querySelector('#cropSaveBtn').onclick = function() {
+                                cropModal.remove();
+                                callback(ev.target.result, file.name, file.type);
+                            };
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) { callback(ev.target.result, file.name, file.type); };
+                    reader.readAsDataURL(file);
+                }
+            }
+        };
+        input.click();
+    };
+    
+    document.getElementById('cameraOptBtn').onclick = function() { openFileInput(true, 'image/jpeg,image/jpg,image/png'); };
+    document.getElementById('galleryOptBtn').onclick = function() { openFileInput(false, 'image/jpeg,image/jpg,image/png'); };
+    document.getElementById('pdfOptBtn').onclick = function() { openFileInput(false, 'application/pdf'); };
+    document.getElementById('closeSourceModal').onclick = closeSourceModal;
+}
+
+// ======================= ☁️ UPLOAD FUNCTIONS =======================
+
+async function uploadDriverPhotoToSupabase(photoBase64, routeId, driverName) {
+    var supabase = getSupabaseClientTransport();
+    if (!supabase || !navigator.onLine) return null;
+    try {
+        var blob = dataURLtoBlob(photoBase64);
+        if (!blob) return null;
+        var fileName = 'driver_' + routeId + '_' + Date.now() + '.jpg';
+        var folderPath = 'transport_drivers/' + routeId + '_' + driverName.replace(/\s/g, '_');
+        var fullPath = folderPath + '/' + fileName;
+        
+        var { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets.some(function(b) { return b.name === 'profile_photos'; })) {
+            await supabase.storage.createBucket('profile_photos', { public: true });
+        }
+        
+        var { error } = await supabase.storage.from('profile_photos').upload(fullPath, blob, { upsert: true });
+        if (error) throw error;
+        var { data: urlData } = supabase.storage.from('profile_photos').getPublicUrl(fullPath);
+        return urlData.publicUrl;
+    } catch(err) { 
+        console.error('Upload error:', err); 
+        return null; 
+    }
+}
+
+async function uploadRouteMapToSupabase(fileData, fileName, fileType, routeId, routeName) {
+    var supabase = getSupabaseClientTransport();
+    if (!supabase || !navigator.onLine) return null;
+    try {
+        var blob = dataURLtoBlob(fileData);
+        if (!blob) return null;
+        var fileExt = fileType === 'application/pdf' ? 'pdf' : 'jpg';
+        var newFileName = Date.now() + '_map.' + fileExt;
+        var folderPath = 'transport_maps/' + routeId + '_' + routeName.replace(/\s/g, '_');
+        var fullPath = folderPath + '/' + newFileName;
+        
+        var { data: buckets } = await supabase.storage.listBuckets();
+        if (!buckets.some(function(b) { return b.name === 'transport_docs'; })) {
+            await supabase.storage.createBucket('transport_docs', { public: true });
+        }
+        
+        var { error } = await supabase.storage.from('transport_docs').upload(fullPath, blob, { upsert: true });
+        if (error) throw error;
+        var { data: urlData } = supabase.storage.from('transport_docs').getPublicUrl(fullPath);
+        return urlData.publicUrl;
+    } catch(err) { 
+        console.error('Upload error:', err); 
+        return null; 
+    }
+}
+
+// ======================= 🔄 REFRESH & FILTER FUNCTIONS =======================
+
 async function refreshTransportData() { 
     showLoader();
     showNotification('🔄 Syncing transport data from cloud...', 'info');
@@ -40461,37 +41062,45 @@ function clearTransportFilter() {
     showNotification('Filter cleared', 'info');
 }
 
-function openDriverPhotoCapture(callback) { /* ... existing code ... */ }
-function openRouteMapCapture(callback) { /* ... existing code ... */ }
-async function uploadDriverPhotoToSupabase(photoBase64, routeId, driverName) { /* ... existing code ... */ }
-async function uploadRouteMapToSupabase(fileData, fileName, fileType, routeId, routeName) { /* ... existing code ... */ }
+// ======================= 🌐 ONLINE/OFFLINE HANDLERS =======================
 
-// ======================= ✅ FIXED: AUTO-LOAD ON MODULE OPEN =======================
-// ✅ Better auto-load mechanism for Transport module
+window.addEventListener('online', async function() {
+    console.log('🟢 [TRANSPORT] Online - Syncing...');
+    showNotification('🟢 Back online! Syncing transport data...', 'success');
+    loadStudentAssignments();
+    loadStudentsWithTransport();
+    ensureStudentsTransportProperty();
+    await loadTransportFromSupabase();
+    await processPendingTransportQueue();
+    renderTransportUI();
+});
+
+window.addEventListener('offline', function() {
+    console.log('🔴 [TRANSPORT] Offline mode');
+    showNotification('🔴 Offline mode - Data saved locally, will sync when online', 'warning');
+});
+
+// ======================= 🚀 AUTO-LOAD SETUP =======================
+
 (function setupTransportAutoLoad() {
     console.log('🚌 [TRANSPORT] Setting up auto-load...');
     
-    // Method 1: Override openModule function
     const originalOpenModule = window.openModule;
     window.openModule = function(moduleId) {
         console.log('📂 [TRANSPORT] openModule called with ID:', moduleId);
         if (originalOpenModule) {
             originalOpenModule(moduleId);
         }
-        // Module ID 14 is Transport
         if (moduleId === 14) {
             console.log('🚌 [TRANSPORT] Transport module opened, loading data...');
             setTimeout(function() {
                 if (typeof loadTransport === 'function' && !isTransportLoading) {
                     loadTransport();
-                } else if (typeof loadTransport === 'function') {
-                    console.log('⚠️ [TRANSPORT] Already loading, skipping...');
                 }
             }, 300);
         }
     };
     
-    // Method 2: Check if module is already open on page load
     setTimeout(function() {
         const moduleTitle = document.getElementById('moduleTitle');
         if (moduleTitle) {
@@ -40505,7 +41114,6 @@ async function uploadRouteMapToSupabase(fileData, fileName, fileType, routeId, r
         }
     }, 500);
     
-    // Method 3: Listen for click events on module buttons
     document.addEventListener('click', function(e) {
         const target = e.target.closest('[data-module-id]');
         if (target) {
@@ -40524,25 +41132,8 @@ async function uploadRouteMapToSupabase(fileData, fileName, fileType, routeId, r
     console.log('✅ [TRANSPORT] Auto-load setup complete');
 })();
 
-// ======================= ONLINE/OFFLINE HANDLERS =======================
-window.addEventListener('online', async function() {
-    console.log('🟢 [TRANSPORT] Online - Syncing...');
-    showNotification('🟢 Back online! Syncing transport data...', 'success');
-    loadStudentAssignments();
-    loadStudentsWithTransport();
-    ensureStudentsTransportProperty();
-    await loadTransportFromSupabase();
-    await processPendingTransportQueue();
-    renderTransportUI();
-});
-
-window.addEventListener('offline', function() {
-    console.log('🔴 [TRANSPORT] Offline mode');
-    showNotification('🔴 Offline mode - Data saved locally, will sync when online', 'warning');
-});
-
 // ======================= INITIAL LOAD =======================
-// Try to load transport if module is already visible
+
 setTimeout(function() {
     const moduleContent = document.getElementById('moduleContent');
     if (moduleContent) {
@@ -40556,7 +41147,8 @@ setTimeout(function() {
     }
 }, 800);
 
-// ======================= EXPOSE FUNCTIONS =======================
+// ======================= EXPOSE ALL FUNCTIONS GLOBALLY =======================
+
 window.loadTransport = loadTransport;
 window.refreshTransportData = refreshTransportData;
 window.showAddTransportForm = showAddTransportForm;
@@ -40580,17 +41172,22 @@ window.updateRouteStudentCount = updateRouteStudentCount;
 window.loadStudentAssignments = loadStudentAssignments;
 window.saveStudentAssignments = saveStudentAssignments;
 
-console.log('✅ PART 17 COMPLETE - Transport Module FULLY FIXED with Auto-Load!');
-console.log('📌 Features:');
-console.log('   ✅ Supabase transportation table connected');
-console.log('   ✅ Student assignments stored in attachments column');
-console.log('   ✅ Data persists after re-login/refresh');
-console.log('   ✅ Student assignments restored from Supabase on load');
-console.log('   ✅ Online/Offline sync with pending queue');
-console.log('   ✅ A5 Landscape PDF Export');
-console.log('   ✅ Driver Photo Upload');
-console.log('   ✅ Route Map Upload');
-console.log('   ✅ Auto-load when module is opened');
+console.log('✅ PART 17 COMPLETE - Transport Module with ALL Functions Working!');
+console.log('📌 ALL Functions Included:');
+console.log('   ✅ Data Management: loadStudentAssignments, saveStudentAssignments, loadStudentsWithTransport, ensureStudentsTransportProperty');
+console.log('   ✅ Student Assignment: getAssignedStudentsForRoute, updateStudentAssignment, updateRouteStudentCount');
+console.log('   ✅ Supabase: loadTransportFromSupabase, saveTransportToSupabase, deleteTransportFromSupabase');
+console.log('   ✅ Export: exportTransportCSV, exportTransportPDF - WORKING');
+console.log('   ✅ View: viewTransportDetails, viewRouteStudents, printRouteDetails, shareRoute, downloadRouteMap');
+console.log('   ✅ CRUD: showAddTransportForm, saveTransportRoute, deleteTransport, closeTransportModal');
+console.log('   ✅ Assign: assignStudentsToRoute, removeStudentFromRoute');
+console.log('   ✅ Upload: openDriverPhotoCapture, openRouteMapCapture, uploadDriverPhotoToSupabase, uploadRouteMapToSupabase');
+console.log('   ✅ Helpers: escapeHtml, formatFullCurrency, showLoader, hideLoader, showNotification, dataURLtoBlob, downloadFile');
+console.log('   ✅ School: getSchoolNameSetting, getSchoolAddressSetting, getSchoolPhoneSetting, getSchoolEmailSetting, getSchoolLogoBase64');
+console.log('   ✅ Driver: getDriverPhotoFromEmployees, getDriverPhoneFromEmployees, getDriverList');
+console.log('   ✅ Student: getStudentPhoto, getStudentFatherName, getStudentMobile');
+console.log('   ✅ Refresh: refreshTransportData, filterTransport, clearTransportFilter');
+console.log('   ✅ Auto-Load: setupTransportAutoLoad with 3 methods');
 
 } // End of duplicate check
 // ======================= PART 17 ENDS HERE =======================
