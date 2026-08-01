@@ -11367,6 +11367,281 @@ console.log('✅ LOGO LOAD FROM PROFILE TABLE FIXED!');
 console.log('✅ SYNC BANNER LOAD FROM PROFILE TABLE FIXED!');
 }
 // =================================== START PART 03-R- ENDS HERE =========================================================================
+// =================================== START PART 03-S- ENDS HERE =========================================================================
+// ============================================
+// PART 03-S: AUTO-REFRESH ALL MODULES
+// ============================================
+
+// ======================= COMPLETE REFRESH FUNCTION =======================
+async function refreshAllModules() {
+    console.log('🔄 refreshAllModules called - Refreshing all data...');
+    
+    // Show loader
+    if (typeof showLoader === 'function') showLoader();
+    if (typeof showNotification === 'function') {
+        showNotification('🔄 Refreshing all data from cloud...', 'info');
+    }
+    
+    try {
+        // ========== 1. REFRESH STUDENTS ==========
+        if (typeof loadStudentsFromSupabase === 'function') {
+            await loadStudentsFromSupabase();
+            console.log('✅ Students refreshed');
+        }
+        
+        // ========== 2. REFRESH EMPLOYEES ==========
+        if (typeof loadEmployeesFromSupabase === 'function') {
+            await loadEmployeesFromSupabase();
+            console.log('✅ Employees refreshed');
+        }
+        
+        // ========== 3. REFRESH FEES ==========
+        if (typeof loadFeesFromSupabase === 'function') {
+            await loadFeesFromSupabase();
+            console.log('✅ Fees refreshed');
+        }
+        
+        // ========== 4. REFRESH ATTENDANCE ==========
+        if (typeof loadAttendanceFromSupabase === 'function') {
+            await loadAttendanceFromSupabase();
+            console.log('✅ Attendance refreshed');
+        }
+        
+        // ========== 5. REFRESH EXPENSES ==========
+        if (typeof loadExpensesFromSupabase === 'function') {
+            await loadExpensesFromSupabase();
+            console.log('✅ Expenses refreshed');
+        }
+        
+        // ========== 6. REFRESH LEDGER ==========
+        if (typeof loadLedgerFromSupabase === 'function') {
+            await loadLedgerFromSupabase();
+            console.log('✅ Ledger refreshed');
+        }
+        
+        // ========== 7. REFRESH EVENTS ==========
+        if (typeof loadEventsFromSupabase === 'function') {
+            await loadEventsFromSupabase();
+            console.log('✅ Events refreshed');
+        }
+        
+        // ========== 8. REFRESH NOTIFICATIONS ==========
+        if (typeof loadNotificationsFromSupabase === 'function') {
+            await loadNotificationsFromSupabase();
+            console.log('✅ Notifications refreshed');
+        }
+        
+        // ========== 9. REFRESH HOMEWORK ==========
+        if (typeof loadHomeworkFromSupabase === 'function') {
+            await loadHomeworkFromSupabase();
+            console.log('✅ Homework refreshed');
+        }
+        
+        // ========== 10. REFRESH RESULTS ==========
+        if (typeof loadResultsFromSupabase === 'function') {
+            await loadResultsFromSupabase();
+            console.log('✅ Results refreshed');
+        }
+        
+        // ========== 11. REFRESH EXAMS ==========
+        if (typeof loadExamsFromSupabase === 'function') {
+            await loadExamsFromSupabase();
+            console.log('✅ Exams refreshed');
+        }
+        
+        // ========== 12. REFRESH CLASSES ==========
+        if (typeof loadClassesFromSupabase === 'function') {
+            await loadClassesFromSupabase();
+            console.log('✅ Classes refreshed');
+        }
+        
+        // ========== 13. REFRESH TRANSPORT ==========
+        if (typeof loadTransportFromSupabase === 'function') {
+            await loadTransportFromSupabase();
+            console.log('✅ Transport refreshed');
+        }
+        
+        // ========== 14. REFRESH FEEDBACKS ==========
+        if (typeof loadFeedbacksFromSupabase === 'function') {
+            await loadFeedbacksFromSupabase();
+            console.log('✅ Feedbacks refreshed');
+        }
+        
+        // ========== 15. REFRESH TIMETABLE ==========
+        if (typeof loadTimetableFromSupabase === 'function') {
+            await loadTimetableFromSupabase();
+            console.log('✅ Timetable refreshed');
+        }
+        
+        // ========== 16. REFRESH LEAVES ==========
+        if (typeof loadLeavesFromSupabase === 'function') {
+            await loadLeavesFromSupabase();
+            console.log('✅ Leaves refreshed');
+        }
+        
+        // ========== 17. REFRESH EMP ATTENDANCE ==========
+        if (typeof loadEmpAttendanceFromSupabase === 'function') {
+            await loadEmpAttendanceFromSupabase();
+            console.log('✅ Employee Attendance refreshed');
+        }
+        
+        // ========== 18. PROCESS ALL PENDING QUEUES ==========
+        if (typeof processPendingQueue === 'function') {
+            await processPendingQueue();
+            console.log('✅ Pending queues processed');
+        }
+        
+        // ========== 19. SYNC SCHOOL LOGO ==========
+        if (typeof loadSchoolLogoFromProfile === 'function') {
+            await loadSchoolLogoFromProfile();
+            console.log('✅ School Logo refreshed');
+        }
+        
+        // ========== 20. SYNC SYNC BANNER ==========
+        if (typeof loadSyncBannerFromSupabase === 'function') {
+            await loadSyncBannerFromSupabase();
+            console.log('✅ Sync Banner refreshed');
+        }
+        
+        // ========== 21. UPDATE DASHBOARD ==========
+        if (typeof renderDashboard === 'function') {
+            renderDashboard();
+            console.log('✅ Dashboard refreshed');
+        }
+        
+        // ========== 22. UPDATE NOTIFICATIONS ==========
+        if (typeof updateNotificationBell === 'function') {
+            updateNotificationBell();
+            console.log('✅ Notification bell updated');
+        }
+        
+        // ========== 23. SAVE ALL DATA TO CACHE ==========
+        if (typeof saveAllData === 'function') {
+            saveAllData();
+            console.log('✅ All data cached');
+        }
+        
+        // ========== 24. RELOAD CURRENT MODULE ==========
+        const moduleTitle = document.getElementById('moduleTitle');
+        if (moduleTitle) {
+            const titleText = moduleTitle.innerText || moduleTitle.textContent || '';
+            
+            const moduleMap = {
+                'PROFILE': loadProfile,
+                'STUDENTS': loadStudentManagement,
+                'FEES': loadFeeCollection,
+                'ATTENDANCE': loadAttendance,
+                'EMP ATTENDANCE': loadEmpAttendance,
+                'EMPLOYEES': loadEmployeeManagement,
+                'HOMEWORK': loadHomeworkManagement,
+                'EXAMS': loadExamsModule,
+                'RESULTS': loadResults,
+                'LEAVE': loadLeaveManagement,
+                'CLASSES': loadClassManagement,
+                'TIMETABLE': loadTimetable,
+                'TRANSPORT': loadTransport,
+                'EXPENSES': loadExpenses,
+                'LEDGER': loadLedger,
+                'EVENTS': loadEvents,
+                'FEEDBACK': loadFeedback,
+                'NOTIFICATIONS': loadNotificationsModule,
+                'PROFIT/LOSS': loadProfitLoss,
+                'LIVING CERTIFICATE': loadLivingCertificateModule,
+                'SETTINGS': loadSettingsModule
+            };
+            
+            for (const [key, func] of Object.entries(moduleMap)) {
+                if (titleText.toUpperCase().includes(key) && typeof func === 'function') {
+                    console.log(`🔄 Reloading module: ${key}`);
+                    await func();
+                    break;
+                }
+            }
+        }
+        
+        if (typeof showNotification === 'function') {
+            showNotification('✅ All modules refreshed successfully!', 'success');
+        }
+        
+    } catch (error) {
+        console.error('❌ Refresh error:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('❌ Error refreshing modules: ' + error.message, 'error');
+        }
+    } finally {
+        if (typeof hideLoader === 'function') hideLoader();
+    }
+}
+
+// ======================= AUTO-REFRESH SETUP =======================
+function setupAutoRefresh() {
+    console.log('🔧 Setting up auto-refresh...');
+    
+    // 1. Tab Focus - Jab user wapas aaye
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && window.currentUser) {
+            console.log('👁️ Tab focused - Auto-refreshing...');
+            if (typeof refreshAllModules === 'function') {
+                refreshAllModules();
+            }
+        }
+    });
+    
+    // 2. Internet Online - Jab internet wapas aaye
+    window.addEventListener('online', async function() {
+        console.log('🟢 Online - Auto-refreshing...');
+        if (typeof refreshAllModules === 'function') {
+            await refreshAllModules();
+        }
+    });
+    
+    // 3. Login ke baad refresh
+    const originalLogin = window.login;
+    if (originalLogin) {
+        window.login = async function() {
+            await originalLogin();
+            if (typeof refreshAllModules === 'function') {
+                setTimeout(async () => {
+                    await refreshAllModules();
+                }, 1000);
+            }
+        };
+    }
+    
+    // 4. Dashboard open par refresh
+    const originalShowDashboard = window.showDashboard;
+    if (originalShowDashboard) {
+        window.showDashboard = function() {
+            originalShowDashboard();
+            if (typeof refreshAllModules === 'function') {
+                setTimeout(() => {
+                    refreshAllModules();
+                }, 500);
+            }
+        };
+    }
+    
+    console.log('✅ Auto-refresh setup complete!');
+}
+
+// ======================= EXPOSE FUNCTIONS =======================
+window.refreshAllModules = refreshAllModules;
+window.setupAutoRefresh = setupAutoRefresh;
+
+// ======================= INITIALIZE =======================
+// Auto-refresh setup when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(setupAutoRefresh, 1000);
+});
+
+console.log('✅ PART 03-Z: Auto-Refresh Module Loaded!');
+console.log('📌 Features:');
+console.log('   ✅ Tab focus - Auto refresh');
+console.log('   ✅ Internet online - Auto refresh');
+console.log('   ✅ After login - Auto refresh');
+console.log('   ✅ Dashboard open - Auto refresh');
+console.log('   ✅ Manual: window.refreshAllModules()');
+// =================================== START PART 03-S- ENDS HERE =========================================================================
 // =================================== PART 03 HELPER FUNCTIONS ENDS HERE =================================================================
 //==================================== START PART 04 DASHBOARD MODULE =====================================================================
 // ======================= PART 4: DASHBOARD MODULE (COMPLETE ROLE-BASED) =================================================================
@@ -41044,7 +41319,7 @@ async function refreshTransportData() {
     await processPendingTransportQueue();
     renderTransportUI();
     hideLoader();
-    showNotification('✅ ' + window.transportData.routes.length + ' routes loaded with ' + Object.keys(window.transportStudentAssignments).length + ' student assignments!', 'success');
+   
 }
 
 function filterTransport() { 
