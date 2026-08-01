@@ -36084,12 +36084,42 @@ setTimeout(() => {
     }
 }, 1000);
 
+// ======================= ✅ EXPOSE FUNCTIONS GLOBALLY =======================
+window.loadLeaveManagement = loadLeaveManagement;
+window.showApplyLeaveForm = showApplyLeaveForm;
+window.approveLeave = approveLeave;
+window.rejectLeave = rejectLeave;
+window.cancelLeave = cancelLeave;
+window.refreshLeaveData = refreshLeaveData;
+window.exportLeavesCSV = exportLeavesCSV;
+window.exportLeavesPDF = exportLeavesPDF;
+window.filterLeaves = filterLeaves;
+window.clearLeaveFilter = clearLeaveFilter;
+window.previousLeavePage = previousLeavePage;
+window.nextLeavePage = nextLeavePage;
+window.changeLeaveRowsPerPage = changeLeaveRowsPerPage;
+window.downloadLeaveDoc = downloadLeaveDoc;
+window.shareLeave = shareLeave;
+window.viewLeaveDetails = viewLeaveDetails;
+window.printLeaveDetails = printLeaveDetails;
+window.shareLeaveDetails = shareLeaveDetails;
+window.loadLeavesFromSupabase = loadLeavesFromSupabase;
+window.syncLeaveToSupabase = syncLeaveToSupabase;
+window.deleteLeaveFromSupabase = deleteLeaveFromSupabase;
+window.uploadLeaveDocToSupabase = uploadLeaveDocToSupabase;
+window.openLeaveDocCapture = openLeaveDocCapture;
+window.getFilteredLeaves = getFilteredLeaves;
+window.renderLeaveList = renderLeaveList;
+window.getSchoolLogoHTML = getSchoolLogoHTML;
+window.escapeHtml = escapeHtml;
+window.formatDateDMY = formatDateDMY;
+
 console.log('✅ PART 14 COMPLETE - Leave Module Fully Fixed!');
+console.log('📌 [LEAVE] All functions exposed globally');
 console.log('📌 [LEAVE] Table Columns: id, emp_name, designation, type, from_date, to_date, days, status, reason, document_url, document_data, applied_on, approved_on, rejected_on, emp_photo_url, created_at, updated_at');
 console.log('📌 [LEAVE] Designation added and working properly');
 console.log('📸 [LEAVE] Photos will display from emp_photo_url column');
 console.log('📥 [LEAVE] Download button working for documents');
-
 } // End of duplicate check
 // ======================= PART 14 ENDS HERE =======================
 // ======================= PART 14 ENDS HERE =======================
@@ -54621,11 +54651,9 @@ function showPrintModal() {
 }
 
 // ================================================================
-// ==================== 12. NOTIFICATION SETTINGS MODAL ==========
+// ==================== 12. NOTIFICATION SETTINGS MODAL (FIXED) ===
 // ================================================================
-// ======================= PART 25: NOTIFICATION SETTINGS MODAL (COMPLETE ERROR-FREE) =======================
-
-// ======================= HELPER FUNCTIONS FOR SETTINGS =======================
+// ======================= HELPER FUNCTIONS =======================
 function showNotificationSafe(msg, type) {
     if (typeof showToast === 'function') {
         showToast(msg, type);
@@ -54647,7 +54675,7 @@ function closeCustomModal(modalElement) {
     }
 }
 
-// ======================= SAVE NOTIFICATION SETTINGS TO SUPABASE =======================
+// ======================= SAVE TO SUPABASE =======================
 async function saveNotificationSettingsToSupabase(settingsData) {
     console.log('📤 Saving notification settings to Supabase...');
     
@@ -54686,7 +54714,7 @@ async function saveNotificationSettingsToSupabase(settingsData) {
     }
 }
 
-// ======================= LOAD NOTIFICATION SETTINGS =======================
+// ======================= LOAD SETTINGS =======================
 async function loadNotificationSettings() {
     const supabase = getSupabaseClient();
     if (!supabase || !navigator.onLine) {
@@ -54744,6 +54772,169 @@ async function loadNotificationSettings() {
     };
 }
 
+// ======================= CHECK PUSH PERMISSION =======================
+function getPushPermissionStatus() {
+    if (!('Notification' in window)) {
+        return 'unsupported';
+    }
+    return Notification.permission; // 'granted', 'denied', 'default'
+}
+
+// ======================= REQUEST PUSH PERMISSION =======================
+function requestPushPermission() {
+    console.log('🔔 Requesting push permission...');
+    
+    if (!('Notification' in window)) {
+        showNotificationSafe('❌ Push notifications not supported in this browser', 'error');
+        return;
+    }
+    
+    if (Notification.permission === 'granted') {
+        showNotificationSafe('✅ Push notifications already enabled!', 'success');
+        return;
+    }
+    
+    if (Notification.permission === 'denied') {
+        showNotificationSafe('⚠️ Permission denied. Please enable from browser settings.', 'warning');
+        return;
+    }
+    
+    Notification.requestPermission().then(function(permission) {
+        if (permission === 'granted') {
+            showNotificationSafe('✅ Push notifications enabled!', 'success');
+            // ✅ Update UI
+            updatePushStatusUI();
+        } else {
+            showNotificationSafe('❌ Permission denied for push notifications', 'error');
+        }
+    });
+}
+
+// ======================= TEST PUSH NOTIFICATION =======================
+function testPushNotification() {
+    console.log('🔔 Testing push notification...');
+    
+    if (!('Notification' in window)) {
+        showNotificationSafe('❌ Notifications not supported', 'error');
+        return;
+    }
+    
+    if (Notification.permission !== 'granted') {
+        showNotificationSafe('⚠️ Please enable push notifications first', 'warning');
+        requestPushPermission();
+        return;
+    }
+    
+    try {
+        const notification = new Notification('🔔 Test Notification', {
+            body: 'This is a test push notification from Wings Convent ERP!',
+            icon: 'https://img.icons8.com/color/96/school--v1.png',
+            badge: 'https://img.icons8.com/color/96/school--v1.png',
+            vibrate: [200, 100, 200],
+            requireInteraction: true,
+            silent: false
+        });
+        
+        notification.onclick = function() {
+            window.focus();
+            notification.close();
+            showNotificationSafe('✅ Notification clicked!', 'success');
+        };
+        
+        showNotificationSafe('✅ Test notification sent! Check your screen.', 'success');
+        
+    } catch (error) {
+        console.error('Test notification error:', error);
+        showNotificationSafe('❌ Error sending test notification: ' + error.message, 'error');
+    }
+}
+
+// ======================= UPDATE PUSH STATUS UI =======================
+function updatePushStatusUI() {
+    const permission = getPushPermissionStatus();
+    const isPushEnabled = localStorage.getItem('pushNotif') === 'true';
+    const statusContainer = document.getElementById('pushStatusContainer');
+    const pushCheckbox = document.getElementById('pushNotif');
+    
+    if (!statusContainer) return;
+    
+    let statusText = '';
+    let statusColor = '';
+    let statusBg = '';
+    let statusIcon = '';
+    
+    if (permission === 'granted' && isPushEnabled) {
+        statusText = '✅ ENABLED & PERMITTED';
+        statusColor = '#065f46';
+        statusBg = '#d1fae5';
+        statusIcon = 'fa-check-circle';
+    } else if (permission === 'granted' && !isPushEnabled) {
+        statusText = '⏸️ DISABLED (Toggle off)';
+        statusColor = '#92400e';
+        statusBg = '#fef3c7';
+        statusIcon = 'fa-pause-circle';
+    } else if (permission === 'denied') {
+        statusText = '❌ PERMISSION DENIED';
+        statusColor = '#991b1b';
+        statusBg = '#fee2e2';
+        statusIcon = 'fa-times-circle';
+    } else if (permission === 'default') {
+        statusText = '⚠️ PERMISSION NOT GRANTED';
+        statusColor = '#92400e';
+        statusBg = '#fef3c7';
+        statusIcon = 'fa-exclamation-triangle';
+    } else {
+        statusText = '❌ NOT SUPPORTED';
+        statusColor = '#475569';
+        statusBg = '#f1f5f9';
+        statusIcon = 'fa-ban';
+    }
+    
+    // ✅ Update status container
+    statusContainer.style.background = statusBg;
+    statusContainer.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: ${statusColor};">
+                <i class="fas ${statusIcon}"></i>
+                Push Notifications: <strong>${statusText}</strong>
+            </span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                ${permission === 'granted' && isPushEnabled ? `
+                <button onclick="testPushNotification()" style="
+                    background: #2563eb;
+                    color: white;
+                    border: none;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    cursor: pointer;
+                    font-size: 10px;
+                ">
+                    <i class="fas fa-bell"></i> Test Push
+                </button>
+                ` : ''}
+                ${permission === 'denied' || permission === 'default' ? `
+                <button onclick="requestPushPermission()" style="
+                    background: #2563eb;
+                    color: white;
+                    border: none;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    cursor: pointer;
+                    font-size: 10px;
+                ">
+                    <i class="fas fa-key"></i> Request Permission
+                </button>
+                ` : ''}
+                ${permission === 'unsupported' ? `
+                <span style="font-size: 10px; color: #475569;">
+                    <i class="fas fa-info-circle"></i> Not supported
+                </span>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
 // ==================== SHOW NOTIFICATION SETTINGS MODAL ====================
 function showNotificationModal() {
     const settings = {
@@ -54753,7 +54944,12 @@ function showNotificationModal() {
         pushPriority: localStorage.getItem('pushPriority') || 'Important'
     };
     
+    const permission = getPushPermissionStatus();
+    const isPushEnabled = settings.pushNotif;
+    const isPermissionGranted = permission === 'granted';
+    
     console.log('📋 Current settings:', settings);
+    console.log('🔔 Push permission:', permission);
     
     var modal = document.createElement('div');
     modal.className = 'custom-modal-overlay';
@@ -54761,21 +54957,50 @@ function showNotificationModal() {
     
     modal.innerHTML = `
         <div class="custom-modal-container" style="max-width: 600px; width:100%; max-height:90vh; overflow-y:auto; border-radius:28px; background:var(--bg-surface);">
+            <!-- HEADER -->
             <div class="custom-modal-header" style="background:linear-gradient(135deg,#ec489a,#be185d); padding:16px 20px; border-radius:28px 28px 0 0; display:flex; justify-content:space-between; align-items:center;">
                 <h2 style="color:white; margin:0; font-size:18px;"><i class="fas fa-bell"></i> Notification Settings</h2>
                 <button class="custom-modal-close" onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background:rgba(255,255,255,0.2); border:none; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:20px; color:white;">&times;</button>
             </div>
             
             <div class="custom-modal-body" style="padding:20px;">
-                <div style="background: #f0fdf4; padding: 12px; border-radius: 12px; margin-bottom: 16px;">
-                    <i class="fas fa-info-circle" style="color: #10b981;"></i>
-                    <span style="font-size: 12px; color: #065f46;">
-                        Configure notification preferences. Settings saved in <strong>notification_settings</strong> table.
-                    </span>
+                <!-- ========== PUSH PERMISSION STATUS ========== -->
+                <div id="pushStatusContainer" style="background: ${isPermissionGranted && isPushEnabled ? '#d1fae5' : isPermissionGranted && !isPushEnabled ? '#fef3c7' : permission === 'denied' ? '#fee2e2' : '#f1f5f9'}; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid ${isPermissionGranted && isPushEnabled ? '#10b981' : permission === 'denied' ? '#ef4444' : '#f59e0b'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span style="font-size: 13px; font-weight: 600; color: ${isPermissionGranted && isPushEnabled ? '#065f46' : permission === 'denied' ? '#991b1b' : '#92400e'};">
+                            <i class="fas ${isPermissionGranted && isPushEnabled ? 'fa-check-circle' : permission === 'denied' ? 'fa-times-circle' : 'fa-exclamation-triangle'}"></i>
+                            Push Notifications: 
+                            <strong>${isPermissionGranted && isPushEnabled ? '✅ ENABLED' : isPermissionGranted && !isPushEnabled ? '⏸️ DISABLED' : permission === 'denied' ? '❌ PERMISSION DENIED' : '⚠️ PERMISSION REQUIRED'}</strong>
+                        </span>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            ${isPermissionGranted && isPushEnabled ? `
+                            <button onclick="testPushNotification()" style="background: #10b981; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 10px;">
+                                <i class="fas fa-bell"></i> Test
+                            </button>
+                            ` : ''}
+                            ${!isPermissionGranted ? `
+                            <button onclick="requestPushPermission()" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 10px;">
+                                <i class="fas fa-key"></i> Request Permission
+                            </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ${permission === 'denied' ? `
+                    <div style="margin-top: 8px; font-size: 11px; color: #991b1b; background: #fee2e2; padding: 8px 12px; border-radius: 8px;">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Push notifications are blocked in browser settings. Please enable them from browser settings.
+                    </div>
+                    ` : ''}
+                    ${permission === 'default' ? `
+                    <div style="margin-top: 8px; font-size: 11px; color: #92400e; background: #fef3c7; padding: 8px 12px; border-radius: 8px;">
+                        <i class="fas fa-info-circle"></i> 
+                        Click <strong>"Request Permission"</strong> to enable push notifications.
+                    </div>
+                    ` : ''}
                 </div>
                 
                 <!-- ========== EMAIL NOTIFICATIONS ========== -->
-                <div class="custom-form-group" style="margin-bottom:16px;">
+                <div class="custom-form-group" style="margin-bottom:14px;">
                     <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                         <input type="checkbox" id="emailNotif" ${settings.emailNotif ? 'checked' : ''} style="width:18px; height:18px;">
                         <span>✉️ Email Notifications</span>
@@ -54784,14 +55009,16 @@ function showNotificationModal() {
                 </div>
                 
                 <!-- ========== PUSH NOTIFICATIONS ========== -->
-                <div class="custom-form-group" style="background: #dbeafe; padding: 12px; border-radius: 12px; border: 1px solid #93c5fd; margin-bottom:16px;">
+                <div class="custom-form-group" style="background: ${isPermissionGranted && isPushEnabled ? '#dbeafe' : '#f1f5f9'}; padding: 14px; border-radius: 12px; border: 1px solid ${isPermissionGranted && isPushEnabled ? '#93c5fd' : '#e2e8f0'}; margin-bottom:14px;">
                     <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                        <input type="checkbox" id="pushNotif" ${settings.pushNotif ? 'checked' : ''} style="width:18px; height:18px;">
-                        <span>📱 Push Notifications (Browser)</span>
-                        <span style="font-size:10px; color:#2563eb; margin-left:8px;">
-                            ${settings.pushNotif ? '✅ Enabled' : '❌ Disabled'}
+                        <input type="checkbox" id="pushNotif" ${settings.pushNotif ? 'checked' : ''} style="width:18px; height:18px;" onchange="togglePushSettings()">
+                        <span>📱 Push Notifications</span>
+                        <span style="font-size:10px; color:${isPermissionGranted && isPushEnabled ? '#2563eb' : '#94a3b8'}; margin-left:8px;">
+                            ${isPermissionGranted && isPushEnabled ? '✅ Enabled' : isPermissionGranted && !isPushEnabled ? '⏸️ Disabled' : permission === 'denied' ? '⚠️ Permission Denied' : '⚠️ Permission Required'}
                         </span>
                     </label>
+                    
+                    <!-- ========== PUSH SETTINGS ========== -->
                     <div id="pushSettingsContainer" style="${settings.pushNotif ? 'display:block;' : 'display:none;'} margin-top: 12px; padding: 12px; background: white; border-radius: 8px;">
                         <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">
                             ⚡ Push Notification Priority Level
@@ -54809,11 +55036,23 @@ function showNotificationModal() {
                               settings.pushPriority === 'Urgent' ? 'Only Urgent & Critical notifications will be sent.' :
                               'Only Critical notifications will be sent.'}
                         </p>
+                        
+                        <!-- ========== PERMISSION BUTTONS ========== -->
+                        ${!isPermissionGranted ? `
+                        <button onclick="requestPushPermission()" class="btn btn-primary btn-sm" style="width:100%; margin-top:8px; padding:10px; border-radius:25px; font-size:13px; background:#2563eb; color:white; border:none; cursor:pointer;">
+                            <i class="fas fa-key"></i> 🔔 Enable Push Notifications
+                        </button>
+                        ` : ''}
+                        ${isPermissionGranted ? `
+                        <button onclick="testPushNotification()" class="btn btn-success btn-sm" style="width:100%; margin-top:8px; padding:10px; border-radius:25px; font-size:13px; background:#10b981; color:white; border:none; cursor:pointer;">
+                            <i class="fas fa-bell"></i> 📤 Send Test Notification
+                        </button>
+                        ` : ''}
                     </div>
                 </div>
                 
                 <!-- ========== SMS NOTIFICATIONS ========== -->
-                <div class="custom-form-group" style="margin-bottom:16px;">
+                <div class="custom-form-group" style="margin-bottom:14px;">
                     <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                         <input type="checkbox" id="smsNotif" ${settings.smsNotif ? 'checked' : ''} style="width:18px; height:18px;">
                         <span>📨 SMS Notifications</span>
@@ -54821,52 +55060,22 @@ function showNotificationModal() {
                     </label>
                 </div>
                 
-                <!-- ========== PUSH NOTIFICATION STATUS ========== -->
-                <div id="pushStatusContainer" style="background: ${settings.pushNotif ? '#d1fae5' : '#fef3c7'}; padding: 10px; border-radius: 12px; margin-top: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                        <span style="font-size: 12px; font-weight: 600; color: ${settings.pushNotif ? '#065f46' : '#92400e'};">
-                            <i class="fas ${settings.pushNotif ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
-                            Push Notifications: <strong>${settings.pushNotif ? 'ENABLED' : 'DISABLED'}</strong>
+                <!-- ========== INFO ========== -->
+                <div style="background: #f8fafc; padding: 12px; border-radius: 12px; margin-top: 12px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <i class="fas fa-info-circle" style="color: #3b82f6; font-size: 14px;"></i>
+                        <span style="font-size: 11px; color: #64748b;">
+                            <strong>📌 Note:</strong> 
+                            ${isPermissionGranted ? '✅ Push notifications are enabled and ready to use.' : '⚠️ You need to grant permission for push notifications.'}
                         </span>
-                        ${settings.pushNotif ? `
-                            <span style="font-size: 10px; color: #065f46; background: #a7f3d0; padding: 2px 10px; border-radius: 20px;">
-                                Priority: ${settings.pushPriority || 'Important'}
-                            </span>
-                            <button id="testPushBtn" style="
-                                background: #2563eb;
-                                color: white;
-                                border: none;
-                                padding: 4px 12px;
-                                border-radius: 20px;
-                                cursor: pointer;
-                                font-size: 10px;
-                            ">
-                                <i class="fas fa-bell"></i> Test Push
-                            </button>
-                        ` : `
-                            <button id="enablePushBtn" style="
-                                background: #2563eb;
-                                color: white;
-                                border: none;
-                                padding: 4px 12px;
-                                border-radius: 20px;
-                                cursor: pointer;
-                                font-size: 10px;
-                            ">
-                                <i class="fas fa-check"></i> Enable Now
-                            </button>
-                        `}
                     </div>
-                </div>
-                
-                <div style="background: #fef3c7; padding: 12px; border-radius: 12px; margin-top: 12px;">
-                    <i class="fas fa-database" style="color: #f59e0b;"></i>
-                    <span style="font-size: 11px; color: #92400e;">
-                        Settings saved in: <strong>notification_settings</strong> table
-                    </span>
+                    <div style="margin-top: 6px; font-size: 10px; color: #94a3b8;">
+                        <i class="fas fa-database"></i> Settings saved in: <strong>notification_settings</strong> table
+                    </div>
                 </div>
             </div>
             
+            <!-- FOOTER -->
             <div class="custom-modal-footer" style="padding: 16px 20px; background: var(--bg-body); border-top: 1px solid var(--border-light); border-radius: 0 0 28px 28px; display: flex; gap: 12px; justify-content: flex-end; flex-wrap:wrap;">
                 <button class="btn btn-secondary" onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="padding:10px 20px; border-radius:30px;">Cancel</button>
                 <button class="btn btn-primary" id="saveNotifBtn" style="padding:10px 20px; border-radius:30px; background:linear-gradient(135deg,#ec489a,#be185d); color:white;">Save Settings</button>
@@ -54876,124 +55085,15 @@ function showNotificationModal() {
     
     document.body.appendChild(modal);
     
-    // ========== TOGGLE PUSH SETTINGS VISIBILITY ==========
-    document.getElementById('pushNotif').addEventListener('change', function() {
+    // ========== TOGGLE PUSH SETTINGS ==========
+    window.togglePushSettings = function() {
         const container = document.getElementById('pushSettingsContainer');
-        const statusContainer = document.getElementById('pushStatusContainer');
+        const checkbox = document.getElementById('pushNotif');
         
-        if (this.checked) {
+        if (checkbox.checked) {
             container.style.display = 'block';
-            statusContainer.style.background = '#d1fae5';
-            statusContainer.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <span style="font-size: 12px; font-weight: 600; color: #065f46;">
-                        <i class="fas fa-check-circle"></i>
-                        Push Notifications: <strong>ENABLED</strong>
-                    </span>
-                    <span style="font-size: 10px; color: #065f46; background: #a7f3d0; padding: 2px 10px; border-radius: 20px;">
-                        Priority: ${document.getElementById('pushPriority').value || 'Important'}
-                    </span>
-                    <button id="testPushBtn" style="
-                        background: #2563eb;
-                        color: white;
-                        border: none;
-                        padding: 4px 12px;
-                        border-radius: 20px;
-                        cursor: pointer;
-                        font-size: 10px;
-                    ">
-                        <i class="fas fa-bell"></i> Test Push
-                    </button>
-                </div>
-            `;
-            document.getElementById('testPushBtn')?.addEventListener('click', function(e) {
-                e.stopPropagation();
-                testPushNotification();
-            });
         } else {
             container.style.display = 'none';
-            statusContainer.style.background = '#fef3c7';
-            statusContainer.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <span style="font-size: 12px; font-weight: 600; color: #92400e;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Push Notifications: <strong>DISABLED</strong>
-                    </span>
-                    <button id="enablePushBtn" style="
-                        background: #2563eb;
-                        color: white;
-                        border: none;
-                        padding: 4px 12px;
-                        border-radius: 20px;
-                        cursor: pointer;
-                        font-size: 10px;
-                    ">
-                        <i class="fas fa-check"></i> Enable Now
-                    </button>
-                </div>
-            `;
-            document.getElementById('enablePushBtn')?.addEventListener('click', function(e) {
-                e.stopPropagation();
-                document.getElementById('pushNotif').checked = true;
-                document.getElementById('pushNotif').dispatchEvent(new Event('change'));
-            });
-        }
-    });
-    
-    // ========== PRIORITY CHANGE ==========
-    document.getElementById('pushPriority').addEventListener('change', function() {
-        const priority = this.value;
-        const statusContainer = document.getElementById('pushStatusContainer');
-        
-        if (document.getElementById('pushNotif').checked) {
-            const priorityBadge = statusContainer.querySelector('span[style*="background: #a7f3d0"]');
-            if (priorityBadge) {
-                priorityBadge.textContent = 'Priority: ' + priority;
-            }
-        }
-    });
-    
-    // ========== TEST PUSH NOTIFICATION ==========
-    window.testPushNotification = function() {
-        if (!('Notification' in window)) {
-            showNotificationSafe('❌ Push notifications not supported in this browser', 'error');
-            return;
-        }
-        
-        if (Notification.permission !== 'granted') {
-            showNotificationSafe('⚠️ Please grant push notification permission first', 'warning');
-            return;
-        }
-        
-        if (typeof sendPushNotification === 'function') {
-            sendPushNotification(
-                '🔔 Test Notification',
-                'This is a test push notification from Wings Convent ERP!',
-                { id: 'test_' + Date.now(), category: 'System', priority: 'Normal' }
-            ).then(success => {
-                if (success) {
-                    showNotificationSafe('✅ Test push notification sent!', 'success');
-                } else {
-                    showNotificationSafe('❌ Failed to send test push. Please check service worker.', 'error');
-                }
-            });
-        } else {
-            if (navigator.serviceWorker) {
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification('🔔 Test Notification', {
-                        body: 'This is a test push notification from Wings Convent ERP!',
-                        icon: '/favicon.ico',
-                        badge: '/favicon.ico',
-                        vibrate: [200, 100, 200],
-                        requireInteraction: true
-                    });
-                    showNotificationSafe('✅ Test push notification sent!', 'success');
-                }).catch(err => {
-                    showNotificationSafe('❌ Failed to send test push: ' + err.message, 'error');
-                });
-            } else {
-                showNotificationSafe('❌ Service worker not available', 'error');
-            }
         }
     };
     
@@ -55014,12 +55114,12 @@ function showNotificationModal() {
         localStorage.setItem('smsNotif', settingsData.smsNotif);
         localStorage.setItem('pushPriority', settingsData.pushPriority);
         
-        // Save to Supabase notification_settings table
+        // Save to Supabase
         saveNotificationSettingsToSupabase(settingsData);
         
         if (settingsData.pushNotif) {
             showNotificationSafe('✅ Push notifications enabled!', 'success');
-            if (typeof requestPushPermission === 'function') {
+            if (getPushPermissionStatus() !== 'granted') {
                 requestPushPermission();
             }
         } else {
@@ -55027,20 +55127,27 @@ function showNotificationModal() {
         }
         
         closeCustomModal(modal);
-        loadSettingsModule();
+        if (typeof loadSettingsModule === 'function') {
+            loadSettingsModule();
+        }
     };
+    
+    // ========== UPDATE STATUS ON LOAD ==========
+    setTimeout(updatePushStatusUI, 100);
 }
 
 // ======================= EXPOSE FUNCTIONS =======================
 window.saveNotificationSettingsToSupabase = saveNotificationSettingsToSupabase;
 window.loadNotificationSettings = loadNotificationSettings;
 window.showNotificationModal = showNotificationModal;
-window.testPushNotification = window.testPushNotification;
+window.testPushNotification = testPushNotification;
+window.requestPushPermission = requestPushPermission;
+window.getPushPermissionStatus = getPushPermissionStatus;
+window.updatePushStatusUI = updatePushStatusUI;
 window.closeCustomModal = closeCustomModal;
-window.loadSettingsModule = loadSettingsModule;
 window.showNotificationSafe = showNotificationSafe;
 
-console.log('✅ PART 25 COMPLETE - Notification Settings Modal');
+console.log('✅ PART 25 COMPLETE - Notification Settings Modal (FIXED)');
 // ================================================================
 // ==================== 13. SMS GATEWAY MODAL ====================
 // ================================================================
