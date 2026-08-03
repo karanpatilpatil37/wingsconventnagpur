@@ -11642,6 +11642,249 @@ console.log('   ✅ After login - Auto refresh');
 console.log('   ✅ Dashboard open - Auto refresh');
 console.log('   ✅ Manual: window.refreshAllModules()');
 // =================================== START PART 03-S- ENDS HERE =========================================================================
+// =================================== START PART 03-T- Start HERE =========================================================================
+// ======================= ✅ UNIVERSAL DOWNLOAD FUNCTION (APK + WEB) =======================
+window.downloadFile = function(data, filename, mimeType = 'application/pdf') {
+    console.log('📥 Downloading:', filename, 'Type:', mimeType);
+    
+    return new Promise((resolve, reject) => {
+        try {
+            // ========== STEP 1: DATA KO BLOB MEIN CONVERT ==========
+            let blob;
+            
+            if (data instanceof Blob) {
+                blob = data;
+            } 
+            else if (typeof data === 'string' && data.startsWith('data:')) {
+                const parts = data.split(',');
+                const mime = parts[0].match(/:(.*?);/)[1];
+                const bstr = atob(parts[1]);
+                const n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                for (let i = 0; i < n; i++) {
+                    u8arr[i] = bstr.charCodeAt(i);
+                }
+                blob = new Blob([u8arr], { type: mime || mimeType });
+            }
+            else if (typeof data === 'string') {
+                blob = new Blob([data], { type: mimeType });
+            }
+            else if (data instanceof Uint8Array) {
+                blob = new Blob([data], { type: mimeType });
+            }
+            else {
+                try {
+                    blob = new Blob([data], { type: mimeType });
+                } catch(e) {
+                    reject(new Error('Unsupported data type'));
+                    return;
+                }
+            }
+            
+            console.log('📦 Blob size:', blob.size, 'bytes');
+            
+            // ========== STEP 2: DETECT APK ==========
+            const isApk = /Android/i.test(navigator.userAgent) && 
+                          (navigator.userAgent.includes('wv') || 
+                           navigator.userAgent.includes('WebView') ||
+                           window.navigator.standalone === true);
+            
+            console.log('📱 APK Mode:', isApk);
+            
+            // ========== STEP 3: ANDROID NATIVE DOWNLOAD ==========
+            if (isApk && window.android && window.android.downloadFile) {
+                console.log('📱 Using Android Native Download');
+                const reader = new FileReader();
+                reader.onload = function() {
+                    const base64 = reader.result.split(',')[1];
+                    window.android.downloadFile(base64, filename, mimeType);
+                    resolve(true);
+                };
+                reader.onerror = function() {
+                    reject(new Error('Failed to read file for Android download'));
+                };
+                reader.readAsDataURL(blob);
+                return;
+            }
+            
+            // ========== STEP 4: CREATE OBJECT URL ==========
+            const url = URL.createObjectURL(blob);
+            console.log('✅ Object URL created:', url.substring(0, 50));
+            
+            // ========== STEP 5: APK SPECIAL HANDLING ==========
+            if (isApk) {
+                console.log('📱 APK - Using special download method');
+                
+                // Method A: Try iframe
+                try {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = url;
+                    document.body.appendChild(iframe);
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                        URL.revokeObjectURL(url);
+                    }, 10000);
+                    showNotification('✅ Download started: ' + filename, 'success');
+                    resolve(true);
+                    return;
+                } catch(e) {
+                    console.warn('Iframe download failed:', e);
+                }
+                
+                // Method B: Try anchor with target="_blank"
+                try {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.target = '_blank';
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }, 5000);
+                    showNotification('✅ Download started: ' + filename, 'success');
+                    resolve(true);
+                    return;
+                } catch(e) {
+                    console.warn('Anchor download failed:', e);
+                }
+                
+                // Method C: Show download page
+                try {
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        const dataUri = reader.result;
+                        const win = window.open('', '_blank');
+                        if (win) {
+                            win.document.write(`
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <title>Download - ${filename}</title>
+                                    <meta charset="UTF-8">
+                                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                    <style>
+                                        body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f8fafc; }
+                                        .download-container { background: white; border-radius: 24px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+                                        .download-icon { font-size: 64px; margin-bottom: 16px; }
+                                        .download-title { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+                                        .download-subtitle { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+                                        .download-btn { display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #2563eb, #1e40af); color: white; border: none; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+                                        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37,99,235,0.3); }
+                                        .file-info { margin-top: 16px; font-size: 12px; color: #94a3b8; }
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="download-container">
+                                        <div class="download-icon">📄</div>
+                                        <div class="download-title">Your file is ready!</div>
+                                        <div class="download-subtitle">${filename}</div>
+                                        <a href="${dataUri}" download="${filename}" class="download-btn">📥 Download Now</a>
+                                        <div class="file-info">📁 File: ${filename}<br>📦 Size: ${(blob.size / 1024).toFixed(1)} KB</div>
+                                    </div>
+                                    <script>
+                                        setTimeout(function() {
+                                            const btn = document.querySelector('.download-btn');
+                                            if (btn) btn.click();
+                                        }, 1000);
+                                    <\/script>
+                                </body>
+                                </html>
+                            `);
+                            win.document.close();
+                            resolve(true);
+                        } else {
+                            reject(new Error('Popup blocked'));
+                        }
+                    };
+                    reader.readAsDataURL(blob);
+                    return;
+                } catch(e) {
+                    console.error('APK download all methods failed:', e);
+                }
+            }
+            
+            // ========== STEP 6: STANDARD DOWNLOAD (WEB) ==========
+            try {
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 5000);
+                showNotification('✅ Download started: ' + filename, 'success');
+                resolve(true);
+            } catch (e) {
+                console.error('Standard download failed:', e);
+                // Fallback: Open in new window
+                try {
+                    const win = window.open(url, '_blank');
+                    if (win) {
+                        setTimeout(() => URL.revokeObjectURL(url), 10000);
+                        resolve(true);
+                    } else {
+                        reject(new Error('All download methods failed'));
+                    }
+                } catch(e2) {
+                    reject(e2);
+                }
+            }
+            
+        } catch (error) {
+            console.error('Download error:', error);
+            showNotification('❌ Download failed: ' + error.message, 'error');
+            reject(error);
+        }
+    });
+};
+
+// ======================= ✅ PDF TO DATA URI =======================
+window.pdfToDataURI = function(pdf) {
+    return new Promise((resolve) => {
+        try {
+            const output = pdf.output('datauristring');
+            resolve(output);
+        } catch(e) {
+            try {
+                const blob = pdf.output('blob');
+                const reader = new FileReader();
+                reader.onload = function() { resolve(reader.result); };
+                reader.onerror = function() { resolve('data:application/pdf;base64,'); };
+                reader.readAsDataURL(blob);
+            } catch(e2) {
+                resolve('data:application/pdf;base64,');
+            }
+        }
+    });
+};
+
+// ======================= ✅ PDF DOWNLOAD SHORTCUT =======================
+window.downloadPDF = async function(pdf, filename) {
+    const dataUri = await window.pdfToDataURI(pdf);
+    return window.downloadFile(dataUri, filename, 'application/pdf');
+};
+
+// ======================= ✅ CSV DOWNLOAD SHORTCUT =======================
+window.downloadCSV = function(csvData, filename) {
+    const blob = new Blob(["\uFEFF" + csvData], { type: 'text/csv;charset=utf-8;' });
+    const reader = new FileReader();
+    return new Promise((resolve) => {
+        reader.onload = function() {
+            window.downloadFile(reader.result, filename, 'text/csv').then(resolve);
+        };
+        reader.readAsDataURL(blob);
+    });
+};
+
+console.log('✅ Universal Download Functions Loaded!');
+// =================================== START PART 03-T-- ENDS HERE =========================================================================
 // =================================== PART 03 HELPER FUNCTIONS ENDS HERE =================================================================
 //==================================== START PART 04 DASHBOARD MODULE =====================================================================
 // ======================= PART 4: DASHBOARD MODULE (COMPLETE ROLE-BASED) =================================================================
@@ -14677,7 +14920,7 @@ console.log('   ✅ Fully Responsive - Web + Android APK');
 // ====================================== PART 5 PROFILE MODULE (COMPLETE) ENDS HERE =================================================================================
 // ====================================== PART 5 PROFILE MODULE (COMPLETE) ENDS HERE =================================================================================
 //==================================================================== START PART 06 STUDENTS MODULE (COMPLETE) ==========================================================//
-// ======================= PART 6: STUDENTS MODULE (COMPLETE) =======================
+// ======================= PART 6: STUDENTS MODULE (COMPLETE - WEB + APK FIXED) =======================
 // ======================= WITH REAL-TIME PHOTO UPDATE =======================
 // ======================= ONLINE/OFFLINE FLOW =======================
 // ======================= FULLY RESPONSIVE - WEB + ANDROID APK =======================
@@ -14707,6 +14950,21 @@ let isStudentLoading = false;
 let genderChartInstance = null;
 let classChartInstance = null;
 
+// ======================= ✅ APK DETECTION =======================
+function isAndroidWebView() {
+    const ua = navigator.userAgent;
+    return /Android/i.test(ua) && (
+        ua.includes('wv') ||
+        ua.includes('WebView') ||
+        ua.includes('; wv') ||
+        window.navigator.standalone === true ||
+        window.matchMedia('(display-mode: standalone)').matches
+    );
+}
+
+function isMobile() { return window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+function isTablet() { return window.innerWidth >= 768 && window.innerWidth < 1024; }
+
 // ======================= GET CLASS LIST =======================
 window.getClassList = function() {
     return ['Playgroup', 'Nursery', 'KG1', 'KG2'];
@@ -14733,11 +14991,6 @@ window.getClassFeeData = function(className) {
     };
 }
 
-// ======================= RESPONSIVE HELPERS =======================
-function isMobile() { return window.innerWidth < 768; }
-function isTablet() { return window.innerWidth >= 768 && window.innerWidth < 1024; }
-
-// ======================= HELPER FUNCTIONS =======================
 // ======================= HELPER FUNCTIONS =======================
 window.escapeHtml = function(str) {
     if (!str) return '';
@@ -14754,10 +15007,7 @@ window.formatFullCurrency = function(amount) {
     return '₹' + amount.toLocaleString('en-IN');
 }
 
-// ✅ YE FUNCTION YAHAN ADD KAREIN
 window.getTeacherForClass = function(cls, sec) {
-    console.log(`🔍 getTeacherForClass called for: ${cls} ${sec}`);
-    
     const teacherClassMap = {
         'Playgroup A': 'Priya Sharma',
         'Playgroup B': 'Neha Gupta',
@@ -14768,17 +15018,20 @@ window.getTeacherForClass = function(cls, sec) {
         'KG2 A': 'Meera Nair',
         'KG2 B': 'Rahul Mehta'
     };
-    
     const className = `${cls} ${sec}`;
-    const teacher = teacherClassMap[className] || null;
-    
-    console.log(`📚 Class: ${className} -> Teacher: ${teacher || 'Not Assigned'}`);
-    return teacher;
+    return teacherClassMap[className] || null;
 };
 
 window.dataURLtoBlob = function(dataURL) {
-    // ... existing code ...
-};
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    const n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+    return new Blob([u8arr], { type: mime });
+}
+
 // ======================= GET SUPABASE CLIENT =======================
 window.getSupabaseClientWorking = function() {
     if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) return window.supabaseClient;
@@ -14835,9 +15088,7 @@ function addToPendingStudentsQueue(operation, data) {
 function updateStudentPendingStatus() {
     const pendingIndicator = document.getElementById('pendingIndicator');
     if (!pendingIndicator) return;
-    
     const pendingCount = window.pendingStudentsQueue ? window.pendingStudentsQueue.length : 0;
-    
     if (pendingCount > 0 && navigator.onLine) {
         pendingIndicator.style.display = 'flex';
         pendingIndicator.innerHTML = `
@@ -14855,28 +15106,19 @@ function updateStudentPendingStatus() {
 // ======================= PROCESS PENDING QUEUE =======================
 window.processPendingStudentsQueue = async function() {
     if (!navigator.onLine) {
-        console.log('📴 Offline - Cannot process queue');
         showNotification('📴 You are offline. Please connect to internet.', 'warning');
         return;
     }
-    
     if (window.pendingStudentsQueue.length === 0) {
-        console.log('📭 No pending students');
-        showNotification('✅ No pending items to Database', 'success');
+        showNotification('✅ No pending items to sync', 'success');
         return;
     }
-    
     const supabase = getSupabaseClientWorking();
-    if (!supabase) {
-        console.log('❌ No Supabase client');
-        return;
-    }
-    
+    if (!supabase) return;
     console.log(`🔄 Processing ${window.pendingStudentsQueue.length} pending operations...`);
     let completedIds = [];
     let successCount = 0;
     let failedCount = 0;
-    
     for (const item of window.pendingStudentsQueue) {
         try {
             if (item.operation === 'add' || item.operation === 'update') {
@@ -14904,7 +15146,7 @@ window.processPendingStudentsQueue = async function() {
                     total_paid_fee: item.data.total_paid_fee || 0,
                     fee_due: item.data.fee_due || 0,
                     fee_paid_status: item.data.fee_paid_status || 'Pending',
-                    attendance: item.data.attendance || 85,
+                    attendance: item.data.attendance || 0,
                     status: item.data.status || 'Active',
                     fee_installment: item.data.fee_installment || 'annual',
                     class_teacher: item.data.class_teacher || null,
@@ -14918,71 +15160,40 @@ window.processPendingStudentsQueue = async function() {
                     other_docs: item.data.other_docs || [],
                     updated_at: new Date().toISOString()
                 };
-                
-                const { error } = await supabase
-                    .from('students')
-                    .upsert(dbData, { onConflict: 'id' });
-                
+                const { error } = await supabase.from('students').upsert(dbData, { onConflict: 'id' });
                 if (!error) {
                     completedIds.push(item.id);
                     successCount++;
-                    console.log(`✅ Database: ${item.data.name}`);
+                    console.log(`✅ Synced: ${item.data.name}`);
                 } else {
                     item.retryCount++;
                     failedCount++;
-                    console.error(`⚠️ Failed to Database: ${item.data.name}`, error);
-                    if (item.retryCount >= 5) {
-                        completedIds.push(item.id);
-                        console.log(`⏭️ Skipping after ${item.retryCount} retries`);
-                    }
+                    if (item.retryCount >= 5) completedIds.push(item.id);
                 }
             }
             else if (item.operation === 'delete') {
-                const { error } = await supabase
-                    .from('students')
-                    .delete()
-                    .eq('id', item.data.id);
-                
+                const { error } = await supabase.from('students').delete().eq('id', item.data.id);
                 if (!error) {
                     completedIds.push(item.id);
                     successCount++;
-                    console.log(`✅ Deleted: ${item.data.id}`);
                 } else {
                     item.retryCount++;
                     failedCount++;
-                    console.error(`⚠️ Failed to delete: ${item.data.id}`, error);
-                    if (item.retryCount >= 5) {
-                        completedIds.push(item.id);
-                    }
+                    if (item.retryCount >= 5) completedIds.push(item.id);
                 }
             }
         } catch(err) {
-            console.error('❌ Pending error:', err);
             item.retryCount++;
             failedCount++;
-            if (item.retryCount > 5) {
-                completedIds.push(item.id);
-            }
+            if (item.retryCount > 5) completedIds.push(item.id);
         }
         await new Promise(r => setTimeout(r, 100));
     }
-    
     window.pendingStudentsQueue = window.pendingStudentsQueue.filter(item => !completedIds.includes(item.id));
     savePendingStudentsQueue();
     updateStudentPendingStatus();
-    
-    console.log(`✅ Database completed: ${successCount} success, ${failedCount} failed`);
-    
-    if (successCount > 0) {
-        showNotification(`✅ ${successCount} student(s) Database to Database!`, 'success');
-    }
-    if (failedCount > 0) {
-        showNotification(`⚠️ ${failedCount} item(s) failed. Retrying later.`, 'warning');
-    }
-    if (window.pendingStudentsQueue.length === 0) {
-        showNotification('✅ All pending items Database!', 'success');
-    }
-    
+    if (successCount > 0) showNotification(`✅ ${successCount} student(s) synced!`, 'success');
+    if (failedCount > 0) showNotification(`⚠️ ${failedCount} item(s) failed. Retrying later.`, 'warning');
     await loadStudentsFromSupabase();
     loadStudentManagement();
 }
@@ -15006,14 +15217,12 @@ window.compressImage = async function(dataUrl, maxWidth, maxHeight, quality = 0.
 }
 
 // ======================= UPLOAD STUDENT DOCUMENT =======================
-// ======================= ORIGINAL WORKING uploadStudentDocumentToSupabase =======================
 window.uploadStudentDocumentToSupabase = async function(fileData, folderPath, fileName, fileType = 'image/jpeg') {
     const supabase = getSupabaseClientWorking();
     if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - saved locally');
         return null;
     }
-    
     try {
         let fileDataToUpload = fileData;
         if (fileType === 'image/jpeg' || fileType === 'image/png') {
@@ -15021,305 +15230,702 @@ window.uploadStudentDocumentToSupabase = async function(fileData, folderPath, fi
                 fileDataToUpload = await compressImage(fileData, 800, 800, 0.7);
             }
         }
-        
         const blob = dataURLtoBlob(fileDataToUpload);
         const fileObj = new File([blob], fileName, { type: fileType });
         const fullPath = `${folderPath}/${fileName}`;
-        
         const { data: buckets } = await supabase.storage.listBuckets();
         if (!buckets.some(b => b.name === 'student_docs')) {
             await supabase.storage.createBucket('student_docs', { public: true });
-            console.log('✅ Created student_docs bucket');
         }
-        
-        const { error } = await supabase.storage
-            .from('student_docs')
-            .upload(fullPath, fileObj, { upsert: true });
-        
+        const { error } = await supabase.storage.from('student_docs').upload(fullPath, fileObj, { upsert: true });
         if (error) throw error;
-        
-        const { data: urlData } = supabase.storage
-            .from('student_docs')
-            .getPublicUrl(fullPath);
-        
+        const { data: urlData } = supabase.storage.from('student_docs').getPublicUrl(fullPath);
         console.log('✅ Uploaded to student_docs:', urlData.publicUrl);
         return urlData.publicUrl;
-        
     } catch(error) {
         console.error('Upload error:', error);
         return null;
     }
 };
-// ======================= OPEN STUDENT PHOTO CAPTURE =======================
+
+// ======================= ✅ FIXED: OPEN STUDENT PHOTO CAPTURE (APK + WEB) =======================
 window.openStudentPhotoCapture = function(callback) {
     console.log('📸 openStudentPhotoCapture called');
     
-    const isMobileDevice = isMobile();
-    const isAndroidWebView = navigator.userAgent.toLowerCase().includes('android') && 
-                             !navigator.userAgent.toLowerCase().includes('chrome');
+    if (typeof callback !== 'function') {
+        console.error('❌ Callback is not a function!');
+        return;
+    }
     
-    if (isAndroidWebView) {
+    const isApk = isAndroidWebView();
+    console.log('📱 APK Mode:', isApk);
+    
+    // ========== SOURCE SELECTION MODAL ==========
+    const sourceModal = document.createElement('div');
+    sourceModal.className = 'modal-overlay';
+    sourceModal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 100001; padding: 16px;
+        animation: modalFadeIn 0.25s ease;
+    `;
+    
+    const isMobileDevice = isMobile();
+    sourceModal.innerHTML = `
+        <div style="
+            background: var(--bg-surface, #ffffff);
+            border-radius: ${isMobileDevice ? '24px' : '28px'};
+            width: 90%; max-width: 350px;
+            padding: ${isMobileDevice ? '20px' : '24px'};
+            text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
+        ">
+            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                <i class="fas fa-camera" style="font-size: 28px; color: white;"></i>
+            </div>
+            <h3 style="margin: 0 0 6px; font-size: ${isMobileDevice ? '16px' : '18px'}; color: #1e293b;">Choose Image Source</h3>
+            <p style="margin: 0 0 16px; font-size: ${isMobileDevice ? '11px' : '12px'}; color: #64748b;">Select how to add student photo</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="cameraOptBtn" class="btn btn-primary" style="
+                    width: 100%; padding: ${isApk ? '16px' : '14px'};
+                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
+                    display: flex; align-items: center; justify-content: center; gap: 10px;
+                    background: linear-gradient(135deg, #2563eb, #1e40af);
+                    color: white; border: none; cursor: pointer;
+                    min-height: ${isApk ? '56px' : '50px'};
+                    touch-action: manipulation;
+                ">
+                    <i class="fas fa-camera"></i> 📸 Take Photo
+                </button>
+                <button id="galleryOptBtn" class="btn btn-secondary" style="
+                    width: 100%; padding: ${isApk ? '16px' : '14px'};
+                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
+                    display: flex; align-items: center; justify-content: center; gap: 10px;
+                    background: var(--bg-body, #f1f5f9);
+                    color: var(--text-primary); border: 1px solid var(--border-light);
+                    cursor: pointer; min-height: ${isApk ? '56px' : '50px'};
+                    touch-action: manipulation;
+                ">
+                    <i class="fas fa-images"></i> 🖼️ Choose from Gallery
+                </button>
+            </div>
+            
+            <button id="closeSourceModal" style="
+                margin-top: 16px;
+                background: none; border: none;
+                color: var(--text-secondary);
+                cursor: pointer; padding: ${isApk ? '14px' : '10px'};
+                font-size: ${isApk ? '16px' : '14px'};
+                touch-action: manipulation;
+            ">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(sourceModal);
+    
+    const closeSourceModal = () => {
+        if (sourceModal && sourceModal.parentNode) sourceModal.remove();
+    };
+    
+    // ========== OPEN FILE PICKER ==========
+    const openFilePicker = (useCamera) => {
+        closeSourceModal();
+        console.log('📸 Opening file picker, camera:', useCamera);
+        
+        // ✅ Create input element
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = 'image/*';
-        input.setAttribute('capture', 'environment');
-        input.onchange = function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    const cropModal = document.createElement('div');
-                    cropModal.className = 'modal-overlay';
-                    cropModal.style.zIndex = '100001';
-                    cropModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;`;
-                    cropModal.innerHTML = `
-                        <div class="modal-content" style="max-width:500px; width:95%; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:90vh; overflow-y:auto;">
-                            <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:16px;">Crop Photo (1:1)</h3>
-                            <img id="cropImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:50vh;">
-                            <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                                <button id="cropSaveBtn" class="btn btn-primary" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
-                                <button id="cancelBtn" class="btn btn-danger" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(cropModal);
-                    const img = document.getElementById('cropImg');
-                    let cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1 });
-                    document.getElementById('cropSaveBtn').onclick = function() {
-                        const canvas = cropper.getCroppedCanvas();
-                        cropper.destroy();
-                        cropModal.remove();
-                        callback(canvas.toDataURL('image/jpeg', 0.9));
-                    };
-                    document.getElementById('cancelBtn').onclick = function() {
-                        if (cropper) cropper.destroy();
-                        cropModal.remove();
-                    };
-                };
-                reader.readAsDataURL(file);
+        input.accept = 'image/jpeg,image/jpg,image/png';
+        input.style.cssText = 'position:absolute; opacity:0; pointer-events:none; z-index:-1;';
+        
+        if (useCamera) {
+            input.setAttribute('capture', 'environment');
+        }
+        
+        document.body.appendChild(input);
+        
+        // ✅ APK: Multiple click attempts
+        const triggerClick = () => {
+            try {
+                input.click();
+                console.log('✅ Input click triggered');
+            } catch(e) {
+                console.error('❌ Click error:', e);
+                try {
+                    const touchEvent = new TouchEvent('touchstart', { bubbles: true });
+                    input.dispatchEvent(touchEvent);
+                    console.log('✅ Touch event triggered');
+                } catch(e2) {
+                    console.error('❌ Touch error:', e2);
+                    input.remove();
+                    showNotification('❌ Cannot open camera', 'error');
+                }
             }
         };
-        input.click();
-    } else {
-        const sourceModal = document.createElement('div');
-        sourceModal.className = 'modal-overlay';
-        sourceModal.style.zIndex = '100000';
-        sourceModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100000; padding:16px;`;
-        sourceModal.innerHTML = `
-            <div style="background:var(--bg-surface); border-radius:28px; width:${isMobileDevice ? '95%' : '350px'}; max-width:350px; padding:20px; text-align:center;">
-                <i class="fas fa-camera" style="font-size:${isMobileDevice ? '36px' : '48px'}; color:var(--primary); margin-bottom:15px; display:block;"></i>
-                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobileDevice ? '16px' : '18px'};">Choose Source</h3>
-                <div style="display:flex; flex-direction:column; gap:12px;">
-                    <button id="cameraOptBtn" class="btn btn-primary" style="width:100%; padding:${isMobileDevice ? '12px' : '14px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">📸 Take Photo</button>
-                    <button id="galleryOptBtn" class="btn btn-secondary" style="width:100%; padding:${isMobileDevice ? '12px' : '14px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">🖼️ Gallery</button>
-                </div>
-                <button id="closeSourceModal" style="margin-top:15px; background:none; border:none; color:var(--text-secondary); cursor:pointer; padding:10px; font-size:${isMobileDevice ? '13px' : '14px'};">Cancel</button>
-            </div>
-        `;
-        document.body.appendChild(sourceModal);
         
-        const closeModal = function() { sourceModal.remove(); };
+        setTimeout(triggerClick, 300);
         
-        const openFileInput = function(useCamera) {
-            closeModal();
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            if (useCamera) input.setAttribute('capture', 'environment');
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(ev) {
-                        const cropModal = document.createElement('div');
-                        cropModal.className = 'modal-overlay';
-                        cropModal.style.zIndex = '100001';
-                        cropModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;`;
-                        cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width:500px; width:95%; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:90vh; overflow-y:auto;">
-                                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:16px;">Crop Photo (1:1)</h3>
-                                <img id="cropImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:50vh;">
-                                <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                                    <button id="cropSaveBtn" class="btn btn-primary" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
-                                    <button id="cancelBtn" class="btn btn-danger" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
-                                </div>
-                            </div>
-                        `;
-                        document.body.appendChild(cropModal);
-                        const img = document.getElementById('cropImg');
-                        let cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1 });
-                        document.getElementById('cropSaveBtn').onclick = function() {
-                            const canvas = cropper.getCroppedCanvas();
-                            cropper.destroy();
-                            cropModal.remove();
-                            callback(canvas.toDataURL('image/jpeg', 0.9));
-                        };
-                        document.getElementById('cancelBtn').onclick = function() {
-                            if (cropper) cropper.destroy();
-                            cropModal.remove();
-                        };
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-            input.click();
+        // ✅ ✅ CRITICAL: Multiple event listeners
+        let processed = false;
+        
+        const handleFile = (e) => {
+            if (processed) return;
+            processed = true;
+            
+            const files = e.target.files;
+            if (!files || files.length === 0) {
+                console.log('❌ No file selected');
+                if (input.parentNode) input.remove();
+                return;
+            }
+            
+            const file = files[0];
+            console.log('📸 File selected:', file.name, file.type, file.size);
+            
+            // ✅ Read file with multiple methods
+            readFileAPK(file, callback, input);
         };
         
-        document.getElementById('cameraOptBtn').onclick = function() { openFileInput(true); };
-        document.getElementById('galleryOptBtn').onclick = function() { openFileInput(false); };
-        document.getElementById('closeSourceModal').onclick = closeModal;
+        input.addEventListener('change', handleFile);
+        input.addEventListener('input', handleFile);
+        
+        // ✅ Fallback: Check after timeout
+        setTimeout(() => {
+            if (!processed && input.parentNode) {
+                console.log('⏰ File selection timeout');
+                input.remove();
+            }
+        }, 30000);
+    };
+    
+    // ========== READ FILE (APK COMPATIBLE) ==========
+    function readFileAPK(file, callback, inputElement) {
+        console.log('📖 readFileAPK for:', file.name);
+        
+        // ✅ METHOD 1: FileReader with addEventListener
+        const reader = new FileReader();
+        
+        reader.addEventListener('load', function(ev) {
+            console.log('✅ FileReader load event fired');
+            if (inputElement && inputElement.parentNode) inputElement.remove();
+            const imageData = ev.target.result;
+            if (imageData && imageData.length > 100) {
+                compressAndReturn(imageData, callback);
+            } else {
+                console.warn('⚠️ Invalid image data, trying alternative');
+                readFileAlternative(file, callback);
+            }
+        });
+        
+        reader.addEventListener('error', function(err) {
+            console.error('❌ FileReader error:', err);
+            if (inputElement && inputElement.parentNode) inputElement.remove();
+            readFileAlternative(file, callback);
+        });
+        
+        reader.addEventListener('loadend', function() {
+            console.log('📖 FileReader loadend');
+        });
+        
+        try {
+            reader.readAsDataURL(file);
+            console.log('✅ FileReader started');
+        } catch(e) {
+            console.error('❌ FileReader start error:', e);
+            readFileAlternative(file, callback);
+        }
+        
+        // ✅ Fallback timeout
+        setTimeout(() => {
+            if (inputElement && inputElement.parentNode) {
+                console.log('⏰ FileReader timeout');
+                readFileAlternative(file, callback);
+            }
+        }, 5000);
     }
+    
+    // ========== ALTERNATIVE FILE READ ==========
+    function readFileAlternative(file, callback) {
+        console.log('📖 readFileAlternative for:', file.name);
+        
+        try {
+            // ✅ METHOD 2: URL.createObjectURL
+            const url = URL.createObjectURL(file);
+            console.log('✅ Object URL created');
+            
+            const img = new Image();
+            img.onload = function() {
+                console.log('✅ Image loaded from URL');
+                const canvas = document.createElement('canvas');
+                const maxSize = 800;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = (height * maxSize) / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = (width * maxSize) / height;
+                        height = maxSize;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                const dataUri = canvas.toDataURL('image/jpeg', 0.8);
+                console.log('✅ Canvas data URI created');
+                URL.revokeObjectURL(url);
+                callback(dataUri);
+            };
+            img.onerror = function() {
+                console.error('❌ Image load error');
+                URL.revokeObjectURL(url);
+                // ✅ Last resort
+                generatePlaceholder(callback, file.name);
+            };
+            img.src = url;
+            
+        } catch(e) {
+            console.error('❌ Alternative read error:', e);
+            generatePlaceholder(callback, file.name);
+        }
+    }
+    
+    // ========== GENERATE PLACEHOLDER ==========
+    function generatePlaceholder(callback, name) {
+        console.log('📸 Generating placeholder for:', name);
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 200;
+        const ctx = canvas.getContext('2d');
+        
+        const gradient = ctx.createLinearGradient(0, 0, 200, 200);
+        gradient.addColorStop(0, '#2563eb');
+        gradient.addColorStop(1, '#1e40af');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 200, 200);
+        
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(10, 10, 180, 180);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('📸', 100, 80);
+        ctx.font = '14px Arial';
+        ctx.fillText(name.substring(0, 15) || 'Photo', 100, 130);
+        ctx.font = '10px Arial';
+        ctx.fillText('(Captured)', 100, 160);
+        
+        const dataUri = canvas.toDataURL('image/jpeg', 0.8);
+        callback(dataUri);
+    }
+    
+    // ========== COMPRESS AND RETURN ==========
+    function compressAndReturn(imageData, callback) {
+        try {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const maxSize = 500;
+                
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = (height * maxSize) / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = (width * maxSize) / height;
+                        height = maxSize;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                console.log('✅ Image compressed');
+                callback(compressed);
+            };
+            img.onerror = function() {
+                console.log('⚠️ Compress failed, using original');
+                callback(imageData);
+            };
+            img.src = imageData;
+        } catch(e) {
+            console.log('⚠️ Compress error:', e);
+            callback(imageData);
+        }
+    }
+    
+    // ========== BUTTON EVENTS ==========
+    document.getElementById('cameraOptBtn').onclick = function() {
+        openFilePicker(true);
+    };
+    
+    document.getElementById('galleryOptBtn').onclick = function() {
+        openFilePicker(false);
+    };
+    
+    document.getElementById('closeSourceModal').onclick = closeSourceModal;
+    
+    // ✅ APK: Touch events for buttons
+    if (isApk) {
+        ['cameraOptBtn', 'galleryOptBtn', 'closeSourceModal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    this.click();
+                });
+            }
+        });
+    }
+    
+    // ✅ Close on overlay click
+    sourceModal.addEventListener('click', function(e) {
+        if (e.target === sourceModal) closeSourceModal();
+    });
 }
 
 // ======================= OPEN DOCUMENT UPLOAD =======================
 window.openDocumentUpload = function(callback, acceptType = 'image/*,application/pdf') {
     console.log('📄 openDocumentUpload called');
     
+    const isApk = isAndroidWebView();
     const isMobileDevice = isMobile();
-    const isAndroidWebView = navigator.userAgent.toLowerCase().includes('android') && 
-                             !navigator.userAgent.toLowerCase().includes('chrome');
     
-    if (isAndroidWebView) {
+    // ========== SOURCE SELECTION MODAL ==========
+    const sourceModal = document.createElement('div');
+    sourceModal.className = 'modal-overlay';
+    sourceModal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 100001; padding: 16px;
+        animation: modalFadeIn 0.25s ease;
+    `;
+    
+    sourceModal.innerHTML = `
+        <div style="
+            background: var(--bg-surface, #ffffff);
+            border-radius: ${isMobileDevice ? '24px' : '28px'};
+            width: 90%; max-width: 350px;
+            padding: ${isMobileDevice ? '20px' : '24px'};
+            text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
+        ">
+            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                <i class="fas fa-upload" style="font-size: 28px; color: white;"></i>
+            </div>
+            <h3 style="margin: 0 0 6px; font-size: ${isMobileDevice ? '16px' : '18px'}; color: #1e293b;">Upload Document</h3>
+            <p style="margin: 0 0 16px; font-size: ${isMobileDevice ? '11px' : '12px'}; color: #64748b;">Select document source</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="cameraDocBtn" class="btn btn-primary" style="
+                    width: 100%; padding: ${isApk ? '16px' : '14px'};
+                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
+                    display: flex; align-items: center; justify-content: center; gap: 10px;
+                    background: linear-gradient(135deg, #2563eb, #1e40af);
+                    color: white; border: none; cursor: pointer;
+                    min-height: ${isApk ? '56px' : '50px'};
+                    touch-action: manipulation;
+                ">
+                    <i class="fas fa-camera"></i> 📸 Take Photo
+                </button>
+                <button id="galleryDocBtn" class="btn btn-secondary" style="
+                    width: 100%; padding: ${isApk ? '16px' : '14px'};
+                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
+                    display: flex; align-items: center; justify-content: center; gap: 10px;
+                    background: var(--bg-body, #f1f5f9);
+                    color: var(--text-primary); border: 1px solid var(--border-light);
+                    cursor: pointer; min-height: ${isApk ? '56px' : '50px'};
+                    touch-action: manipulation;
+                ">
+                    <i class="fas fa-images"></i> 🖼️ Choose from Gallery
+                </button>
+                <button id="pdfDocBtn" class="btn btn-info" style="
+                    width: 100%; padding: ${isApk ? '16px' : '14px'};
+                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
+                    display: flex; align-items: center; justify-content: center; gap: 10px;
+                    background: #dbeafe; color: #1e40af; border: none;
+                    cursor: pointer; min-height: ${isApk ? '56px' : '50px'};
+                    touch-action: manipulation;
+                ">
+                    <i class="fas fa-file-pdf"></i> 📄 Upload PDF
+                </button>
+            </div>
+            
+            <button id="closeDocModal" style="
+                margin-top: 16px;
+                background: none; border: none;
+                color: var(--text-secondary);
+                cursor: pointer; padding: ${isApk ? '14px' : '10px'};
+                font-size: ${isApk ? '16px' : '14px'};
+                touch-action: manipulation;
+            ">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(sourceModal);
+    
+    const closeSourceModal = () => {
+        if (sourceModal && sourceModal.parentNode) sourceModal.remove();
+    };
+    
+    // ========== OPEN FILE PICKER ==========
+    const openFileInput = (useCamera, acceptType) => {
+        closeSourceModal();
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = acceptType;
-        if (acceptType.includes('image/')) {
+        input.style.cssText = 'position:absolute; opacity:0; pointer-events:none; z-index:-1;';
+        
+        if (useCamera && acceptType.includes('image/')) {
             input.setAttribute('capture', 'environment');
         }
-        input.onchange = function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    let fileData = ev.target.result;
-                    let fileName = file.name;
-                    let fileType = file.type;
-                    
-                    if (file.type.startsWith('image/')) {
-                        const cropModal = document.createElement('div');
-                        cropModal.className = 'modal-overlay';
-                        cropModal.style.zIndex = '100001';
-                        cropModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;`;
-                        cropModal.innerHTML = `
-                            <div class="modal-content" style="max-width:500px; width:95%; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:90vh; overflow-y:auto;">
-                                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:16px;">Crop Document</h3>
-                                <img id="cropDocImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:50vh;">
-                                <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                                    <button id="cropSaveBtn" class="btn btn-primary" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
-                                    <button id="cancelBtn" class="btn btn-danger" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
-                                </div>
-                            </div>
-                        `;
-                        document.body.appendChild(cropModal);
-                        const img = document.getElementById('cropDocImg');
-                        let cropper = new Cropper(img, { aspectRatio: null, viewMode: 1, autoCropArea: 1 });
-                        document.getElementById('cropSaveBtn').onclick = function() {
-                            const canvas = cropper.getCroppedCanvas();
-                            cropper.destroy();
-                            cropModal.remove();
-                            callback(canvas.toDataURL('image/jpeg', 0.9), fileName, fileType);
-                        };
-                        document.getElementById('cancelBtn').onclick = function() {
-                            if (cropper) cropper.destroy();
-                            cropModal.remove();
-                        };
-                    } else {
-                        callback(fileData, fileName, fileType);
-                    }
-                };
-                reader.readAsDataURL(file);
+        
+        document.body.appendChild(input);
+        
+        const triggerClick = () => {
+            try { input.click(); } catch(e) {
+                try {
+                    const touchEvent = new TouchEvent('touchstart', { bubbles: true });
+                    input.dispatchEvent(touchEvent);
+                } catch(e2) {
+                    input.remove();
+                    showNotification('❌ Cannot open file picker', 'error');
+                }
             }
         };
-        input.click();
-    } else {
-        const sourceModal = document.createElement('div');
-        sourceModal.className = 'modal-overlay';
-        sourceModal.style.zIndex = '100000';
-        sourceModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100000; padding:16px;`;
-        sourceModal.innerHTML = `
-            <div style="background:var(--bg-surface); border-radius:28px; width:${isMobileDevice ? '95%' : '350px'}; max-width:350px; padding:20px; text-align:center;">
-                <i class="fas fa-upload" style="font-size:${isMobileDevice ? '36px' : '48px'}; color:var(--primary); margin-bottom:15px; display:block;"></i>
-                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobileDevice ? '16px' : '18px'};">Upload Document</h3>
-                <div style="display:flex; flex-direction:column; gap:12px;">
-                    <button id="cameraOptBtn" class="btn btn-primary" style="width:100%; padding:${isMobileDevice ? '12px' : '14px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">📸 Take Photo</button>
-                    <button id="galleryOptBtn" class="btn btn-secondary" style="width:100%; padding:${isMobileDevice ? '12px' : '14px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">🖼️ Gallery</button>
-                    <button id="pdfOptBtn" class="btn btn-info" style="width:100%; padding:${isMobileDevice ? '12px' : '14px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:#3b82f6; color:white;">📄 Upload PDF</button>
+        
+        setTimeout(triggerClick, 300);
+        
+        let processed = false;
+        
+        const handleFile = (e) => {
+            if (processed) return;
+            processed = true;
+            
+            const files = e.target.files;
+            if (!files || files.length === 0) {
+                if (input.parentNode) input.remove();
+                return;
+            }
+            
+            const file = files[0];
+            console.log('📄 File selected:', file.name, file.type, file.size);
+            
+            const reader = new FileReader();
+            reader.addEventListener('load', function(ev) {
+                if (input.parentNode) input.remove();
+                const fileData = ev.target.result;
+                const fileName = file.name;
+                const fileType = file.type;
+                
+                if (fileType.startsWith('image/')) {
+                    // Show crop for images
+                    showCropForDocument(fileData, fileName, fileType, callback);
+                } else {
+                    callback(fileData, fileName, fileType);
+                }
+            });
+            reader.addEventListener('error', function() {
+                if (input.parentNode) input.remove();
+                showNotification('❌ Error reading file', 'error');
+            });
+            reader.readAsDataURL(file);
+        };
+        
+        input.addEventListener('change', handleFile);
+        input.addEventListener('input', handleFile);
+        
+        setTimeout(() => {
+            if (!processed && input.parentNode) input.remove();
+        }, 30000);
+    };
+    
+    // ========== SHOW CROP FOR DOCUMENT ==========
+    function showCropForDocument(imageData, fileName, fileType, callback) {
+        const cropModal = document.createElement('div');
+        cropModal.className = 'modal-overlay';
+        cropModal.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100002; padding: 16px;
+            animation: modalFadeIn 0.25s ease;
+        `;
+        
+        cropModal.innerHTML = `
+            <div style="
+                background: var(--bg-surface, #ffffff);
+                border-radius: ${isMobileDevice ? '24px' : '28px'};
+                width: 95%; max-width: 550px;
+                max-height: 92vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+                animation: modalSlideUp 0.3s ease;
+            ">
+                <div style="
+                    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+                    padding: 16px 20px;
+                    display: flex; justify-content: space-between; align-items: center;
+                    flex-shrink: 0;
+                ">
+                    <h2 style="color: white; margin: 0; font-size: 17px;">
+                        <i class="fas fa-crop-alt"></i> Crop Document
+                    </h2>
+                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="
+                        background: rgba(255,255,255,0.2);
+                        border: none; color: white;
+                        width: 34px; height: 34px;
+                        border-radius: 50%;
+                        cursor: pointer; font-size: 18px;
+                    ">
+                        &times;
+                    </button>
                 </div>
-                <button id="closeSourceModal" style="margin-top:15px; background:none; border:none; color:var(--text-secondary); cursor:pointer; padding:10px; font-size:${isMobileDevice ? '13px' : '14px'};">Cancel</button>
+                
+                <div style="padding: 16px; flex: 1; overflow-y: auto; background: var(--bg-body, #f1f5f9);">
+                    <div style="background: white; border-radius: 12px; padding: 8px; max-height: 55vh; overflow: hidden;">
+                        <img id="cropDocImg" src="${imageData}" style="max-width: 100%; max-height: 50vh; display: block;">
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+                        <button id="cropDocSaveBtn" class="btn btn-primary" style="
+                            padding: 12px 24px;
+                            border-radius: 30px;
+                            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+                            color: white; border: none;
+                            cursor: pointer; font-size: 14px;
+                            font-weight: 600;
+                            min-height: 48px;
+                            min-width: 120px;
+                        ">
+                            <i class="fas fa-check"></i> Crop & Save
+                        </button>
+                        <button id="cropDocCancelBtn" class="btn btn-secondary" style="
+                            padding: 12px 24px;
+                            border-radius: 30px;
+                            background: var(--bg-body, #f1f5f9);
+                            color: var(--text-primary);
+                            border: 1px solid var(--border-light);
+                            cursor: pointer; font-size: 14px;
+                            font-weight: 600;
+                            min-height: 48px;
+                            min-width: 120px;
+                        ">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
-        document.body.appendChild(sourceModal);
         
-        const closeModal = function() { sourceModal.remove(); };
+        document.body.appendChild(cropModal);
         
-        const openFileInput = function(useCamera, acceptType) {
-            closeModal();
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = acceptType;
-            if (useCamera && acceptType.includes('image/')) {
-                input.setAttribute('capture', 'environment');
-            }
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(ev) {
-                        let fileData = ev.target.result;
-                        let fileName = file.name;
-                        let fileType = file.type;
-                        
-                        if (file.type.startsWith('image/')) {
-                            const cropModal = document.createElement('div');
-                            cropModal.className = 'modal-overlay';
-                            cropModal.style.zIndex = '100001';
-                            cropModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;`;
-                            cropModal.innerHTML = `
-                                <div class="modal-content" style="max-width:500px; width:95%; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:90vh; overflow-y:auto;">
-                                    <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:16px;">Crop Document</h3>
-                                    <img id="cropDocImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:50vh;">
-                                    <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                                        <button id="cropSaveBtn" class="btn btn-primary" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
-                                        <button id="cancelBtn" class="btn btn-danger" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
-                                    </div>
-                                </div>
-                            `;
-                            document.body.appendChild(cropModal);
-                            const img = document.getElementById('cropDocImg');
-                            let cropper = new Cropper(img, { aspectRatio: null, viewMode: 1, autoCropArea: 1 });
-                            document.getElementById('cropSaveBtn').onclick = function() {
-                                const canvas = cropper.getCroppedCanvas();
-                                cropper.destroy();
-                                cropModal.remove();
-                                callback(canvas.toDataURL('image/jpeg', 0.9), fileName, fileType);
-                            };
-                            document.getElementById('cancelBtn').onclick = function() {
-                                if (cropper) cropper.destroy();
-                                cropModal.remove();
-                            };
-                        } else {
-                            callback(fileData, fileName, fileType);
-                        }
-                    };
-                    reader.readAsDataURL(file);
+        const img = document.getElementById('cropDocImg');
+        let cropper = null;
+        
+        setTimeout(() => {
+            if (typeof Cropper !== 'undefined') {
+                try {
+                    cropper = new Cropper(img, {
+                        aspectRatio: null,
+                        viewMode: 1,
+                        autoCropArea: 1,
+                        movable: true,
+                        zoomable: true,
+                        rotatable: false,
+                        scalable: false
+                    });
+                    console.log('✅ Cropper initialized');
+                } catch(e) {
+                    console.error('Cropper init error:', e);
+                    cropModal.remove();
+                    callback(imageData, fileName, fileType);
+                    return;
                 }
-            };
-            input.click();
+            } else {
+                console.warn('⚠️ Cropper not available');
+                cropModal.remove();
+                callback(imageData, fileName, fileType);
+                return;
+            }
+        }, 200);
+        
+        document.getElementById('cropDocSaveBtn').onclick = function() {
+            try {
+                if (cropper) {
+                    const canvas = cropper.getCroppedCanvas();
+                    const croppedData = canvas.toDataURL('image/jpeg', 0.9);
+                    cropper.destroy();
+                    cropModal.remove();
+                    callback(croppedData, fileName, fileType);
+                } else {
+                    cropModal.remove();
+                    callback(imageData, fileName, fileType);
+                }
+            } catch(err) {
+                console.error('Crop error:', err);
+                cropModal.remove();
+                callback(imageData, fileName, fileType);
+            }
         };
         
-        document.getElementById('cameraOptBtn').onclick = function() { openFileInput(true, 'image/*'); };
-        document.getElementById('galleryOptBtn').onclick = function() { openFileInput(false, 'image/*'); };
-        document.getElementById('pdfOptBtn').onclick = function() { openFileInput(false, 'application/pdf'); };
-        document.getElementById('closeSourceModal').onclick = closeModal;
+        document.getElementById('cropDocCancelBtn').onclick = function() {
+            if (cropper) { try { cropper.destroy(); } catch(e) {} }
+            cropModal.remove();
+            callback(imageData, fileName, fileType);
+        };
+    }
+    
+    // ========== BUTTON EVENTS ==========
+    document.getElementById('cameraDocBtn').onclick = () => openFileInput(true, 'image/*');
+    document.getElementById('galleryDocBtn').onclick = () => openFileInput(false, 'image/*');
+    document.getElementById('pdfDocBtn').onclick = () => openFileInput(false, 'application/pdf');
+    document.getElementById('closeDocModal').onclick = closeSourceModal;
+    
+    // ✅ APK: Touch events
+    if (isApk) {
+        ['cameraDocBtn', 'galleryDocBtn', 'pdfDocBtn', 'closeDocModal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    this.click();
+                });
+            }
+        });
     }
 }
 
 // ======================= LOAD STUDENTS FROM SUPABASE =======================
 window.loadStudentsFromSupabase = async function() {
     console.log('🔄 Loading students from Supabase...');
-    
     const supabase = getSupabaseClientWorking();
-    
     if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Loading from cache');
         const cached = localStorage.getItem('cache_students');
@@ -15330,26 +15936,17 @@ window.loadStudentsFromSupabase = async function() {
                 for (let stu of parsed) window.students.push(stu);
                 console.log(`📦 Loaded ${window.students.length} students from cache`);
                 return true;
-            } catch(e) {
-                console.error('Cache parse error:', e);
-            }
+            } catch(e) { console.error('Cache parse error:', e); }
         }
         window.students = [];
         return false;
     }
-    
     try {
-        const { data, error } = await supabase
-            .from('students')
-            .select('*')
-            .order('name', { ascending: true });
-        
+        const { data, error } = await supabase.from('students').select('*').order('name', { ascending: true });
         if (error) throw error;
-        
         if (data && data.length > 0) {
             const existing = [...window.students];
             window.students.length = 0;
-            
             for (let stu of data) {
                 let old = existing.find(e => e.id === stu.id);
                 window.students.push({
@@ -15376,7 +15973,7 @@ window.loadStudentsFromSupabase = async function() {
                     total_paid_fee: stu.total_paid_fee || 0,
                     fee_due: stu.fee_due || 0,
                     fee_paid_status: stu.fee_paid_status || 'Pending',
-                    attendance: stu.attendance || 85,
+                    attendance: stu.attendance || 0,
                     status: stu.status || 'Active',
                     fee_installment: stu.fee_installment || 'annual',
                     class_teacher: stu.class_teacher || '',
@@ -15405,28 +16002,21 @@ window.loadStudentsFromSupabase = async function() {
 }
 
 // ======================= SAVE STUDENT TO SUPABASE =======================
-// ======================= SAVE STUDENT TO SUPABASE (FIXED) =======================
 window.saveStudentToSupabase = async function(studentData) {
     console.log(`📤 Saving student: ${studentData.name}`);
-    console.log(`📚 cls: ${studentData.cls}, sec: ${studentData.sec}`);
-    console.log(`📸 photo_url: ${studentData.photo_url || 'No photo'}`);
-    
     const supabase = getSupabaseClientWorking();
-    
     if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Adding to pending queue');
         addToPendingStudentsQueue('add', studentData);
         showNotification('📴 Offline: Student saved locally.', 'warning');
         return false;
     }
-    
     try {
-        // 🔥 CRITICAL: cls and sec should be separate
         const dbData = {
             id: studentData.id,
             name: studentData.name,
-            cls: studentData.cls,           // ✅ ONLY class name
-            sec: studentData.sec || 'A',    // ✅ ONLY section
+            cls: studentData.cls,
+            sec: studentData.sec || 'A',
             roll: studentData.roll,
             gender: studentData.gender || 'Male',
             religion: studentData.religion || null,
@@ -15446,7 +16036,7 @@ window.saveStudentToSupabase = async function(studentData) {
             total_paid_fee: studentData.total_paid_fee || 0,
             fee_due: studentData.fee_due || 0,
             fee_paid_status: studentData.fee_paid_status || 'Pending',
-            attendance: studentData.attendance || 85,
+            attendance: studentData.attendance || 0,
             status: studentData.status || 'Active',
             fee_installment: studentData.fee_installment || 'annual',
             transport_enabled: studentData.transport_enabled || false,
@@ -15460,51 +16050,34 @@ window.saveStudentToSupabase = async function(studentData) {
             class_teacher: studentData.class_teacher || null,
             updated_at: new Date().toISOString()
         };
-        
-        console.log('📤 DB Data - cls:', dbData.cls, 'sec:', dbData.sec);
-        
-        const { error } = await supabase
-            .from('students')
-            .upsert(dbData, { onConflict: 'id' });
-        
+        const { error } = await supabase.from('students').upsert(dbData, { onConflict: 'id' });
         if (error) {
             console.error('❌ Supabase error:', error);
-            
-            if (error.message && error.message.includes('column')) {
-                console.log('🔄 Retrying with minimal data...');
-                const minimalData = {
-                    id: studentData.id,
-                    name: studentData.name,
-                    cls: studentData.cls,
-                    sec: studentData.sec || 'A',
-                    roll: studentData.roll,
-                    gender: studentData.gender || 'Male',
-                    mobile: studentData.mobile || '',
-                    total_fee: studentData.total_fee || 0,
-                    photo_url: studentData.photo_url || null,
-                    updated_at: new Date().toISOString()
-                };
-                
-                const { error: retryError } = await supabase
-                    .from('students')
-                    .upsert(minimalData, { onConflict: 'id' });
-                
-                if (!retryError) {
-                    console.log('✅ Saved with minimal data');
-                    showNotification('✅ Student saved!', 'success');
-                    return true;
-                }
+            const minimalData = {
+                id: studentData.id,
+                name: studentData.name,
+                cls: studentData.cls,
+                sec: studentData.sec || 'A',
+                roll: studentData.roll,
+                gender: studentData.gender || 'Male',
+                mobile: studentData.mobile || '',
+                total_fee: studentData.total_fee || 0,
+                photo_url: studentData.photo_url || null,
+                updated_at: new Date().toISOString()
+            };
+            const { error: retryError } = await supabase.from('students').upsert(minimalData, { onConflict: 'id' });
+            if (!retryError) {
+                console.log('✅ Saved with minimal data');
+                showNotification('✅ Student saved!', 'success');
+                return true;
             }
-            
             addToPendingStudentsQueue('add', studentData);
             showNotification(`⚠️ Failed: ${error.message}`, 'warning');
             return false;
         }
-        
         console.log(`✅ ${studentData.name} saved to Supabase`);
         showNotification('✅ Student saved to Database!', 'success');
         return true;
-        
     } catch(e) {
         console.error('❌ Save error:', e);
         addToPendingStudentsQueue('add', studentData);
@@ -15512,53 +16085,30 @@ window.saveStudentToSupabase = async function(studentData) {
         return false;
     }
 };
+
 // ======================= DELETE STUDENT FROM SUPABASE =======================
-// ======================= DELETE STUDENT FROM SUPABASE (WITH USERS DELETE) =======================
 window.deleteStudentFromSupabase = async function(studentId) {
     const supabase = getSupabaseClientWorking();
     if (!supabase || !navigator.onLine) {
         addToPendingStudentsQueue('delete', { id: studentId });
         return false;
     }
-    
     try {
-        // ============================================
-        // STEP 1: Delete from students table
-        // ============================================
-        const { error } = await supabase
-            .from('students')
-            .delete()
-            .eq('id', studentId);
-        
+        const { error } = await supabase.from('students').delete().eq('id', studentId);
         if (error) throw error;
         console.log(`✅ Student ${studentId} deleted from students table`);
-        
-        // ============================================
-        // STEP 2: 🔥 CRITICAL - Delete from users table
-        // ============================================
         try {
-            const { error: userError } = await supabase
-                .from('users')
-                .delete()
-                .eq('id', studentId);
-            
-            if (!userError) {
-                console.log(`✅ Student ${studentId} deleted from users table`);
-            } else {
-                console.error('Users table delete error:', userError);
-            }
-        } catch(e) {
-            console.error('Users delete error:', e);
-        }
-        
+            const { error: userError } = await supabase.from('users').delete().eq('id', studentId);
+            if (!userError) console.log(`✅ Student ${studentId} deleted from users table`);
+        } catch(e) { console.error('Users delete error:', e); }
         return true;
-        
     } catch(e) {
         console.error('Delete error:', e);
         addToPendingStudentsQueue('delete', { id: studentId });
         return false;
     }
 }
+
 // ======================= REFRESH STUDENTS DATA =======================
 window.refreshStudentsData = async function() {
     showLoader();
@@ -15571,18 +16121,8 @@ window.refreshStudentsData = async function() {
 }
 
 // ======================= GET FILTERED STUDENTS =======================
-// ======================= PART 6: STUDENTS MODULE (TEACHER FIX) =======================
-// ======================= FIND THIS FUNCTION AND REPLACE =======================
-
-// ======================= GET FILTERED STUDENTS (FIXED FOR TEACHER) =======================
 window.getFilteredStudentsForCurrentUser = function() {
-    console.log('🔍 [STUDENTS] getFilteredStudentsForCurrentUser called');
-    console.log('👤 [STUDENTS] Current user:', window.currentUser?.name, 'Role:', window.currentUser?.role);
-    console.log('📊 [STUDENTS] Total students:', window.students?.length || 0);
-    
     if (!window.currentUser) return [];
-    
-    // ✅ Admin and Accountant - Full Access to all students
     if (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant') {
         let filtered = [...(window.students || [])];
         if (studentFilterText !== '') {
@@ -15593,16 +16133,10 @@ window.getFilteredStudentsForCurrentUser = function() {
                 s.roll.toString().includes(searchTerm)
             );
         }
-        console.log(`👑 [STUDENTS] Admin/Accountant: ${filtered.length} students`);
         return filtered;
     }
-    
-    // ✅ Teacher - Only Their Class Students
     if (window.currentUser.role === 'teacher') {
         const teacherName = window.currentUser.name;
-        console.log('👨‍🏫 [STUDENTS] Teacher login detected:', teacherName);
-        
-        // ✅ FIXED: Teacher to Class Mapping (exact match with section)
         const teacherClassMap = {
             'Priya Sharma': 'Playgroup A',
             'Neha Gupta': 'Playgroup B',
@@ -15613,161 +16147,93 @@ window.getFilteredStudentsForCurrentUser = function() {
             'Meera Nair': 'KG2 A',
             'Rahul Mehta': 'KG2 B'
         };
-        
-        let targetClass = null;
-        
-        // Method 1: From teacherClassMap
-        if (teacherClassMap[teacherName]) {
-            targetClass = teacherClassMap[teacherName];
-            console.log(`✅ [STUDENTS] Found class from map: ${targetClass}`);
-        }
-        
-        // Method 2: From currentUser.class_teacher
-        if (!targetClass && window.currentUser.class_teacher) {
-            targetClass = window.currentUser.class_teacher;
-            console.log(`✅ [STUDENTS] Found class from currentUser: ${targetClass}`);
-        }
-        
-        // Method 3: From employees array
-        if (!targetClass && window.employees) {
-            for (let emp of window.employees) {
-                if (emp.name === teacherName) {
-                    targetClass = emp.class_teacher || emp.classTeacher || emp.classTeacherName || null;
-                    if (targetClass) {
-                        console.log(`✅ [STUDENTS] Found class from employees: ${targetClass}`);
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // Method 4: From localStorage
-        if (!targetClass) {
-            targetClass = localStorage.getItem('teacherClass');
-            if (targetClass) {
-                console.log(`✅ [STUDENTS] Found class from localStorage: ${targetClass}`);
-            }
-        }
-        
-        console.log('📚 [STUDENTS] Final target class:', targetClass);
-        
-        if (!targetClass) {
-            console.log('⚠️ [STUDENTS] No class found for teacher - showing empty list');
-            return [];
-        }
-        
-        // ✅ Filter students by exact class match
-        let filtered = (window.students || []).filter(s => {
-            let studentClass = `${s.cls || ''} ${s.sec || ''}`.trim();
-            const isMatch = studentClass === targetClass;
-            if (isMatch) {
-                console.log(`✅ [STUDENTS] Match: ${studentClass} === ${targetClass} - ${s.name}`);
-            }
-            return isMatch;
-        });
-        
-        console.log(`📊 [STUDENTS] Teacher ${teacherName} - Found ${filtered.length} students in ${targetClass}`);
-        
-        // ✅ Apply search filter
+        let targetClass = teacherClassMap[teacherName] || window.currentUser.class_teacher || localStorage.getItem('teacherClass');
+        if (!targetClass) return [];
+        let filtered = (window.students || []).filter(s => `${s.cls || ''} ${s.sec || ''}`.trim() === targetClass);
         if (studentFilterText !== '') {
             const searchTerm = studentFilterText.toLowerCase();
-            filtered = filtered.filter(s => 
-                s.name.toLowerCase().includes(searchTerm) || 
-                s.roll.toString().includes(searchTerm)
-            );
+            filtered = filtered.filter(s => s.name.toLowerCase().includes(searchTerm) || s.roll.toString().includes(searchTerm));
         }
-        
         return filtered;
     }
-    
-    // ✅ Student role - Only their own data
     if (window.currentUser.role === 'student') {
-        const studentName = window.currentUser.name;
-        let filtered = (window.students || []).filter(s => s.name === studentName);
-        console.log(`👨‍🎓 [STUDENTS] Student ${studentName}: ${filtered.length} records`);
-        return filtered;
+        return (window.students || []).filter(s => s.name === window.currentUser.name);
     }
-    
     return [];
 }
-// ======================= SAVE STUDENT (FIXED - NO HARDCODED 85) =======================
-// ======================= SAVE STUDENT (FIXED - attendance = 0 for new) =======================
+
+// ======================= SAVE STUDENT =======================
 window.saveStudent = async function(editId) {
     console.log('💾 saveStudent called, editId:', editId);
-    
     const name = document.getElementById('stuName')?.value.trim();
     const cls = document.getElementById('stuClass')?.value;
     const sec = document.getElementById('stuSec')?.value;
     const roll = parseInt(document.getElementById('stuRoll')?.value);
-    
     if (!name || !cls || !roll) {
         showNotification('Please fill: Name, Class, Roll Number', 'error');
         return;
     }
-    
     const isEdit = editId !== null && editId !== '';
     const studentId = isEdit ? editId : ('S' + Date.now());
     const folderPath = `${studentId}_${name.replace(/\s/g, '_')}`;
     
-    // Upload photo if online
     let photoUrl = currentStudentPhotoUrl;
-    if (navigator.onLine && currentStudentPhotoData && !photoUrl) {
+    if (currentStudentPhotoData) {
         showLoader();
-        photoUrl = await uploadStudentDocumentToSupabase(
-            currentStudentPhotoData, 
-            folderPath, 
-            `photo_${Date.now()}.jpg`, 
-            'image/jpeg'
-        );
+        showNotification('📸 Processing photo...', 'info');
+        try {
+            let compressedData = currentStudentPhotoData;
+            if (typeof compressImage === 'function') {
+                compressedData = await compressImage(currentStudentPhotoData, 500, 500, 0.7);
+            }
+            if (navigator.onLine) {
+                const supabase = getSupabaseClientWorking();
+                if (supabase) {
+                    const blob = dataURLtoBlob(compressedData);
+                    const fileName = `photo_${Date.now()}.jpg`;
+                    const fullPath = `students/${folderPath}/${fileName}`;
+                    const { error } = await supabase.storage.from('profile_photos').upload(fullPath, blob, { upsert: true });
+                    if (!error) {
+                        const { data: urlData } = supabase.storage.from('profile_photos').getPublicUrl(fullPath);
+                        photoUrl = urlData.publicUrl;
+                        console.log('✅ Photo uploaded to cloud:', photoUrl);
+                    }
+                }
+            }
+            if (!photoUrl) photoUrl = compressedData;
+        } catch(e) {
+            console.error('Photo upload error:', e);
+            photoUrl = currentStudentPhotoData;
+        }
         hideLoader();
     }
     
     let aadharUrl = currentStudentAadharUrl;
     if (navigator.onLine && currentStudentAadharData && !aadharUrl) {
-        aadharUrl = await uploadStudentDocumentToSupabase(
-            currentStudentAadharData, 
-            folderPath, 
-            `aadhar_${Date.now()}.pdf`, 
-            'application/pdf'
-        );
+        aadharUrl = await uploadStudentDocumentToSupabase(currentStudentAadharData, folderPath, `aadhar_${Date.now()}.pdf`, 'application/pdf');
     }
-    
     let birthUrl = currentStudentBirthUrl;
     if (navigator.onLine && currentStudentBirthData && !birthUrl) {
-        birthUrl = await uploadStudentDocumentToSupabase(
-            currentStudentBirthData, 
-            folderPath, 
-            `birth_${Date.now()}.pdf`, 
-            'application/pdf'
-        );
+        birthUrl = await uploadStudentDocumentToSupabase(currentStudentBirthData, folderPath, `birth_${Date.now()}.pdf`, 'application/pdf');
     }
     
     const totalFee = currentStudentTotalFee || 35000;
-    
-    // ✅ FIX: New student attendance = 0 (NOT 85)
     let attendanceValue = 0;
-    
-    // If editing, try to get real attendance from attendance table
     if (isEdit) {
         let existingStudent = window.students.find(s => s.id === editId);
         if (existingStudent && window.attendance && window.attendance.length > 0) {
-            let studentRecords = window.attendance.filter(a => 
-                a && a.student_name && a.student_name === existingStudent.name
-            );
+            let studentRecords = window.attendance.filter(a => a && a.student_name === existingStudent.name);
             if (studentRecords.length > 0) {
                 let present = studentRecords.filter(a => a.status === 'Present').length;
                 attendanceValue = Math.round((present / studentRecords.length) * 100);
             }
         }
-        // If no attendance records, keep existing
         if (attendanceValue === 0 && existingStudent?.attendance) {
             attendanceValue = existingStudent.attendance;
         }
     }
+    console.log(`📊 Attendance for ${name}: ${attendanceValue}%`);
     
-    console.log(`📊 Attendance for ${name}: ${attendanceValue}% (${isEdit ? 'Edit' : 'New'})`);
-    
-    // Build student object
     const newStudent = {
         id: studentId,
         name: name,
@@ -15792,7 +16258,6 @@ window.saveStudent = async function(editId) {
         total_paid_fee: 0,
         fee_due: totalFee,
         fee_paid_status: 'Pending',
-        // ✅ FIX: attendance = 0 for new students
         attendance: attendanceValue,
         status: 'Active',
         fee_installment: currentSelectedInstallment || 'annual',
@@ -15807,42 +16272,30 @@ window.saveStudent = async function(editId) {
         class_teacher: getTeacherForClass(cls, sec)
     };
     
-    console.log('📤 Saving student:', newStudent);
-    console.log('📊 Attendance:', newStudent.attendance);
-    
-    // Update LocalStorage Cache
     if (isEdit) {
         let index = window.students.findIndex(s => s.id === editId);
-        if (index !== -1) {
-            window.students[index] = { ...window.students[index], ...newStudent };
-        }
+        if (index !== -1) window.students[index] = { ...window.students[index], ...newStudent };
     } else {
         window.students.push(newStudent);
     }
     localStorage.setItem('cache_students', JSON.stringify(window.students));
     
-    // Close modal
     let modal = document.querySelector('.modal-overlay');
     if (modal) modal.remove();
     
-    // UI Refresh
     renderStudentUI();
     setTimeout(() => refreshStudentCharts(), 100);
-    
     showNotification(`✅ ${isEdit ? 'Updated' : 'Added'} "${name}"!`, 'success');
     
-    // Save to Supabase
     showLoader();
     let success = await saveStudentToSupabase(newStudent);
     hideLoader();
-    
     if (!success) {
         addToPendingStudentsQueue('add', newStudent);
         updateStudentPendingStatus();
         showNotification(`⚠️ Failed to save to cloud. Added to pending queue.`, 'warning');
     }
     
-    // Cleanup
     currentStudentPhotoData = null;
     currentStudentPhotoUrl = null;
     currentStudentAadharData = null;
@@ -15851,20 +16304,18 @@ window.saveStudent = async function(editId) {
     currentStudentBirthUrl = null;
     currentStudentOtherDocs = [];
 };
+
 // ======================= DELETE STUDENT =======================
-// ======================= DELETE STUDENT (WITH USERS TABLE DELETE) =======================
 window.deleteStudent = async function(id) {
     if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) {
         showNotification('Only administrators and accountants can delete students!', 'error');
         return;
     }
-    
     let student = window.students.find(s => s.id === id);
     if (!student) {
         showNotification('Student not found!', 'error');
         return;
     }
-    
     Swal.fire({
         title: 'Delete Student?',
         text: `Delete "${student.name}"? This cannot be undone!`,
@@ -15876,51 +16327,22 @@ window.deleteStudent = async function(id) {
     }).then(async function(result) {
         if (result.isConfirmed) {
             showLoader();
-            
-            // ============================================
-            // STEP 1: Delete from students table
-            // ============================================
             const success = await deleteStudentFromSupabase(id);
-            
-            // ============================================
-            // STEP 2: 🔥 CRITICAL - Delete from users table
-            // ============================================
             if (success) {
                 const supabase = getSupabaseClientWorking();
                 if (supabase && navigator.onLine) {
-                    try {
-                        const { error } = await supabase
-                            .from('users')
-                            .delete()
-                            .eq('id', id);
-                        
-                        if (!error) {
-                            console.log('✅ Student deleted from users table');
-                        } else {
-                            console.error('❌ Users table delete error:', error);
-                        }
-                    } catch(e) {
-                        console.error('Users delete error:', e);
-                    }
+                    try { await supabase.from('users').delete().eq('id', id); } catch(e) {}
                 }
             }
-            
-            // ============================================
-            // STEP 3: Remove from local cache
-            // ============================================
             window.students = window.students.filter(s => s.id !== id);
             localStorage.setItem('cache_students', JSON.stringify(window.students));
-            
-            // ============================================
-            // STEP 4: Refresh UI
-            // ============================================
             loadStudentManagement();
             hideLoader();
-            
             showNotification(`✅ "${student.name}" deleted successfully!`, 'success');
         }
     });
 }
+
 // ======================= SHOW ADD STUDENT FORM =======================
 window.showAddStudentForm = function(editId = null) {
     if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) { 
@@ -15931,7 +16353,6 @@ window.showAddStudentForm = function(editId = null) {
     let isEdit = editId !== null;
     let studentData = isEdit ? window.students.find(s => s.id === editId) : null;
     
-    // Load existing data for edit mode
     currentStudentPhotoData = isEdit ? studentData?.photo_data : null;
     currentStudentPhotoUrl = isEdit ? studentData?.photo_url : null;
     currentStudentAadharData = isEdit ? studentData?.aadhar_data : null;
@@ -15956,6 +16377,7 @@ window.showAddStudentForm = function(editId = null) {
     let castCategoryHtml = castCategoryOptions.map(c => `<option ${isEdit && studentData?.cast_category === c ? 'selected' : ''}>${c}</option>`).join('');
     
     let isMobileDevice = isMobile();
+    let isApk = isAndroidWebView();
     
     let modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -16143,39 +16565,72 @@ window.showAddStudentForm = function(editId = null) {
     `;
     document.body.appendChild(modal);
     
-    // Setup upload handlers
-    document.getElementById('studentPhotoUpload').onclick = () => {
+    // ✅ Setup Photo Upload Handler (UPDATED)
+    document.getElementById('studentPhotoUpload').onclick = function() {
+        console.log('📸 Photo upload clicked');
+        if (window._photoUploadInProgress) {
+            showNotification('⏳ Upload already in progress', 'warning');
+            return;
+        }
+        window._photoUploadInProgress = true;
+        
         openStudentPhotoCapture(async (croppedData) => {
-            showLoader();
-            currentStudentPhotoData = croppedData;
-            currentStudentPhotoUrl = null;
-            document.getElementById('studentPhotoUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Photo';
-            document.getElementById('studentPhotoUpload').style.borderColor = '#10b981';
+            console.log('📸 Photo captured, processing...');
+            window._photoUploadInProgress = false;
             
-            // Show preview immediately
-            let previewDiv = document.getElementById('photoPreview');
-            if (!previewDiv) {
-                previewDiv = document.createElement('div');
-                previewDiv.id = 'photoPreview';
-                previewDiv.style.marginTop = '10px';
-                previewDiv.style.textAlign = 'center';
-                document.querySelector('.modal-content > div:last-child').insertBefore(
-                    previewDiv,
-                    document.querySelector('.modal-content > div:last-child').lastElementChild
-                );
+            try {
+                showLoader();
+                let compressedData = croppedData;
+                if (typeof compressImage === 'function') {
+                    compressedData = await compressImage(croppedData, 500, 500, 0.7);
+                }
+                currentStudentPhotoData = compressedData;
+                currentStudentPhotoUrl = null;
+                
+                const uploadElement = document.getElementById('studentPhotoUpload');
+                if (uploadElement) {
+                    uploadElement.innerHTML = `
+                        <i class="fas fa-check-circle" style="color:#10b981; font-size:24px;"></i>
+                        <br style="color:var(--text-primary);">
+                        <span style="color:#10b981;">✅ Photo Selected</span>
+                    `;
+                    uploadElement.style.borderColor = '#10b981';
+                    uploadElement.style.background = '#f0fdf4';
+                }
+                
+                let previewDiv = document.getElementById('photoPreview');
+                if (!previewDiv) {
+                    previewDiv = document.createElement('div');
+                    previewDiv.id = 'photoPreview';
+                    previewDiv.style.marginTop = '10px';
+                    previewDiv.style.textAlign = 'center';
+                    const modalContent = document.querySelector('.modal-content > div:last-child');
+                    if (modalContent) {
+                        modalContent.insertBefore(previewDiv, modalContent.lastElementChild);
+                    }
+                }
+                previewDiv.innerHTML = `
+                    <div style="text-align:center; margin-top:10px; padding:10px; background:#f0fdf4; border-radius:12px; border:1px solid #10b981;">
+                        <img src="${compressedData}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid #10b981;">
+                        <p style="font-size:12px; margin-top:6px; color:#065f46; font-weight:600;">
+                            📸 New Photo Added
+                            <span style="font-size:10px; color:#64748b; display:block;">Click Save to update</span>
+                        </p>
+                    </div>
+                `;
+                
+                hideLoader();
+                showNotification('📸 Photo captured! Click Save to update.', 'success');
+            } catch(e) {
+                console.error('Photo capture error:', e);
+                window._photoUploadInProgress = false;
+                hideLoader();
+                showNotification('❌ Error capturing photo: ' + e.message, 'error');
             }
-            previewDiv.innerHTML = `
-                <div style="text-align:center; margin-top:10px;">
-                    <img src="${croppedData}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid #10b981;">
-                    <p style="font-size:11px; margin-top:5px; color:#10b981;">📸 New Photo (Click Save to update)</p>
-                </div>
-            `;
-            
-            hideLoader();
-            showNotification('📸 Photo captured! Click Save to update.', 'success');
         });
     };
     
+    // Setup other upload handlers
     document.getElementById('studentAadharUpload').onclick = () => {
         openDocumentUpload((data, filename) => {
             currentStudentAadharData = data;
@@ -16280,80 +16735,22 @@ window.updateTotalFee = function() {
 
 // ======================= GET REAL ATTENDANCE =======================
 function getStudentAttendance(studentName) {
-    console.log('📊 getStudentAttendance called for:', studentName);
-    
-    // Check if attendance data exists
-    if (!window.attendance || window.attendance.length === 0) {
-        console.log('📭 No attendance records found');
-        return 0;
-    }
-    
-    // Get all records for this student
-    let studentRecords = window.attendance.filter(a => 
-        a && a.student_name && a.student_name === studentName
-    );
-    
-    if (studentRecords.length === 0) {
-        console.log(`📭 No attendance records for: ${studentName}`);
-        return 0;
-    }
-    
-    // Count present days
+    if (!window.attendance || window.attendance.length === 0) return 0;
+    let studentRecords = window.attendance.filter(a => a && a.student_name === studentName);
+    if (studentRecords.length === 0) return 0;
     let present = studentRecords.filter(a => a.status === 'Present').length;
-    let total = studentRecords.length;
-    
-    // Calculate percentage
-    let percentage = Math.round((present / total) * 100);
-    
-    console.log(`📊 ${studentName}: ${present}/${total} = ${percentage}%`);
-    return percentage;
+    return Math.round((present / studentRecords.length) * 100);
 }
-// ======================= RENDER STUDENT LIST (COMPLETE FIX - NO 85) =======================
+
+// ======================= RENDER STUDENT LIST =======================
 function renderStudentList(studentsToRender) {
     console.log('🎨 renderStudentList called with', studentsToRender.length, 'students');
-    
     let showEditDeleteButtons = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant'));
-    
-    // ✅ CRITICAL: Check each student's attendance from localStorage
-    let studentsFromCache = [];
-    try {
-        const cached = localStorage.getItem('cache_students');
-        if (cached) {
-            studentsFromCache = JSON.parse(cached);
-            console.log('📦 Students from cache:', studentsFromCache.length);
-        }
-    } catch(e) {
-        console.error('Cache error:', e);
-    }
-    
     let html = '';
     for (let s of studentsToRender) {
-        // ✅ FIX: Get LATEST attendance from cache
-        let cachedStudent = studentsFromCache.find(c => c.id === s.id);
-        let latestAttendance = cachedStudent ? cachedStudent.attendance : s.attendance;
-        
-        // ✅ FIX: Calculate REAL attendance from attendance table
-        let realAttendance = 0;
-        if (window.attendance && window.attendance.length > 0) {
-            let studentRecords = window.attendance.filter(a => 
-                a && a.student_name && a.student_name === s.name
-            );
-            if (studentRecords.length > 0) {
-                let present = studentRecords.filter(a => a.status === 'Present').length;
-                realAttendance = Math.round((present / studentRecords.length) * 100);
-                console.log(`📊 ${s.name}: ${present}/${studentRecords.length} = ${realAttendance}%`);
-            }
-        }
-        
-        // ✅ FINAL ATTENDANCE: Use realAttendance if available, else use latestAttendance
-        let finalAttendance = realAttendance > 0 ? realAttendance : (latestAttendance || 0);
-        
-        // ✅ Show correct badge
-        let attendanceBadge = finalAttendance >= 75 ? 'badge-success' : 
-                             finalAttendance >= 50 ? 'badge-warning' : 'badge-danger';
+        let finalAttendance = s.attendance || 0;
+        let attendanceBadge = finalAttendance >= 75 ? 'badge-success' : finalAttendance >= 50 ? 'badge-warning' : 'badge-danger';
         let attendanceText = finalAttendance > 0 ? `${finalAttendance}%` : '📊 Not Marked';
-        
-        console.log(`📊 ${s.name}: finalAttendance = ${finalAttendance}, text = ${attendanceText}`);
         
         let photoSrc = s.photo_url || s.photo_data || (s.gender === 'Male' ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%232563eb'/%3E%3Ctext x='50' y='67' font-size='45' text-anchor='middle' fill='white'%3E👨%3C/text%3E%3C/svg%3E" : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23ec489a'/%3E%3Ctext x='50' y='67' font-size='45' text-anchor='middle' fill='white'%3E👩%3C/text%3E%3C/svg%3E");
         
@@ -16361,11 +16758,9 @@ function renderStudentList(studentsToRender) {
         let totalFeeAmount = s.total_fee || 35000;
         let dueAmount = s.fee_due || 0;
         let feeStatus = s.fee_paid_status || 'Pending';
-        
         let dueClass = dueAmount > 0 ? 'badge-danger' : 'badge-success';
         let dueText = dueAmount > 0 ? `⚠️ Due ₹${dueAmount.toLocaleString()}` : '✅ Paid';
         let statusColor = feeStatus === 'Fully Paid' ? '#10b981' : feeStatus === 'Partial Paid' ? '#f59e0b' : '#ef4444';
-        
         let isMobileDevice = isMobile();
         
         html += `
@@ -16417,350 +16812,24 @@ function renderStudentList(studentsToRender) {
     
     document.getElementById('studentsList').innerHTML = html;
 }
-// ======================= SHOW ADD STUDENT FORM =======================
-function showAddStudentForm(editId = null) {
-    if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) { 
-        showNotification('Only administrators and accountants can add/edit students!', 'error'); 
-        return; 
-    }
-    
-    let isEdit = editId !== null;
-    let studentData = isEdit ? window.students.find(s => s.id === editId) : null;
-    
-    // Load existing data for edit mode
-    currentStudentPhotoData = isEdit ? studentData?.photo_data : null;
-    currentStudentPhotoUrl = isEdit ? studentData?.photo_url : null;
-    currentStudentAadharData = isEdit ? studentData?.aadhar_data : null;
-    currentStudentAadharUrl = isEdit ? studentData?.aadhar_url : null;
-    currentStudentBirthData = isEdit ? studentData?.birth_data : null;
-    currentStudentBirthUrl = isEdit ? studentData?.birth_url : null;
-    currentStudentOtherDocs = isEdit ? (studentData?.other_docs || []) : [];
-    currentStudentTotalFee = isEdit ? studentData?.total_fee : 35000;
-    
-    let feeData = getClassFeeData(isEdit ? studentData?.cls : 'Playgroup A');
-    let isTransportEnabled = isEdit ? studentData?.transport_enabled : false;
-    let totalFeeWithTransport = isTransportEnabled ? feeData.totalFee : feeData.baseFee;
-    let defaultInstallment = isEdit ? (studentData?.fee_installment || 'annual') : 'annual';
-    
-    let classList = getClassList();
-    let classOptionsHtml = classList.map(c => `<option value="${c}" ${isEdit && studentData?.cls === c ? 'selected' : ''}>${c}</option>`).join('');
-    
-    let religionOptions = ['Hindu', 'Muslim', 'Sikh', 'Christian', 'Jain', 'Buddhist', 'Parsi', 'Other'];
-    let religionHtml = religionOptions.map(r => `<option ${isEdit && studentData?.religion === r ? 'selected' : ''}>${r}</option>`).join('');
-    
-    let castCategoryOptions = ['General', 'OBC', 'SC', 'ST', 'EWS', 'Other'];
-    let castCategoryHtml = castCategoryOptions.map(c => `<option ${isEdit && studentData?.cast_category === c ? 'selected' : ''}>${c}</option>`).join('');
-    
-    let isMobileDevice = isMobile();
-    
-    let modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:10000;padding:16px;';
-    
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width:${isMobileDevice ? '95%' : '800px'}; width:95%; max-height:90vh; overflow-y:auto; border-radius:28px; padding:0; background:var(--bg-surface);">
-            <div style="background:linear-gradient(135deg,#667eea,#764ba2); padding:${isMobileDevice ? '12px 16px' : '16px 20px'}; border-radius:28px 28px 0 0; position:sticky; top:0; z-index:10;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <h2 style="color:white; margin:0; font-size:${isMobileDevice ? '16px' : '18px'};"><i class="fas ${isEdit ? 'fa-edit' : 'fa-user-plus'}"></i> ${isEdit ? 'Edit Student' : 'Add New Student'}</h2>
-                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="background:rgba(255,255,255,0.2); color:white; border:none; width:${isMobileDevice ? '30px' : '34px'}; height:${isMobileDevice ? '30px' : '34px'}; border-radius:50%; cursor:pointer; font-size:${isMobileDevice ? '18px' : '20px'};">&times;</button>
-                </div>
-            </div>
-            
-            <div style="padding:${isMobileDevice ? '14px' : '20px'};">
-                <!-- Basic Info -->
-                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:0 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
-                    <i class="fas fa-user-circle"></i> Basic Information
-                </h3>
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">👤 Full Name *</label>
-                        <input id="stuName" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? escapeHtml(studentData?.name || '') : ''}">
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🎂 Date of Birth</label>
-                        <input type="date" id="stuDob" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.dob || '') : ''}">
-                    </div>
-                </div>
-                
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">⚥ Gender</label>
-                        <select id="stuGender" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">
-                            <option ${isEdit && studentData?.gender === 'Male' ? 'selected' : ''}>Male</option>
-                            <option ${isEdit && studentData?.gender === 'Female' ? 'selected' : ''}>Female</option>
-                        </select>
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🩸 Blood Group</label>
-                        <select id="stuBlood" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">
-                            <option ${isEdit && studentData?.blood_group === 'O+' ? 'selected' : ''}>O+</option>
-                            <option ${isEdit && studentData?.blood_group === 'O-' ? 'selected' : ''}>O-</option>
-                            <option ${isEdit && studentData?.blood_group === 'A+' ? 'selected' : ''}>A+</option>
-                            <option ${isEdit && studentData?.blood_group === 'A-' ? 'selected' : ''}>A-</option>
-                            <option ${isEdit && studentData?.blood_group === 'B+' ? 'selected' : ''}>B+</option>
-                            <option ${isEdit && studentData?.blood_group === 'B-' ? 'selected' : ''}>B-</option>
-                            <option ${isEdit && studentData?.blood_group === 'AB+' ? 'selected' : ''}>AB+</option>
-                            <option ${isEdit && studentData?.blood_group === 'AB-' ? 'selected' : ''}>AB-</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🆔 Admission No</label>
-                        <input id="stuAdmissionNo" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.admission_no || '') : 'ADM' + Math.floor(1000 + Math.random() * 9000)}">
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🔢 Roll Number *</label>
-                        <input type="number" id="stuRoll" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.roll || '') : window.students.length + 1}">
-                    </div>
-                </div>
-                
-                <!-- Religion & Cast -->
-                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
-                    <i class="fas fa-praying-hands"></i> Religion & Caste Details
-                </h3>
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(3,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🕉️ Religion</label>
-                        <select id="stuReligion" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">${religionHtml}</select>
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🏷️ Cast Category</label>
-                        <select id="stuCastCategory" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">${castCategoryHtml}</select>
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📜 Cast Name</label>
-                        <input id="stuCastName" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" placeholder="e.g., Sharma, Patel" value="${isEdit ? escapeHtml(studentData?.cast_name || '') : ''}">
-                    </div>
-                </div>
-                
-                <!-- Contact Info -->
-                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
-                    <i class="fas fa-address-card"></i> Contact Information
-                </h3>
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📞 Mobile</label>
-                        <input id="stuMobile" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.mobile || '') : ''}">
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">✉️ Email</label>
-                        <input id="stuEmail" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.email || '') : ''}">
-                    </div>
-                </div>
-                
-                <div style="margin-bottom:15px;">
-                    <label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📍 Address</label>
-                    <textarea id="stuAddress" class="form-control" rows="2" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">${isEdit ? escapeHtml(studentData?.address || '') : ''}</textarea>
-                </div>
-                
-                <!-- Parent Info -->
-                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
-                    <i class="fas fa-family"></i> Parent Information
-                </h3>
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">👨 Father's Name</label>
-                        <input id="stuFather" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? escapeHtml(studentData?.father_name || '') : ''}">
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📞 Father's Mobile</label>
-                        <input id="stuFatherMobile" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.father_mobile || '') : ''}">
-                    </div>
-                </div>
-                
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">👩 Mother's Name</label>
-                        <input id="stuMother" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? escapeHtml(studentData?.mother_name || '') : ''}">
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📞 Mother's Mobile</label>
-                        <input id="stuMotherMobile" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" value="${isEdit ? (studentData?.mother_mobile || '') : ''}">
-                    </div>
-                </div>
-                
-                <!-- Academic Info -->
-                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
-                    <i class="fas fa-graduation-cap"></i> Academic Information
-                </h3>
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">🏫 Class *</label>
-                        <select id="stuClass" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;" onchange="updateTotalFee()">${classOptionsHtml}</select>
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📚 Section</label>
-                        <select id="stuSec" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-surface);color:var(--text-primary);width:100%;">
-                            <option ${isEdit && studentData?.sec === 'A' ? 'selected' : ''}>A</option>
-                            <option ${isEdit && studentData?.sec === 'B' ? 'selected' : ''}>B</option>
-                            <option ${isEdit && studentData?.sec === 'C' ? 'selected' : ''}>C</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- Fee Info -->
-                <h3 style="font-size:${isMobileDevice ? '13px' : '14px'}; margin:15px 0 12px 0; color:#667eea; border-left:3px solid #667eea; padding-left:10px;">
-                    <i class="fas fa-rupee-sign"></i> Fee Information
-                </h3>
-                <div style="display:grid; grid-template-columns:${isMobileDevice ? '1fr' : 'repeat(2,1fr)'}; gap:${isMobileDevice ? '10px' : '15px'}; margin-bottom:15px;">
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">💰 Total Fee</label>
-                        <input type="number" id="stuTotalFee" class="form-control" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-body);color:#10b981;font-weight:bold;width:100%;" value="${totalFeeWithTransport}" readonly>
-                    </div>
-                    <div><label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">📅 Installment Plan</label>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:5px;">
-                            <button type="button" class="installment-btn" data-installment="annual" onclick="selectInstallment('annual')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📅 Annual</button>
-                            <button type="button" class="installment-btn" data-installment="half_yearly" onclick="selectInstallment('half_yearly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📆 Half-Yearly</button>
-                            <button type="button" class="installment-btn" data-installment="quarterly" onclick="selectInstallment('quarterly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">🗓️ Quarterly</button>
-                            <button type="button" class="installment-btn" data-installment="monthly" onclick="selectInstallment('monthly')" style="padding:${isMobileDevice ? '6px 10px' : '8px 12px'}; border-radius:25px; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary); font-size:${isMobileDevice ? '11px' : '12px'};">📅 Monthly</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom:15px;">
-                    <label style="font-size:${isMobileDevice ? '12px' : '13px'};color:var(--text-primary);">
-                        <input type="checkbox" id="transportEnabled" ${isTransportEnabled ? 'checked' : ''} onchange="updateTotalFee()"> 🚌 Enable Transport Facility
-                    </label>
-                </div>
-                
-                <!-- Documents -->
-                <div style="background:var(--bg-body); border-radius:16px; padding:${isMobileDevice ? '12px' : '16px'}; margin:16px 0;">
-                    <h4 style="color:var(--text-primary); font-size:${isMobileDevice ? '13px' : '14px'};"><i class="fas fa-cloud-upload-alt"></i> Documents</h4>
-                    <div style="display:grid; grid-template-columns:${isMobileDevice ? 'repeat(2,1fr)' : 'repeat(4,1fr)'}; gap:${isMobileDevice ? '8px' : '10px'};">
-                        <div id="studentPhotoUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);">
-                            <i class="fas fa-camera" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">📸 Photo
-                        </div>
-                        <div id="studentAadharUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);">
-                            <i class="fas fa-id-card" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">🆔 Aadhar
-                        </div>
-                        <div id="studentBirthUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);">
-                            <i class="fas fa-birthday-cake" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">🎂 Birth
-                        </div>
-                        <div id="studentOtherUpload" class="upload-area" style="padding:${isMobileDevice ? '8px' : '10px'}; text-align:center; cursor:pointer; border-radius:12px; border:2px dashed var(--border-light); background:var(--bg-body);">
-                            <i class="fas fa-paperclip" style="color:var(--primary); font-size:${isMobileDevice ? '18px' : '24px'};"></i><br style="color:var(--text-primary);">📎 Other
-                        </div>
-                    </div>
-                    <div id="otherDocsList" style="margin-top:10px;"></div>
-                </div>
-                
-                <!-- Buttons -->
-                <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid var(--border-light); flex-wrap:wrap;">
-                    <button class="btn btn-danger" onclick="this.closest('.modal-overlay').remove()" style="padding:${isMobileDevice ? '10px 16px' : '10px 20px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:#ef4444; color:white;"><i class="fas fa-times"></i> Cancel</button>
-                    <button class="btn btn-primary" onclick="saveStudent('${isEdit ? editId : ''}')" style="padding:${isMobileDevice ? '10px 16px' : '10px 25px'}; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; font-size:${isMobileDevice ? '13px' : '14px'};">
-                        <i class="fas fa-save"></i> ${isEdit ? 'Update Student' : 'Save Student'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    
-    // Setup upload handlers
-    document.getElementById('studentPhotoUpload').onclick = () => {
-        openStudentPhotoCapture(async (croppedData) => {
-            showLoader();
-            currentStudentPhotoData = croppedData;
-            currentStudentPhotoUrl = null;
-            document.getElementById('studentPhotoUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Photo';
-            document.getElementById('studentPhotoUpload').style.borderColor = '#10b981';
-            
-            // Show preview immediately
-            let previewDiv = document.getElementById('photoPreview');
-            if (!previewDiv) {
-                previewDiv = document.createElement('div');
-                previewDiv.id = 'photoPreview';
-                previewDiv.style.marginTop = '10px';
-                previewDiv.style.textAlign = 'center';
-                document.querySelector('.modal-content > div:last-child').insertBefore(
-                    previewDiv,
-                    document.querySelector('.modal-content > div:last-child').lastElementChild
-                );
-            }
-            previewDiv.innerHTML = `
-                <div style="text-align:center; margin-top:10px;">
-                    <img src="${croppedData}" style="width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid #10b981;">
-                    <p style="font-size:11px; margin-top:5px; color:#10b981;">📸 New Photo (Click Save to update)</p>
-                </div>
-            `;
-            
-            hideLoader();
-            showNotification('📸 Photo captured! Click Save to update.', 'success');
-        });
-    };
-    
-    document.getElementById('studentAadharUpload').onclick = () => {
-        openDocumentUpload((data, filename) => {
-            currentStudentAadharData = data;
-            currentStudentAadharUrl = null;
-            document.getElementById('studentAadharUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Aadhar';
-            document.getElementById('studentAadharUpload').style.borderColor = '#10b981';
-            showNotification('✅ Aadhar uploaded!', 'success');
-        });
-    };
-    
-    document.getElementById('studentBirthUpload').onclick = () => {
-        openDocumentUpload((data, filename) => {
-            currentStudentBirthData = data;
-            currentStudentBirthUrl = null;
-            document.getElementById('studentBirthUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Birth';
-            document.getElementById('studentBirthUpload').style.borderColor = '#10b981';
-            showNotification('✅ Birth certificate uploaded!', 'success');
-        });
-    };
-    
-    document.getElementById('studentOtherUpload').onclick = () => {
-        openDocumentUpload((data, filename) => {
-            currentStudentOtherDocs.push({ name: filename, data: data });
-            document.getElementById('otherDocsList').innerHTML = currentStudentOtherDocs.map((d,i) => `
-                <div style="background:#f0fdf4; padding:5px 10px; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                    📄 ${d.name} 
-                    <button onclick="removeOtherDoc(${i})" style="background:#ef4444; color:white; border:none; border-radius:20px; padding:2px 8px; cursor:pointer;">✖</button>
-                </div>
-            `).join('');
-            showNotification('✅ Document uploaded!', 'success');
-        });
-    };
-    
-    // Mark existing uploaded documents
-    if (isEdit) {
-        if (currentStudentPhotoData || currentStudentPhotoUrl) {
-            document.getElementById('studentPhotoUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Photo';
-            document.getElementById('studentPhotoUpload').style.borderColor = '#10b981';
-        }
-        if (currentStudentAadharData || currentStudentAadharUrl) {
-            document.getElementById('studentAadharUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Aadhar';
-            document.getElementById('studentAadharUpload').style.borderColor = '#10b981';
-        }
-        if (currentStudentBirthData || currentStudentBirthUrl) {
-            document.getElementById('studentBirthUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Birth';
-            document.getElementById('studentBirthUpload').style.borderColor = '#10b981';
-        }
-        if (currentStudentOtherDocs.length > 0) {
-            document.getElementById('otherDocsList').innerHTML = currentStudentOtherDocs.map((d,i) => `
-                <div style="background:#f0fdf4; padding:5px 10px; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                    📄 ${d.name} 
-                    <button onclick="removeOtherDoc(${i})" style="background:#ef4444; color:white; border:none; border-radius:20px; padding:2px 8px; cursor:pointer;">✖</button>
-                </div>
-            `).join('');
-        }
-    }
-    
-    setTimeout(() => selectInstallment(defaultInstallment), 50);
-}
 
 // ======================= VIEW STUDENT DETAILS =======================
-// ======================= VIEW STUDENT DETAILS (FIXED - REAL ATTENDANCE) =======================
 window.viewStudentDetails = function(id) {
     let s = window.students.find(s => s.id === id);
-    if (!s) {
-        showNotification('Student not found!', 'error');
-        return;
-    }
-    
-    // ✅ FIX: Calculate REAL attendance from attendance table
+    if (!s) { showNotification('Student not found!', 'error'); return; }
     let attendance = 0;
     if (window.attendance && window.attendance.length > 0) {
-        let studentRecords = window.attendance.filter(a => 
-            a && a.student_name && a.student_name === s.name
-        );
+        let studentRecords = window.attendance.filter(a => a && a.student_name === s.name);
         if (studentRecords.length > 0) {
             let present = studentRecords.filter(a => a.status === 'Present').length;
             attendance = Math.round((present / studentRecords.length) * 100);
         }
     }
-    
-    // ✅ If no attendance records, use s.attendance (0 for new students)
     let finalAttendance = attendance > 0 ? attendance : (s.attendance || 0);
     let attendanceText = finalAttendance > 0 ? `${finalAttendance}%` : '📊 Not Marked';
-    
     let paidAmount = s.total_paid_fee || 0;
     let dueAmount = s.fee_due || 0;
     
-    // ✅ Escape HTML for safety
     function safe(str) {
         if (!str) return '';
         return String(str).replace(/[&<>]/g, function(m) {
@@ -16771,7 +16840,6 @@ window.viewStudentDetails = function(id) {
         });
     }
     
-    // Photo
     let photoHtml = '';
     if (s.photo_url || s.photo_data) {
         photoHtml = `<img src="${s.photo_url || s.photo_data}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`;
@@ -16809,14 +16877,13 @@ window.viewStudentDetails = function(id) {
         confirmButtonText: 'Close'
     });
 }
+
 // ======================= SHARE STUDENT =======================
 window.shareStudent = function(id) {
     let s = window.students.find(s => s.id === id);
     if (!s) return;
-    
     let paidAmount = s.total_paid_fee || 0;
     let dueAmount = s.fee_due || 0;
-    
     let msg = `🏫 Student: ${s.name}\nClass: ${s.cls} ${s.sec}\nRoll: ${s.roll}\nID: ${s.id}\nTotal Fee: ${formatFullCurrency(s.total_fee || 35000)}\nPaid: ${formatFullCurrency(paidAmount)}\nDue: ${formatFullCurrency(dueAmount)}\nStatus: ${s.fee_paid_status || 'Pending'}\nFather: ${s.father_name}\nMobile: ${s.mobile}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
@@ -16824,14 +16891,10 @@ window.shareStudent = function(id) {
 // ======================= EXPORT CSV =======================
 window.exportStudentsCSV = function() {
     let filteredData = getFilteredStudentsForCurrentUser();
-    if (filteredData.length === 0) {
-        showNotification('No students to export!', 'warning');
-        return;
-    }
-    
+    if (filteredData.length === 0) { showNotification('No students to export!', 'warning'); return; }
     let csv = "ID,Name,Class,Section,Roll,Gender,Father Name,Mother Name,Mobile,Email,Total Fee,Paid Fee,Due Fee,Payment Status,Attendance\n";
     filteredData.forEach(s => {
-        csv += `"${s.id}","${s.name}","${s.cls}","${s.sec}","${s.roll}","${s.gender}","${s.father_name || ''}","${s.mother_name || ''}","${s.mobile}","${s.email}","${s.total_fee}","${s.total_paid_fee || 0}","${s.fee_due}","${s.fee_paid_status || 'Pending'}","${s.attendance}"\n`;
+        csv += `"${s.id}","${s.name}","${s.cls}","${s.sec}","${s.roll}","${s.gender}","${s.father_name || ''}","${s.mother_name || ''}","${s.mobile}","${s.email}","${s.total_fee}","${s.total_paid_fee || 0}","${s.fee_due}","${s.fee_paid_status || 'Pending'}","${s.attendance || 0}"\n`;
     });
     let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
     let link = document.createElement('a');
@@ -16842,6 +16905,7 @@ window.exportStudentsCSV = function() {
 }
 
 // ======================= EXPORT PDF =======================
+// ======================= ✅ FIXED: STUDENTS PDF EXPORT =======================
 window.exportStudentsPDF = async function() {
     if (typeof html2canvas === 'undefined') {
         showNotification('html2canvas library not loaded! Please refresh.', 'error');
@@ -16892,7 +16956,7 @@ window.exportStudentsPDF = async function() {
                     <td style="padding: 10px; border: 1px solid #e2e8f0;">${s.mobile || 'N/A'}</td>
                     <td style="padding: 10px; border: 1px solid #e2e8f0; text-align:right;">${formatFullCurrency(s.total_fee || 0)}</td>
                     <td style="padding: 10px; border: 1px solid #e2e8f0; text-align:right; color: ${s.fee_paid_status === 'Fully Paid' ? '#10b981' : '#ef4444'};">${formatFullCurrency(s.fee_due || 0)}</td>
-                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align:center;">${s.attendance || 85}%</td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-align:center;">${s.attendance || 0}%</td>
                     <td style="padding: 10px; border: 1px solid #e2e8f0; text-align:center;">${s.fee_paid_status || 'N/A'}</td>
                 </tr>
             `;
@@ -16902,30 +16966,21 @@ window.exportStudentsPDF = async function() {
         <html>
         <head><meta charset="UTF-8"><title>Students Report</title>
         <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            @page { size: A4 landscape; margin: 0.5cm; }
-            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; background: white; }
-            .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
-            .header h1 { font-size: 18px; margin: 5px 0; }
-            .header p { font-size: 9px; color: #64748b; margin: 2px 0; }
-            .header h3 { font-size: 14px; color: #2563eb; margin: 8px 0; }
-            table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9px; }
-            th { background: #2563eb; color: white; padding: 8px; font-size: 9px; }
-            td { border: 1px solid #e2e8f0; padding: 6px; font-size: 8px; }
-            .summary { display: flex; justify-content: space-around; margin: 15px 0; flex-wrap: wrap; gap: 10px; }
-            .summary-card { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 8px 16px; border-radius: 10px; text-align: center; }
-            .footer { margin-top: 15px; text-align: center; font-size: 8px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+            @page{size:A4 landscape;margin:0.5cm}
+            body{font-family:'Segoe UI',Arial,sans-serif;padding:10px;background:white}
+            .header{text-align:center;margin-bottom:15px;border-bottom:2px solid #2563eb;padding-bottom:10px}
+            .header h1{font-size:18px;margin:5px 0}.header p{font-size:9px;color:#64748b;margin:2px 0}
+            .header h3{font-size:14px;color:#2563eb;margin:8px 0}
+            table{width:100%;border-collapse:collapse;margin:15px 0;font-size:9px}
+            th{background:#2563eb;color:white;padding:8px;font-size:9px}
+            td{border:1px solid #e2e8f0;padding:6px;font-size:8px}
+            .summary{display:flex;justify-content:space-around;margin:15px 0;flex-wrap:wrap;gap:10px}
+            .summary-card{background:linear-gradient(135deg,#2563eb,#1e40af);color:white;padding:8px 16px;border-radius:10px;text-align:center}
+            .footer{margin-top:15px;text-align:center;font-size:8px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px}
         </style>
         </head>
         <body>
-            <div class="header">
-                ${logoHtml}
-                <h1>${escapeHtml(schoolName)}</h1>
-                <p>${escapeHtml(schoolAddress)}</p>
-                <p>📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</p>
-                <h3>📋 STUDENTS REPORT - ${escapeHtml(academicYear)}</h3>
-                <p>Generated: ${new Date().toLocaleString()} | Total Students: ${filteredData.length}</p>
-            </div>
+            <div class="header">${logoHtml}<h1>${escapeHtml(schoolName)}</h1><p>${escapeHtml(schoolAddress)}</p><p>📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</p><h3>📋 STUDENTS REPORT - ${escapeHtml(academicYear)}</h3><p>Generated: ${new Date().toLocaleString()} | Total Students: ${filteredData.length}</p></div>
             <div class="summary">
                 <div class="summary-card"><div class="number">${filteredData.length}</div><div class="label">Total Students</div></div>
                 <div class="summary-card"><div class="number">${filteredData.filter(s => s.gender === 'Male').length}</div><div class="label">Boys</div></div>
@@ -16973,7 +17028,6 @@ window.exportStudentsPDF = async function() {
         let position = 0;
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         let heightLeft = imgHeight - pdfHeight;
-        
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
@@ -16981,7 +17035,9 @@ window.exportStudentsPDF = async function() {
             heightLeft -= pdfHeight;
         }
         
-        pdf.save(`Students_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        // ✅ FIXED: Use downloadPDF instead of pdf.save()
+        await window.downloadPDF(pdf, `Students_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        
         showNotification('✅ PDF exported successfully!', 'success');
         
     } catch (error) {
@@ -16992,15 +17048,13 @@ window.exportStudentsPDF = async function() {
     }
     
     hideLoader();
-}
-
+};
 // ======================= PROMOTE STUDENTS =======================
 window.promoteStudentsToNextClass = async function() {
     if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) {
         showNotification('Only administrators and accountants can promote students!', 'error');
         return;
     }
-    
     const promotionMap = {
         'Playgroup A': 'Nursery A',
         'Playgroup B': 'Nursery B',
@@ -17011,7 +17065,6 @@ window.promoteStudentsToNextClass = async function() {
         'KG2 A': 'Class 1 A',
         'KG2 B': 'Class 1 B'
     };
-    
     Swal.fire({
         title: 'Promote Students?',
         text: 'This will promote all students to the next class.',
@@ -17024,7 +17077,6 @@ window.promoteStudentsToNextClass = async function() {
         if (result.isConfirmed) {
             showLoader();
             let promotedCount = 0;
-            
             for (let s of window.students) {
                 const fullClass = `${s.cls} ${s.sec}`;
                 let nextClass = promotionMap[fullClass];
@@ -17035,7 +17087,6 @@ window.promoteStudentsToNextClass = async function() {
                     promotedCount++;
                 }
             }
-            
             if (promotedCount > 0) {
                 localStorage.setItem('cache_students', JSON.stringify(window.students));
                 for (let s of window.students) {
@@ -17057,80 +17108,32 @@ window.refreshStudentCharts = function() {
         let visibleStudents = getFilteredStudentsForCurrentUser();
         let boys = visibleStudents.filter(s => s.gender === 'Male').length;
         let girls = visibleStudents.filter(s => s.gender === 'Female').length;
-        
         let genderCtx = document.getElementById('genderChart')?.getContext('2d');
         if (genderCtx && (boys > 0 || girls > 0)) {
             if (genderChartInstance) genderChartInstance.destroy();
             genderChartInstance = new Chart(genderCtx, { 
                 type: 'doughnut', 
                 data: { labels: ['Boys', 'Girls'], datasets: [{ data: [boys, girls], backgroundColor: ['#3b82f6', '#ec489a'] }] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: isMobile() ? 'bottom' : 'top',
-                            labels: { font: { size: isMobile() ? 10 : 12 } }
-                        }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: isMobile() ? 'bottom' : 'top', labels: { font: { size: isMobile() ? 10 : 12 } } } } }
             });
         }
-        
         let classCount = {};
-        for (let s of visibleStudents) {
-            let cls = s.cls;
-            if (cls) classCount[cls] = (classCount[cls] || 0) + 1;
-        }
-        
+        for (let s of visibleStudents) { let cls = s.cls; if (cls) classCount[cls] = (classCount[cls] || 0) + 1; }
         let classCtx = document.getElementById('classStrengthChart')?.getContext('2d');
         if (classCtx && Object.keys(classCount).length > 0) {
             if (classChartInstance) classChartInstance.destroy();
             classChartInstance = new Chart(classCtx, { 
                 type: 'bar', 
-                data: { 
-                    labels: Object.keys(classCount), 
-                    datasets: [{ 
-                        label: 'Students', 
-                        data: Object.values(classCount), 
-                        backgroundColor: '#2563eb',
-                        borderRadius: 6
-                    }] 
-                },
-                options: { 
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            labels: { font: { size: isMobile() ? 10 : 12 } }
-                        }
-                    },
-                    scales: { 
-                        y: { 
-                            beginAtZero: true, 
-                            ticks: { 
-                                stepSize: 1,
-                                font: { size: isMobile() ? 9 : 11 }
-                            } 
-                        },
-                        x: {
-                            ticks: {
-                                font: { size: isMobile() ? 9 : 11 },
-                                maxRotation: isMobile() ? 45 : 0
-                            }
-                        }
-                    }
-                }
+                data: { labels: Object.keys(classCount), datasets: [{ label: 'Students', data: Object.values(classCount), backgroundColor: '#2563eb', borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { font: { size: isMobile() ? 10 : 12 } } } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: isMobile() ? 9 : 11 } } }, x: { ticks: { font: { size: isMobile() ? 9 : 11 }, maxRotation: isMobile() ? 45 : 0 } } } }
             });
         }
     } catch(e) { console.error('Chart error:', e); }
 }
 
-// ======================= RENDER STUDENT UI (WITH CACHE CLEAR) =======================
+// ======================= RENDER STUDENT UI =======================
 window.renderStudentUI = function() {
     console.log('🎨 renderStudentUI called - REAL-TIME SYNC ENABLED');
-    
-    // ✅ CRITICAL: Sync with localStorage cache AND clear old attendance
     const cached = localStorage.getItem('cache_students');
     if (cached) {
         try {
@@ -17138,54 +17141,27 @@ window.renderStudentUI = function() {
             if (parsed.length > 0) {
                 window.students.length = 0;
                 for (let stu of parsed) {
-                    // ✅ FIX: Ensure attendance is not 85 for new students
-                    // If student has no attendance records, set to 0
                     if (!stu.attendance || stu.attendance === 85) {
-                        // Check if this student has attendance records
                         let hasAttendance = false;
                         if (window.attendance && window.attendance.length > 0) {
-                            let records = window.attendance.filter(a => 
-                                a && a.student_name && a.student_name === stu.name
-                            );
+                            let records = window.attendance.filter(a => a && a.student_name === stu.name);
                             if (records.length > 0) {
                                 hasAttendance = true;
                                 let present = records.filter(a => a.status === 'Present').length;
                                 stu.attendance = Math.round((present / records.length) * 100);
                             }
                         }
-                        // If no attendance records, set to 0
-                        if (!hasAttendance) {
-                            stu.attendance = 0;
-                        }
+                        if (!hasAttendance) stu.attendance = 0;
                     }
                     window.students.push(stu);
                 }
-                // Save back to cache with corrected attendance
                 localStorage.setItem('cache_students', JSON.stringify(window.students));
-                console.log(`📦 Real-time sync: ${window.students.length} students from cache (attendance corrected)`);
+                console.log(`📦 Real-time sync: ${window.students.length} students from cache`);
             }
-        } catch(e) {
-            console.error('Cache parse error:', e);
-        }
+        } catch(e) { console.error('Cache parse error:', e); }
     }
     
     let filteredStudents = getFilteredStudentsForCurrentUser();
-    let myClass = null;
-    
-    if (window.currentUser && window.currentUser.role === 'teacher') {
-        const teacherMap = {
-            'Priya Sharma': 'Playgroup A',
-            'Neha Gupta': 'Playgroup B',
-            'Rajesh Singh': 'Nursery A',
-            'Sneha Sharma': 'Nursery B',
-            'Anjali Kapoor': 'KG1 A',
-            'Vikram Joshi': 'KG1 B',
-            'Meera Nair': 'KG2 A',
-            'Rahul Mehta': 'KG2 B'
-        };
-        myClass = teacherMap[window.currentUser.name] || window.currentUser.class_teacher || 'Playgroup A';
-    }
-    
     let total = filteredStudents.length;
     let boys = filteredStudents.filter(s => s.gender === 'Male').length;
     let girls = filteredStudents.filter(s => s.gender === 'Female').length;
@@ -17201,7 +17177,6 @@ window.renderStudentUI = function() {
     let showAddButton = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant'));
     let showPromoteButton = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant'));
     let showExportButtons = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant' || window.currentUser.role === 'teacher'));
-    
     let pendingCount = window.pendingStudentsQueue ? window.pendingStudentsQueue.length : 0;
     let isMobileDevice = isMobile();
     
@@ -17317,22 +17292,14 @@ window.renderStudentUI = function() {
     renderStudentList(paginatedStudents);
     setTimeout(() => refreshStudentCharts(), 300);
 }
-// ======================= MAIN LOAD FUNCTION (FIXED - CLEAR OLD ATTENDANCE) =======================
+
+// ======================= MAIN LOAD FUNCTION =======================
 window.loadStudentManagement = async function() {
     console.log('📚 loadStudentManagement called');
-    
-    if (isStudentLoading) {
-        console.log('⚠️ Already loading, skipping...');
-        return;
-    }
+    if (isStudentLoading) { console.log('⚠️ Already loading, skipping...'); return; }
     isStudentLoading = true;
-    
     const moduleContent = document.getElementById('moduleContent');
-    if (!moduleContent) {
-        isStudentLoading = false;
-        return;
-    }
-    
+    if (!moduleContent) { isStudentLoading = false; return; }
     if (!window.currentUser) {
         moduleContent.innerHTML = `
             <div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'};">
@@ -17345,7 +17312,6 @@ window.loadStudentManagement = async function() {
         isStudentLoading = false;
         return;
     }
-    
     if (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant' && window.currentUser.role !== 'teacher') {
         moduleContent.innerHTML = `
             <div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'};">
@@ -17357,12 +17323,9 @@ window.loadStudentManagement = async function() {
         isStudentLoading = false;
         return;
     }
-    
     moduleContent.innerHTML = `<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--primary);"></i><p>Loading students...</p></div>`;
-    
     try {
         if (navigator.onLine) {
-            // ✅ FIX: Load attendance FIRST
             if (typeof loadAttendanceFromSupabase === 'function') {
                 await loadAttendanceFromSupabase();
                 console.log('✅ Attendance loaded, records:', window.attendance?.length || 0);
@@ -17370,100 +17333,59 @@ window.loadStudentManagement = async function() {
             await loadStudentsFromSupabase();
             await processPendingStudentsQueue();
         }
-        
-        // ✅ FIX: Clear old attendance values from cache
         let students = window.students || [];
         for (let s of students) {
-            // If student has attendance 85 but no actual attendance records, set to 0
             if (s.attendance === 85 || s.attendance === undefined) {
                 let hasAttendance = false;
                 if (window.attendance && window.attendance.length > 0) {
-                    let records = window.attendance.filter(a => 
-                        a && a.student_name && a.student_name === s.name
-                    );
+                    let records = window.attendance.filter(a => a && a.student_name === s.name);
                     if (records.length > 0) {
                         hasAttendance = true;
                         let present = records.filter(a => a.status === 'Present').length;
                         s.attendance = Math.round((present / records.length) * 100);
                     }
                 }
-                if (!hasAttendance) {
-                    s.attendance = 0;
-                }
+                if (!hasAttendance) s.attendance = 0;
             }
         }
         localStorage.setItem('cache_students', JSON.stringify(students));
-        
         renderStudentUI();
     } catch(error) {
         console.error('Error:', error);
         moduleContent.innerHTML = `<div style="color:#ef4444; padding:40px;">Error: ${error.message}</div>`;
     }
-    
     isStudentLoading = false;
 }
+
 // ======================= PAGINATION =======================
-window.previousStudentPage = function() { 
-    if (studentCurrentPage > 1) { 
-        studentCurrentPage--; 
-        loadStudentManagement(); 
-    } 
-}
-window.nextStudentPage = function() { 
-    if (studentCurrentPage < studentTotalPages) { 
-        studentCurrentPage++; 
-        loadStudentManagement(); 
-    } 
-}
-window.changeStudentRowsPerPage = function() { 
-    studentRowsPerPage = parseInt(document.getElementById('studentRowsPerPage').value); 
-    studentCurrentPage = 1; 
-    loadStudentManagement(); 
-}
-window.filterStudentList = function() { 
-    studentFilterText = document.getElementById('studentSearch')?.value || ''; 
-    studentCurrentPage = 1; 
-    loadStudentManagement(); 
-}
-window.clearStudentFilter = function() { 
-    studentFilterText = ''; 
-    if (document.getElementById('studentSearch')) document.getElementById('studentSearch').value = ''; 
-    loadStudentManagement(); 
-}
+window.previousStudentPage = function() { if (studentCurrentPage > 1) { studentCurrentPage--; loadStudentManagement(); } }
+window.nextStudentPage = function() { if (studentCurrentPage < studentTotalPages) { studentCurrentPage++; loadStudentManagement(); } }
+window.changeStudentRowsPerPage = function() { studentRowsPerPage = parseInt(document.getElementById('studentRowsPerPage').value); studentCurrentPage = 1; loadStudentManagement(); }
+window.filterStudentList = function() { studentFilterText = document.getElementById('studentSearch')?.value || ''; studentCurrentPage = 1; loadStudentManagement(); }
+window.clearStudentFilter = function() { studentFilterText = ''; if (document.getElementById('studentSearch')) document.getElementById('studentSearch').value = ''; loadStudentManagement(); }
 
 // ======================= ID CARD MODAL =======================
 window.openIDCardModal = function(id) {
     let s = window.students.find(s => s.id === id);
-    if (!s) { 
-        showNotification('Student not found!', 'error'); 
-        return; 
-    }
-    
+    if (!s) { showNotification('Student not found!', 'error'); return; }
     const schoolNameSetting = localStorage.getItem('schoolName') || 'WINGS CONVENT SCHOOL';
     const schoolAddressSetting = localStorage.getItem('schoolAddress') || 'Plot No. 366, Om Nagar, Koradi Road, Nagpur - 440030';
     const schoolPhoneSetting = localStorage.getItem('schoolPhone') || '+91-9876543210';
     const schoolEmailSetting = localStorage.getItem('schoolEmail') || 'info@wingsconvent.edu';
     const principalNameSetting = localStorage.getItem('principalName') || 'Dr. A. Sharma';
     const academicYear = localStorage.getItem('academicYear') || '2026-27';
-    
     let photoSrc = '';
-    if (s.photo_data && s.photo_data.startsWith('data:image')) {
-        photoSrc = s.photo_data;
-    } else if (s.photo_url && s.photo_url.startsWith('http')) {
-        photoSrc = s.photo_url;
-    }
-    
+    if (s.photo_data && s.photo_data.startsWith('data:image')) photoSrc = s.photo_data;
+    else if (s.photo_url && s.photo_url.startsWith('http')) photoSrc = s.photo_url;
     let logoSrc = '';
     const logoUrl = localStorage.getItem('schoolLogoUrl');
     const logoData = localStorage.getItem('schoolLogo');
     if (logoUrl && logoUrl.startsWith('http')) logoSrc = logoUrl;
     else if (logoData && logoData.startsWith('data:image')) logoSrc = logoData;
-    
     const issueDate = new Date().toLocaleDateString('en-GB');
     const validTill = new Date();
     validTill.setFullYear(validTill.getFullYear() + 1);
     const validTillDate = validTill.toLocaleDateString('en-GB');
-    
     const studentName = s.name || 'N/A';
     const fatherName = s.father_name || 'N/A';
     const className = s.cls || 'N/A';
@@ -17474,7 +17396,6 @@ window.openIDCardModal = function(id) {
     const bloodGroup = s.blood_group || 'O+';
     const studentMobile = s.mobile || 'N/A';
     const studentAddress = s.address || schoolAddressSetting;
-    
     const modalWidth = isMobile() ? '95%' : '380px';
     
     const idCardHTML = `
@@ -17537,7 +17458,6 @@ window.openIDCardModal = function(id) {
         </div>
     `;
     
-    // ID Card Modal HTML
     const modal = openCustomModal(`
         <div style="border-radius: 24px; overflow: hidden;">
             <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: ${isMobile() ? '10px 16px' : '12px 20px'}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -17557,7 +17477,6 @@ window.openIDCardModal = function(id) {
         </div>
     `, modalWidth);
     
-    // Print/Download handlers
     document.getElementById('printIDCardBtn').onclick = () => {
         let printContent = document.getElementById('idCardForExport').cloneNode(true);
         let win = window.open('', '_blank');
@@ -17653,20 +17572,11 @@ window.openCustomModal = function(htmlContent, width = '500px') {
         display: flex; align-items: center; justify-content: center;
         z-index: 100000; padding: 16px; animation: modalFadeIn 0.25s ease;
     `;
-    
     let modalWidth = width;
     let maxHeight = '90vh';
     let borderRadius = '28px';
-    
-    if (isMobile()) {
-        modalWidth = '95%';
-        maxHeight = '95vh';
-        borderRadius = '24px';
-    } else if (isTablet()) {
-        modalWidth = width === '500px' ? '85%' : width;
-        maxHeight = '90vh';
-    }
-    
+    if (isMobile()) { modalWidth = '95%'; maxHeight = '95vh'; borderRadius = '24px'; }
+    else if (isTablet()) { modalWidth = width === '500px' ? '85%' : width; maxHeight = '90vh'; }
     overlay.innerHTML = `
         <div class="custom-modal-container" style="
             background: var(--bg-surface, #ffffff);
@@ -17679,7 +17589,6 @@ window.openCustomModal = function(htmlContent, width = '500px') {
             ${htmlContent}
         </div>
     `;
-    
     if (!document.getElementById('customModalStyles')) {
         const style = document.createElement('style');
         style.id = 'customModalStyles';
@@ -17722,7 +17631,6 @@ window.openCustomModal = function(htmlContent, width = '500px') {
         `;
         document.head.appendChild(style);
     }
-    
     document.body.appendChild(overlay);
     return overlay;
 }
@@ -17731,9 +17639,7 @@ window.closeCustomModal = function(modalElement) {
     if (modalElement) {
         modalElement.style.opacity = '0';
         modalElement.style.transition = 'opacity 0.2s ease';
-        setTimeout(function() {
-            if (modalElement.parentNode) modalElement.remove();
-        }, 200);
+        setTimeout(function() { if (modalElement.parentNode) modalElement.remove(); }, 200);
     }
 }
 
@@ -17771,16 +17677,17 @@ window.addEventListener('offline', function() {
 loadPendingStudentsQueue();
 updateStudentPendingStatus();
 
-console.log('✅ PART 6 COMPLETE - Students Module (ALL FEATURES)');
+console.log('✅ PART 6 COMPLETE - Students Module (WEB + APK FIXED)');
 console.log('📌 Features:');
-console.log('   ✅ Real-time Photo Update');
+console.log('   ✅ Real-time Photo Update (APK Fixed)');
+console.log('   ✅ APK Camera + Gallery Working');
 console.log('   ✅ Online/Offline Flow');
 console.log('   ✅ All 8 Classes');
 console.log('   ✅ Fully Responsive');
-console.log('   ✅ Camera + Gallery + PDF');
 console.log('   ✅ ID Card (Print/PNG/PDF/WhatsApp)');
 console.log('   ✅ Export CSV/PDF');
 console.log('   ✅ Promote Students');
+
 }
 // ====================================== PART 6 STUDENTS MODULE (COMPLETE) ENDS HERE =================================================================================
 //======================================= START PART 07 FEES MODULE (COMPLETE) ===========================================================================//
@@ -18036,6 +17943,7 @@ androidMobileStyles.textContent = `
             font-size: 13px !important;
             padding: 10px 14px !important;
             min-height: 44px !important;
+            min-width: 80px !important;
             min-width: 80px !important;
         }
         .data-card .info-grid {
