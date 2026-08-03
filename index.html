@@ -43932,7 +43932,7 @@ console.log('✅ PART 19 COMPLETE - Ledger Module with Supabase Sync, PDF Export
 // ======================= PART 19 ENDS HERE =======================
 // ======================= PART 19 ENDS HERE =======================
 // ======================= PART 20: EVENTS MODULE WITH SUPABASE SYNC & OFFLINE SUPPORT =======================
-// ======================= PART 20: EVENTS MODULE WITH COMPLETE CACHE + PENDING QUEUE =======================
+// ======================= PART 20: EVENTS MODULE WITH SUPABASE SYNC & OFFLINE SUPPORT =======================
 let eventFilterText = '';
 
 // ======================= HELPER FUNCTIONS =======================
@@ -43952,134 +43952,49 @@ function formatFullCurrency(amount) {
 }
 
 function dataURLtoBlob(dataURL) {
-    try {
-        const arr = dataURL.split(',');
-        const mime = arr[0].match(/:(.*?);/)[1];
-        const bstr = atob(arr[1]);
-        const n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
-        return new Blob([u8arr], { type: mime });
-    } catch(e) {
-        console.error('Blob conversion error:', e);
-        return null;
-    }
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    const n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+    return new Blob([u8arr], { type: mime });
 }
 
 function downloadFile(dataURL, fileName) {
-    try {
-        const link = document.createElement('a');
-        link.href = dataURL;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        return true;
-    } catch(e) {
-        console.error('Download error:', e);
-        return false;
-    }
+    const link = document.createElement('a');
+    link.href = dataURL;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function showLoader() { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'flex'; }
 function hideLoader() { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'none'; }
 
-function showNotification(msg, type) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({ toast: true, position: 'top-end', icon: type, title: msg, showConfirmButton: false, timer: 3000 });
-    } else {
-        alert(msg);
-    }
-}
-
-// ======================= GET SCHOOL SETTINGS =======================
-function getSchoolNameSetting() {
-    return localStorage.getItem('schoolName') || 'Wings Convent School';
-}
-
-function getSchoolAddressSetting() {
-    return localStorage.getItem('schoolAddress') || '';
-}
-
-function getSchoolPhoneSetting() {
-    return localStorage.getItem('schoolPhone') || '';
-}
-
-function getSchoolEmailSetting() {
-    return localStorage.getItem('schoolEmail') || '';
-}
-
-function getSchoolLogoBase64() {
-    try {
-        let logoUrl = localStorage.getItem('schoolLogoUrl');
-        let logoData = localStorage.getItem('schoolLogo');
-        if (logoUrl && logoUrl.startsWith('http')) {
-            return logoUrl;
-        } else if (logoData && logoData.startsWith('data:image')) {
-            return logoData;
-        }
-        return null;
-    } catch(e) {
-        console.warn('Error getting school logo:', e);
-        return null;
-    }
-}
-
 // Make sure events array exists globally
 if (typeof window.events === 'undefined') window.events = [];
-
-// ======================= PENDING QUEUE FUNCTIONS =======================
-function addToPendingEventsQueue(operation, data) {
-    try {
-        let queue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
-        queue.push({
-            id: 'PEQ_' + Date.now(),
-            operation: operation,
-            data: data,
-            timestamp: new Date().toISOString(),
-            retryCount: 0
-        });
-        localStorage.setItem('pendingEventsQueue', JSON.stringify(queue));
-        console.log(`📴 [EVENTS] Added to pending queue: ${operation} - ${data.title || data.id}`);
-        return true;
-    } catch(e) {
-        console.error('Queue add error:', e);
-        return false;
-    }
-}
-
-function getPendingEventsCount() {
-    try {
-        let queue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
-        return queue.length;
-    } catch(e) {
-        return 0;
-    }
-}
 
 // ======================= SUPABASE FUNCTIONS =======================
 async function loadEventsFromSupabase() {
     const supabase = getSupabaseClient();
-    
     if (!supabase || !navigator.onLine) {
-        console.log('📴 [EVENTS] Offline - Loading from cache');
+        console.log('📴 Offline - Loading events from cache');
         const cached = localStorage.getItem('cache_events');
         if (cached) {
             try {
                 const parsed = JSON.parse(cached);
                 window.events.length = 0;
                 for (let event of parsed) window.events.push(event);
-                console.log(`📦 [EVENTS] Loaded ${window.events.length} events from cache`);
-                return true;
-            } catch(e) {
-                console.error('Cache parse error:', e);
-            }
+                console.log(`📦 Loaded ${window.events.length} events from cache`);
+            } catch(e) {}
         }
         return false;
     }
     
     try {
-        console.log('🔄 [EVENTS] Loading from Supabase...');
+        console.log('🔄 Loading events from Supabase table: events');
         const { data, error } = await supabase
             .from('events')
             .select('*')
@@ -44087,13 +44002,11 @@ async function loadEventsFromSupabase() {
         
         if (error) throw error;
         
-        console.log(`📊 [EVENTS] Supabase returned ${data ? data.length : 0} events`);
+        console.log(`📊 Supabase returned ${data ? data.length : 0} events`);
         
         if (data && data.length > 0) {
-            // Merge with existing local data (preserve poster data)
             const existingEvents = [...window.events];
             window.events.length = 0;
-            
             for (let event of data) {
                 let existing = existingEvents.find(e => e.id === event.id);
                 window.events.push({
@@ -44106,35 +44019,29 @@ async function loadEventsFromSupabase() {
                     status: event.status || 'Upcoming',
                     posterUrl: event.poster_url,
                     poster: existing?.poster || null,
-                    created_at: event.created_at,
-                    updated_at: event.updated_at
+                    created_at: event.created_at
                 });
             }
-            
-            // Save to cache
-            try {
-                localStorage.setItem('cache_events', JSON.stringify(window.events));
-            } catch(e) {}
-            
-            console.log(`✅ [EVENTS] Loaded ${window.events.length} events from Supabase`);
+            localStorage.setItem('cache_events', JSON.stringify(window.events));
+            console.log(`✅ Loaded ${window.events.length} events from Supabase`);
             return true;
         }
         return false;
     } catch(e) {
-        console.error('❌ [EVENTS] Supabase load error:', e);
+        console.error('Error loading events from Supabase:', e);
         return false;
     }
 }
 
-// ======================= ✅ FIXED: SAVE WITH CACHE + PENDING QUEUE =======================
 async function saveEventToSupabase(eventData) {
     const supabase = getSupabaseClient();
     if (!supabase) return false;
     
-    // If offline, add to pending queue
     if (!navigator.onLine) {
-        console.log('📴 [EVENTS] Offline - Adding to pending queue');
-        addToPendingEventsQueue('upsert', eventData);
+        let pendingQueue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
+        pendingQueue.push({ id: Date.now().toString(), operation: 'upsert', data: eventData, timestamp: Date.now() });
+        localStorage.setItem('pendingEventsQueue', JSON.stringify(pendingQueue));
+        console.log('📴 Added to pending queue');
         return false;
     }
     
@@ -44151,77 +44058,50 @@ async function saveEventToSupabase(eventData) {
             updated_at: new Date().toISOString()
         };
         
-        console.log('📤 [EVENTS] Saving to Supabase:', dbData.title);
+        console.log('📤 Saving event to Supabase:', dbData);
         
         const { error } = await supabase.from('events').upsert(dbData, { onConflict: 'id' });
-        
-        if (error) {
-            console.error('❌ [EVENTS] Supabase save error:', error);
-            // Save to pending queue on error
-            addToPendingEventsQueue('upsert', eventData);
-            return false;
-        }
-        
-        console.log(`✅ [EVENTS] Event "${eventData.title}" saved to Supabase`);
+        if (error) throw error;
+        console.log(`✅ Event ${eventData.title} saved to Supabase`);
         return true;
-        
     } catch(e) {
-        console.error('❌ [EVENTS] Save error:', e);
-        // Save to pending queue on error
-        addToPendingEventsQueue('upsert', eventData);
+        console.error('Supabase error:', e);
         return false;
     }
 }
 
-// ======================= DELETE WITH PENDING QUEUE =======================
 async function deleteEventFromSupabase(eventId) {
     const supabase = getSupabaseClient();
     if (!supabase || !navigator.onLine) {
-        addToPendingEventsQueue('delete', { id: eventId });
+        let pendingQueue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
+        pendingQueue.push({ id: Date.now().toString(), operation: 'delete', data: { id: eventId }, timestamp: Date.now() });
+        localStorage.setItem('pendingEventsQueue', JSON.stringify(pendingQueue));
         return false;
     }
     
     try {
         const { error } = await supabase.from('events').delete().eq('id', eventId);
         if (error) throw error;
-        console.log(`✅ [EVENTS] Event ${eventId} deleted from Supabase`);
+        console.log(`✅ Event ${eventId} deleted from Supabase`);
         return true;
     } catch(e) {
-        console.error('❌ [EVENTS] Delete error:', e);
-        addToPendingEventsQueue('delete', { id: eventId });
+        console.error('Delete error:', e);
         return false;
     }
 }
 
-// ======================= ✅ FIXED: PROCESS PENDING QUEUE =======================
 async function processPendingEventsQueue() {
-    if (!navigator.onLine) {
-        console.log('📴 [EVENTS] Offline - Cannot process queue');
-        return;
-    }
-    
+    if (!navigator.onLine) return;
     const supabase = getSupabaseClient();
-    if (!supabase) {
-        console.log('❌ [EVENTS] No Supabase client');
-        return;
-    }
+    if (!supabase) return;
     
-    let allPending = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
-    let pendingItems = allPending.filter(function(item) { 
-        return item.operation === 'upsert' || item.operation === 'delete';
-    });
+    let pendingQueue = JSON.parse(localStorage.getItem('pendingEventsQueue') || '[]');
+    if (pendingQueue.length === 0) return;
     
-    if (pendingItems.length === 0) {
-        console.log('📭 [EVENTS] No pending items');
-        return;
-    }
-    
-    console.log(`🔄 [EVENTS] Processing ${pendingItems.length} pending operations...`);
+    console.log(`🔄 Processing ${pendingQueue.length} pending event operations...`);
     let completedIds = [];
-    let successCount = 0;
-    let failCount = 0;
     
-    for (let item of pendingItems) {
+    for (let item of pendingQueue) {
         try {
             if (item.operation === 'upsert') {
                 const dbData = {
@@ -44232,88 +44112,31 @@ async function processPendingEventsQueue() {
                     venue: item.data.venue || 'TBA',
                     description: item.data.description || '',
                     status: item.data.status || 'Upcoming',
-                    poster_url: item.data.posterUrl || null,
-                    updated_at: new Date().toISOString()
+                    poster_url: item.data.posterUrl || null
                 };
-                
                 const { error } = await supabase.from('events').upsert(dbData, { onConflict: 'id' });
-                if (!error) {
-                    completedIds.push(item.id);
-                    successCount++;
-                    console.log(`✅ [EVENTS] Synced: ${item.data.title}`);
-                } else {
-                    item.retryCount = (item.retryCount || 0) + 1;
-                    if (item.retryCount > 3) {
-                        completedIds.push(item.id);
-                        failCount++;
-                        console.error(`❌ [EVENTS] Failed after 3 retries: ${item.data.title}`);
-                    }
-                }
+                if (!error) completedIds.push(item.id);
             }
             else if (item.operation === 'delete') {
                 const { error } = await supabase.from('events').delete().eq('id', item.data.id);
-                if (!error) {
-                    completedIds.push(item.id);
-                    successCount++;
-                    console.log(`✅ [EVENTS] Deleted: ${item.data.id}`);
-                } else {
-                    item.retryCount = (item.retryCount || 0) + 1;
-                    if (item.retryCount > 3) {
-                        completedIds.push(item.id);
-                        failCount++;
-                        console.error(`❌ [EVENTS] Failed after 3 retries: ${item.data.id}`);
-                    }
-                }
+                if (!error) completedIds.push(item.id);
             }
-        } catch(err) {
-            console.error('❌ [EVENTS] Pending error:', err);
-            item.retryCount = (item.retryCount || 0) + 1;
-            if (item.retryCount > 3) {
-                completedIds.push(item.id);
-                failCount++;
-            }
-        }
-        await new Promise(function(r) { setTimeout(r, 100); });
+        } catch(err) { console.error('Pending error:', err); }
     }
     
-    // Update queue
-    allPending = allPending.filter(function(item) { 
-        return !completedIds.includes(item.id); 
-    });
-    localStorage.setItem('pendingEventsQueue', JSON.stringify(allPending));
-    
-    if (successCount > 0) {
-        showNotification(`✅ ${successCount} events synced to Database!`, 'success');
-    }
-    if (failCount > 0) {
-        showNotification(`⚠️ ${failCount} events failed to sync`, 'warning');
-    }
-    
-    console.log(`📊 [EVENTS] Queue processed: ${successCount} success, ${failCount} failed`);
+    pendingQueue = pendingQueue.filter(item => !completedIds.includes(item.id));
+    localStorage.setItem('pendingEventsQueue', JSON.stringify(pendingQueue));
+    if (completedIds.length > 0) console.log(`✅ Synced ${completedIds.length} pending operations`);
 }
 
-// ======================= REFRESH FUNCTION =======================
 async function refreshEventsData() {
     showLoader();
     showNotification('🔄 Syncing events from cloud...', 'info');
-    
-    // Load from Supabase
     await loadEventsFromSupabase();
-    
-    // Process any pending operations
     await processPendingEventsQueue();
-    
-    // Reload UI
     loadEvents();
-    
     hideLoader();
-    
-    let pendingCount = getPendingEventsCount();
-    if (pendingCount > 0) {
-        showNotification(`✅ ${window.events.length} events loaded! ${pendingCount} pending sync`, 'info');
-    } else {
-        showNotification(`✅ ${window.events.length} events loaded from Database!`, 'success');
-    }
+    showNotification(`✅ ${window.events.length} events loaded from Database!`, 'success');
 }
 
 // ======================= CAMERA UPLOAD FOR EVENT POSTERS =======================
@@ -44398,8 +44221,6 @@ async function uploadEventPosterToStorage(posterBase64, eventId, eventTitle) {
         }
         
         const blob = dataURLtoBlob(compressed);
-        if (!blob) return null;
-        
         const fileName = `poster_${Date.now()}.jpg`;
         const folderPath = `events/${eventId}_${eventTitle.replace(/\s/g, '_')}`;
         const fullPath = `${folderPath}/${fileName}`;
@@ -44430,7 +44251,7 @@ async function uploadEventPosterToStorage(posterBase64, eventId, eventTitle) {
     }
 }
 
-// ======================= ✅ FIXED PDF EXPORT =======================
+// ======================= PDF EXPORT WITH LOGO =======================
 async function exportEventsPDF() {
     if (typeof html2canvas === 'undefined') {
         showNotification('html2canvas library not loaded! Please refresh.', 'error');
@@ -44441,12 +44262,6 @@ async function exportEventsPDF() {
     showNotification('Generating PDF, please wait...', 'info');
     
     try {
-        var schoolName = getSchoolNameSetting();
-        var schoolAddress = getSchoolAddressSetting();
-        var schoolPhone = getSchoolPhoneSetting();
-        var schoolEmail = getSchoolEmailSetting();
-        var logoSrc = getSchoolLogoBase64();
-        
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
         tempDiv.style.left = '-9999px';
@@ -44457,8 +44272,12 @@ async function exportEventsPDF() {
         tempDiv.style.fontFamily = "'Segoe UI', Arial, sans-serif";
         
         let logoHtml = '';
-        if (logoSrc) {
-            logoHtml = `<img src="${logoSrc}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;" onerror="this.style.display='none';">`;
+        let logoUrl = localStorage.getItem('schoolLogoUrl');
+        let logoData = localStorage.getItem('schoolLogo');
+        if (logoUrl && logoUrl.startsWith('http')) {
+            logoHtml = `<img src="${logoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;">`;
+        } else if (logoData && logoData.startsWith('data:image')) {
+            logoHtml = `<img src="${logoData}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px;">`;
         } else {
             logoHtml = '<div style="font-size: 40px; margin-bottom: 10px;">🏫</div>';
         }
@@ -44480,7 +44299,7 @@ async function exportEventsPDF() {
                     <strong style="font-size: 14px; color: #2563eb;">${escapeHtml(e.title)}</strong><br>
                     📅 ${e.date} | ⏰ ${e.time || 'TBA'} | 📍 ${e.venue || 'TBA'}<br>
                     <span style="font-size: 12px; color: #64748b;">${escapeHtml((e.description || '').substring(0, 100))}</span>
-                    ${e.posterUrl ? `<div style="margin-top:5px;"><a href="${e.posterUrl}" target="_blank" style="color:#10b981;">📸 View Poster</a></div>` : ''}
+                    ${e.posterUrl ? `<div style="margin-top:5px;"><a href="${e.posterUrl}" target="_blank">📸 View Poster</a></div>` : ''}
                 </div>`;
             }
             calendarHtml += `</div>`;
@@ -44493,9 +44312,9 @@ async function exportEventsPDF() {
         tempDiv.innerHTML = `
             <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #2563eb; padding-bottom: 15px;">
                 ${logoHtml}
-                <h2 style="margin: 5px 0; color: #1e293b; font-size: 20px;">${escapeHtml(schoolName)}</h2>
-                <p style="margin: 2px 0; font-size: 11px; color: #64748b;">${escapeHtml(schoolAddress)}</p>
-                <p style="margin: 2px 0; font-size: 10px; color: #64748b;">📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</p>
+                <h2 style="margin: 5px 0; color: #1e293b; font-size: 20px;">${escapeHtml(schoolName || 'Wings Convent School')}</h2>
+                <p style="margin: 2px 0; font-size: 11px; color: #64748b;">${escapeHtml(schoolAddress || '')}</p>
+                <p style="margin: 2px 0; font-size: 10px; color: #64748b;">📞 ${escapeHtml(schoolPhone || '')} | ✉️ ${escapeHtml(schoolEmail || '')}</p>
                 <h3 style="margin: 12px 0 5px; font-size: 16px; color: #2563eb;">📋 EVENT CALENDAR</h3>
                 <p style="font-size: 10px; color: #64748b;">Generated on: ${new Date().toLocaleString()}</p>
             </div>
@@ -44519,11 +44338,11 @@ async function exportEventsPDF() {
                 </div>
             </div>
             
-            ${calendarHtml || '<p style="text-align:center; padding:40px; color:#94a3b8;">No events scheduled</p>'}
+            ${calendarHtml || '<p style="text-align:center; padding:40px;">No events scheduled</p>'}
             
             <div style="margin-top: 25px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 8px; color: #94a3b8;">
                 <p>This is a computer generated report | Valid with school stamp</p>
-                <p>${escapeHtml(schoolName)} - Empowering Education</p>
+                <p>${escapeHtml(schoolName || 'Wings Convent School')} - Empowering Education</p>
             </div>
         `;
         
@@ -44541,23 +44360,12 @@ async function exportEventsPDF() {
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         
         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-        
-        const pageCount = pdf.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            pdf.setPage(i);
-            pdf.setFontSize(7);
-            pdf.setTextColor(148, 163, 184);
-            pdf.text(`Page ${i} of ${pageCount}`, pdfWidth - 15, pdf.internal.pageSize.getHeight() - 5);
-        }
-        
         pdf.save(`events_calendar_${new Date().toISOString().split('T')[0]}.pdf`);
         showNotification('✅ PDF exported successfully!', 'success');
         
     } catch(error) {
         console.error('PDF Error:', error);
         showNotification('❌ Error generating PDF: ' + error.message, 'error');
-        const tempDivExists = document.querySelector('div[style*="left: -9999px"]');
-        if (tempDivExists) tempDivExists.remove();
     }
     
     hideLoader();
@@ -44570,23 +44378,19 @@ async function loadEvents() {
         return; 
     }
     
-    // Load from cache first (immediate UI)
-    const cached = localStorage.getItem('cache_events');
-    if (cached) {
-        try {
-            const parsed = JSON.parse(cached);
-            if (parsed && parsed.length > 0) {
-                window.events.length = 0;
-                for (let event of parsed) window.events.push(event);
-                console.log(`📦 [EVENTS] Loaded ${window.events.length} events from cache`);
-            }
-        } catch(e) {}
-    }
-    
-    // Then load from Supabase (background sync)
     if (navigator.onLine) {
         await loadEventsFromSupabase();
         await processPendingEventsQueue();
+    } else {
+        const cached = localStorage.getItem('cache_events');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                window.events.length = 0;
+                for (let event of parsed) window.events.push(event);
+                console.log(`📦 Loaded ${window.events.length} events from cache`);
+            } catch(e) {}
+        }
     }
     
     let filteredEvents = window.events.filter(e => {
@@ -44613,7 +44417,6 @@ async function loadEvents() {
     
     let sortedEvents = [...filteredEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
     let canAddEditDelete = (currentUser.role === 'admin');
-    let pendingCount = getPendingEventsCount();
     
     let content = `
     <style>
@@ -44627,7 +44430,6 @@ async function loadEvents() {
         }
         .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .offline-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
-        .pending-badge { background: #f59e0b; color: #1e293b; padding: 4px 12px; border-radius: 20px; font-size: 10px; }
         .custom-event-modal {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
@@ -44690,8 +44492,7 @@ async function loadEvents() {
     <div style="text-align: right; margin-bottom: 10px;">
         <span class="${navigator.onLine ? 'online-badge' : 'offline-badge'}">
             <i class="fas ${navigator.onLine ? 'fa-wifi' : 'fa-plug'}"></i>
-            ${navigator.onLine ? '🟢 Online' : '🔴 Offline'} | <strong>${window.events.length}</strong> Events
-            ${pendingCount > 0 ? `<span class="pending-badge" style="margin-left:8px;"><i class="fas fa-clock"></i> ${pendingCount} Pending</span>` : ''}
+            ${navigator.onLine ? 'Connected to Cloud' : 'Offline Mode'} | <strong>${window.events.length}</strong> Events
         </span>
     </div>
     
@@ -44735,7 +44536,7 @@ function renderEventList(eventsToRender) {
         html += `<div class="data-card" style="margin-bottom: 12px; border-radius: 20px;">
             <div class="card-header" style="display: flex; gap: 12px; padding: 12px; flex-wrap: wrap;">
                 <div class="card-photo" style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                    ${e.posterUrl ? `<img src="${e.posterUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-calendar-alt\\" style=\\"color: white; font-size: 24px;\\"></i>';">` : (e.poster ? `<img src="${e.poster}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-calendar-alt\\" style=\\"color: white; font-size: 24px;\\"></i>';">` : '<i class="fas fa-calendar-alt" style="color: white; font-size: 24px;"></i>')}
+                    ${e.posterUrl ? `<img src="${e.posterUrl}" style="width:100%; height:100%; object-fit:cover;">` : (e.poster ? `<img src="${e.poster}" style="width:100%; height:100%; object-fit:cover;">` : '<i class="fas fa-calendar-alt" style="color: white; font-size: 24px;"></i>')}
                 </div>
                 <div class="card-title" style="flex: 1;">
                     <h3 style="font-size: 15px;">${escapeHtml(e.title)}</h3>
@@ -44869,9 +44670,9 @@ function showAddEventModal(editId = null) {
         let previewDiv = document.getElementById(`posterPreview_${modalId}`);
         if (previewDiv) {
             if (evData.posterUrl) {
-                previewDiv.innerHTML = `<div><img src="${evData.posterUrl}" style="width:80px; border-radius:8px;" onerror="this.style.display='none';"><p>Poster in Cloud</p></div>`;
+                previewDiv.innerHTML = `<div><img src="${evData.posterUrl}" style="width:80px; border-radius:8px;"><p>Poster in Cloud</p></div>`;
             } else if (evData.poster) {
-                previewDiv.innerHTML = `<div><img src="${evData.poster}" style="width:80px; border-radius:8px;" onerror="this.style.display='none';"><p>Poster saved locally</p></div>`;
+                previewDiv.innerHTML = `<div><img src="${evData.poster}" style="width:80px; border-radius:8px;"><p>Poster saved locally</p></div>`;
             }
         }
     }
@@ -44888,7 +44689,7 @@ function showAddEventModal(editId = null) {
             
             let previewDiv = document.getElementById(`posterPreview_${modalId}`);
             if (previewDiv) {
-                previewDiv.innerHTML = `<div><img src="${uploadedUrl || croppedData}" style="width:80px; border-radius:8px;" onerror="this.style.display='none';"><p>${uploadedUrl ? '☁️ Uploaded to Database!' : '📁 Saved locally'}</p></div>`;
+                previewDiv.innerHTML = `<div><img src="${uploadedUrl || croppedData}" style="width:80px; border-radius:8px;"><p>${uploadedUrl ? '☁️ Uploaded to Database!' : '📁 Saved locally'}</p></div>`;
             }
             hideLoader();
             showNotification(uploadedUrl ? 'Poster uploaded to Database!' : 'Poster saved locally', uploadedUrl ? 'success' : 'warning');
@@ -44896,7 +44697,7 @@ function showAddEventModal(editId = null) {
     };
 }
 
-// ======================= ✅ FIXED: SAVE WITH CACHE + PENDING QUEUE =======================
+// ======================= SAVE EVENT DATA =======================
 async function saveEventData(modalId, editId) {
     let title = document.getElementById(`evTitle_${modalId}`)?.value.trim();
     if (!title) {
@@ -44916,14 +44717,13 @@ async function saveEventData(modalId, editId) {
         posterUrl: window.eventPosterUrl
     };
     
-    // STEP 1: Update Local Cache (Immediate UI)
     if (editId) {
         let idx = window.events.findIndex(e => e.id === editId);
         if (idx !== -1) window.events[idx] = { ...window.events[idx], ...evObj };
-        showNotification('Event updated successfully! (Local cache)', 'success');
+        showNotification('Event updated successfully!', 'success');
     } else {
         window.events.push(evObj);
-        showNotification(evObj.posterUrl ? '✅ Event added! Poster saved to cloud.' : '✅ Event added! (Local cache)', 'success');
+        showNotification(evObj.posterUrl ? '✅ Event added! Poster saved to cloud.' : '✅ Event added!', 'success');
         
         if (typeof recentActivities !== 'undefined') {
             recentActivities.unshift({
@@ -44936,33 +44736,17 @@ async function saveEventData(modalId, editId) {
         }
     }
     
-    // STEP 2: Save to localStorage cache
-    try {
-        localStorage.setItem('cache_events', JSON.stringify(window.events));
-        console.log('💾 [EVENTS] Saved to localStorage cache');
-    } catch(e) {
-        console.error('Cache save error:', e);
-    }
+    localStorage.setItem('cache_events', JSON.stringify(window.events));
     
-    // STEP 3: Close modal and refresh UI immediately
-    closeEventModal(modalId);
-    loadEvents();
-    
-    // STEP 4: Try to save to Supabase (background)
     if (navigator.onLine) {
-        let saved = await saveEventToSupabase(evObj);
-        if (saved) {
-            showNotification(`✅ "${title}" saved to cloud!`, 'success');
-        } else {
-            showNotification(`📴 "${title}" saved locally. Will sync when online.`, 'warning');
-        }
+        await saveEventToSupabase(evObj);
     } else {
-        // Offline: Add to pending queue
-        addToPendingEventsQueue('upsert', evObj);
-        showNotification(`📴 Offline: "${title}" saved locally. Will sync when online.`, 'warning');
+        showNotification('📴 Offline - Event saved locally. Will sync when online.', 'warning');
     }
     
     if (typeof saveAllData === 'function') saveAllData();
+    closeEventModal(modalId);
+    loadEvents();
 }
 
 function closeEventModal(modalId) {
@@ -44984,7 +44768,7 @@ function viewEventDetails(id) {
         title: `🎉 ${escapeHtml(e.title)}`,
         html: `
             <div style="text-align: center;">
-                ${e.posterUrl ? `<img src="${e.posterUrl}" style="max-width:100%; max-height:150px; border-radius:12px; margin-bottom:10px;" onerror="this.style.display='none';">` : (e.poster ? `<img src="${e.poster}" style="max-width:100%; max-height:150px; border-radius:12px; margin-bottom:10px;" onerror="this.style.display='none';">` : '')}
+                ${e.posterUrl ? `<img src="${e.posterUrl}" style="max-width:100%; max-height:150px; border-radius:12px; margin-bottom:10px;">` : (e.poster ? `<img src="${e.poster}" style="max-width:100%; max-height:150px; border-radius:12px; margin-bottom:10px;">` : '')}
             </div>
             <div style="text-align: left; margin-top: 10px;">
                 <p><strong>📅 Date:</strong> ${e.date} (${dayName})</p>
@@ -45018,31 +44802,17 @@ async function deleteEvent(id) {
         if (result.isConfirmed) {
             showLoader();
             
-            // Remove from local array
             window.events = window.events.filter(e => e.id !== id);
+            localStorage.setItem('cache_events', JSON.stringify(window.events));
             
-            // Save to cache
-            try {
-                localStorage.setItem('cache_events', JSON.stringify(window.events));
-                console.log('💾 [EVENTS] Deleted from localStorage cache');
-            } catch(e) {}
-            
-            // Try to delete from Supabase
             if (navigator.onLine) {
-                let deleted = await deleteEventFromSupabase(id);
-                if (deleted) {
-                    showNotification('✅ Event deleted from cloud!', 'success');
-                } else {
-                    showNotification('📴 Event deleted locally. Will sync when online.', 'warning');
-                }
-            } else {
-                addToPendingEventsQueue('delete', { id: id });
-                showNotification('📴 Offline: Event deleted locally. Will sync when online.', 'warning');
+                await deleteEventFromSupabase(id);
             }
             
             if (typeof saveAllData === 'function') saveAllData();
             hideLoader();
             loadEvents();
+            showNotification('Event deleted successfully!', 'success');
         }
     });
 }
@@ -45050,10 +44820,6 @@ async function deleteEvent(id) {
 function shareEvent(id) {
     let e = window.events.find(event => event.id === id);
     if (!e) return;
-    
-    let schoolName = getSchoolNameSetting();
-    let schoolPhone = getSchoolPhoneSetting();
-    
     let message = `🎉 *${e.title}* 🎉\n\n📅 Date: ${e.date}\n⏰ Time: ${e.time}\n📍 Venue: ${e.venue}\n📝 ${e.description || ''}\n\n🏫 ${schoolName}\n📞 ${schoolPhone}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
 }
@@ -45072,10 +44838,6 @@ function downloadEventPoster(id) {
 }
 
 function printEventCalendar() {
-    let schoolName = getSchoolNameSetting();
-    let schoolAddress = getSchoolAddressSetting();
-    let schoolPhone = getSchoolPhoneSetting();
-    
     let printWindow = window.open('', '_blank');
     let eventsByMonth = {};
     let sortedEvents = [...window.events].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -45114,9 +44876,9 @@ function printEventCalendar() {
     </head>
     <body>
         <div class="header">
-            <h2>${escapeHtml(schoolName)}</h2>
+            <h2>${schoolName}</h2>
             <h3>EVENT CALENDAR</h3>
-            <p>${escapeHtml(schoolAddress)} | 📞 ${escapeHtml(schoolPhone)}</p>
+            <p>${schoolAddress} | 📞 ${schoolPhone}</p>
             <p>Generated: ${new Date().toLocaleDateString()}</p>
         </div>
         ${calendarHtml || '<p>No events scheduled</p>'}
@@ -45155,19 +44917,18 @@ function clearEventFilter() {
 
 // ======================= ONLINE/OFFLINE HANDLERS =======================
 window.addEventListener('online', async () => {
-    console.log('🟢 [EVENTS] Online - Syncing...');
-    showNotification('🟢 Back online! Syncing events...', 'info');
+    console.log('🟢 Online - Syncing events...');
+    showNotification('🟢 Back online! Syncing events...', 'success');
     await loadEventsFromSupabase();
     await processPendingEventsQueue();
     loadEvents();
 });
 
 window.addEventListener('offline', () => {
-    console.log('🔴 [EVENTS] Offline mode');
+    console.log('🔴 Offline mode');
     showNotification('🔴 Offline mode - Events data saved locally', 'warning');
 });
 
-// Initialize
 setTimeout(() => {
     if (navigator.onLine) {
         loadEventsFromSupabase().then(() => processPendingEventsQueue());
@@ -45175,12 +44936,7 @@ setTimeout(() => {
     loadEvents();
 }, 1000);
 
-console.log('✅ PART 20 COMPLETE - Events Module with Cache + Pending Queue Flow');
-console.log('📌 Flow Implemented:');
-console.log('   ✅ ONLINE: Save → Cache → UI → Supabase → Success/Fail → Queue');
-console.log('   ✅ OFFLINE: Save → Cache → UI → Add to Queue → Show Offline Notification');
-console.log('   ✅ ONLINE RETURN: Auto-sync pending queue → Remove from queue → Show Sync Notification');
-console.log('   ✅ GET SCHOOL SETTINGS: Proper functions for localStorage access');
+console.log('✅ PART 20 COMPLETE - Events Module with Supabase Sync, PDF Export, and Offline Support!');
 // ======================= PART 20 ENDS HERE =======================
 // ======================= PART 20 ENDS HERE =======================
 // ======================= PART 21: FEEDBACK MODULE (COMPLETE - PRODUCTION READY) =======================
@@ -56729,398 +56485,6 @@ console.log('📌 Supabase Sync → Password Protected (KLT@1234)');
 
 } // End of duplicate check
 // ======================= PART 25 ENDS HERE ===================================================================
-//===============================================================================================================
-// ============================================
-// CHROME - IN-WINDOW POPUP (COMPLETE FIX)
-// ============================================
-
-(function() {
-    console.log('🔥 Chrome in-window popup - COMPLETE FIX...');
-    
-    // ====== DETECT BROWSER ======
-    const isChrome = navigator.userAgent.includes('Chrome') && 
-                     !navigator.userAgent.includes('Edg') &&
-                     !navigator.userAgent.includes('OPR');
-    const isFirefox = navigator.userAgent.includes('Firefox');
-    const isEdge = navigator.userAgent.includes('Edg');
-    const isSafari = navigator.userAgent.includes('Safari') && !isChrome;
-    
-    const isWebView = /Android/.test(navigator.userAgent) && 
-                      (navigator.userAgent.includes('wv') || 
-                       navigator.userAgent.includes('WebView'));
-    const isApk = window.navigator.standalone === true || 
-                  window.matchMedia('(display-mode: standalone)').matches ||
-                  document.referrer.includes('android-app://');
-    const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
-    const isSecure = window.location.protocol === 'https:' || 
-                     window.location.hostname === 'localhost' ||
-                     window.location.hostname === '127.0.0.1';
-    
-    // ====== CHECK IF CHROME + HTTPS ======
-    if (isChrome && !isSecure) {
-        console.warn('⚠️ Chrome requires HTTPS for notifications! Using fallback.');
-        // ✅ Chrome HTTP पर Swal Fallback use करेंगे
-    }
-    
-    console.log(`🌐 Browser: ${isChrome ? 'Chrome' : isFirefox ? 'Firefox' : isEdge ? 'Edge' : isSafari ? 'Safari' : 'Other'}`);
-    console.log(`🔒 HTTPS: ${isSecure}`);
-    console.log(`📱 Mobile: ${isMobile}`);
-    console.log(`📦 APK/WebView: ${isApk || isWebView}`);
-    
-    // ====== SOUND ======
-    function playSound() {
-        try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            oscillator.frequency.value = isMobile ? 800 : 600;
-            oscillator.type = 'sine';
-            gainNode.gain.value = isMobile ? 0.1 : 0.08;
-            oscillator.start();
-            setTimeout(() => {
-                oscillator.stop();
-                audioCtx.close();
-            }, isMobile ? 200 : 150);
-        } catch(e) {
-            // Silent fail
-        }
-    }
-    
-    // ====== IN-WINDOW POPUP ======
-    window.showInWindowPopup = function(title, message, type = 'success') {
-        console.log(`💬 Popup: ${title} (${type})`);
-        
-        // ✅ APK/WebView: Swal toast
-        if (isApk || isWebView || (isChrome && !isSecure)) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: type || 'success',
-                    title: title,
-                    text: message,
-                    showConfirmButton: false,
-                    timer: 4000,
-                    customClass: {
-                        popup: 'apk-swal-popup'
-                    }
-                });
-                return true;
-            }
-        }
-        
-        const colors = {
-            success: '#10b981',
-            warning: '#f59e0b',
-            error: '#ef4444',
-            info: '#2563eb'
-        };
-        const icons = {
-            success: '✅',
-            warning: '⚠️',
-            error: '❌',
-            info: 'ℹ️'
-        };
-        
-        // Remove existing
-        const existing = document.getElementById('inWindowPopup');
-        if (existing) existing.remove();
-        
-        const isMobileDevice = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
-        
-        const popup = document.createElement('div');
-        popup.id = 'inWindowPopup';
-        popup.style.cssText = `
-            position: fixed;
-            top: ${isMobileDevice ? '12px' : '20px'};
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            border-radius: ${isMobileDevice ? '16px' : '16px'};
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            z-index: 999999;
-            max-width: ${isMobileDevice ? '92%' : '450px'};
-            width: ${isMobileDevice ? '340px' : 'auto'};
-            min-width: ${isMobileDevice ? 'auto' : '300px'};
-            animation: slideDown 0.5s ease;
-            border-left: 5px solid ${colors[type] || '#2563eb'};
-            overflow: hidden;
-            font-family: 'Segoe UI', Arial, sans-serif;
-        `;
-        
-        if (!document.getElementById('inWindowPopupStyle')) {
-            const style = document.createElement('style');
-            style.id = 'inWindowPopupStyle';
-            style.textContent = `
-                @keyframes slideDown {
-                    from { opacity: 0; transform: translateX(-50%) translateY(-30px); }
-                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-                }
-                @keyframes slideUp {
-                    from { opacity: 1; transform: translateX(-50%) translateY(0); }
-                    to { opacity: 0; transform: translateX(-50%) translateY(-30px); }
-                }
-                .iw-popup-content {
-                    padding: ${isMobileDevice ? '14px 16px' : '16px 20px'};
-                    display: flex;
-                    align-items: flex-start;
-                    gap: ${isMobileDevice ? '12px' : '14px'};
-                }
-                .iw-popup-icon {
-                    font-size: ${isMobileDevice ? '24px' : '28px'};
-                    flex-shrink: 0;
-                    margin-top: 2px;
-                    width: ${isMobileDevice ? '40px' : '44px'};
-                    height: ${isMobileDevice ? '40px' : '44px'};
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: ${colors[type] || '#2563eb'}15;
-                }
-                .iw-popup-text { flex: 1; }
-                .iw-popup-title {
-                    font-weight: 700;
-                    font-size: ${isMobileDevice ? '14px' : '15px'};
-                    color: #1e293b;
-                    margin-bottom: ${isMobileDevice ? '2px' : '4px'};
-                }
-                .iw-popup-message {
-                    font-size: ${isMobileDevice ? '12px' : '13px'};
-                    color: #64748b;
-                    line-height: ${isMobileDevice ? '1.3' : '1.4'};
-                }
-                .iw-popup-close {
-                    background: none;
-                    border: none;
-                    color: #94a3b8;
-                    cursor: pointer;
-                    font-size: ${isMobileDevice ? '18px' : '18px'};
-                    padding: 4px 8px;
-                    border-radius: 50%;
-                    transition: background 0.2s;
-                    flex-shrink: 0;
-                }
-                .iw-popup-close:hover {
-                    background: #f1f5f9;
-                    color: #1e293b;
-                }
-                .iw-popup-footer {
-                    padding: ${isMobileDevice ? '6px 16px 10px 16px' : '8px 20px 12px 20px'};
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    border-top: 1px solid #f1f5f9;
-                }
-                .iw-popup-time {
-                    font-size: ${isMobileDevice ? '9px' : '10px'};
-                    color: #94a3b8;
-                }
-                .iw-popup-progress {
-                    height: ${isMobileDevice ? '3px' : '3px'};
-                    width: 100%;
-                    animation: progressBar 4s linear forwards;
-                }
-                @keyframes progressBar {
-                    from { width: 100%; }
-                    to { width: 0%; }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        const progressStyle = document.createElement('style');
-        progressStyle.textContent = `
-            .iw-popup-progress { background: ${colors[type] || '#2563eb'} !important; }
-        `;
-        progressStyle.id = 'iwProgressStyle';
-        const oldProgress = document.getElementById('iwProgressStyle');
-        if (oldProgress) oldProgress.remove();
-        document.head.appendChild(progressStyle);
-        
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        popup.innerHTML = `
-            <div class="iw-popup-content">
-                <div class="iw-popup-icon">
-                    <span style="font-size: ${isMobileDevice ? '20px' : '24px'};">${icons[type] || 'ℹ️'}</span>
-                </div>
-                <div class="iw-popup-text">
-                    <div class="iw-popup-title">${title}</div>
-                    <div class="iw-popup-message">${message}</div>
-                </div>
-                <button class="iw-popup-close" onclick="this.closest('#inWindowPopup').remove()">✕</button>
-            </div>
-            <div class="iw-popup-footer">
-                <span class="iw-popup-time">🕐 ${timeStr}</span>
-                <span style="font-size: ${isMobileDevice ? '9px' : '10px'}; color: #94a3b8;">🔔 Notification</span>
-            </div>
-            <div class="iw-popup-progress"></div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        // Vibration
-        if (isMobileDevice && navigator.vibrate) {
-            navigator.vibrate([100, 50, 100]);
-        }
-        
-        // Sound
-        playSound();
-        
-        // Auto remove
-        setTimeout(() => {
-            if (popup.parentNode) {
-                popup.style.animation = 'slideUp 0.4s ease';
-                setTimeout(() => {
-                    if (popup.parentNode) popup.remove();
-                }, 400);
-            }
-        }, 4000);
-        
-        return true;
-    };
-    
-    // ====== ✅ FIX: OVERRIDE showNotification (ONLY for logged in user) ======
-    const origNotif = window.showNotification;
-    window.showNotification = function(msg, type) {
-        console.log(`🔔 showNotification called: ${msg} (${type})`);
-        
-        // ✅ Call original if exists
-        if (typeof origNotif === 'function') {
-            origNotif(msg, type);
-        }
-        
-        // ✅ ONLY show popup if user is logged in
-        const isLoggedIn = window.currentUser && window.currentUser.name;
-        console.log(`👤 User logged in: ${isLoggedIn}`);
-        
-        if (isLoggedIn) {
-            const title = type === 'success' ? '✅ Success' : 
-                          type === 'warning' ? '⚠️ Warning' : 
-                          type === 'error' ? '❌ Error' : 'ℹ️ Info';
-            
-            // ✅ Show popup after delay
-            setTimeout(() => {
-                window.showInWindowPopup(title, msg, type || 'success');
-            }, 100);
-        } else {
-            console.log('🚫 Popup blocked - User not logged in');
-        }
-    };
-    
-    // ====== ✅ FIX: OVERRIDE sendEventNotification ======
-    const origSend = window.sendEventNotification;
-    window.sendEventNotification = function(title, message, type) {
-        console.log(`🔔 sendEventNotification: ${title}`);
-        
-        if (typeof origSend === 'function') {
-            origSend(title, message, type);
-        }
-        
-        const isLoggedIn = window.currentUser && window.currentUser.name;
-        if (isLoggedIn) {
-            setTimeout(() => {
-                window.showInWindowPopup(title, message, type || 'success');
-            }, 100);
-        }
-    };
-    
-    // ====== ✅ FIX: LOGIN SUCCESS ======
-    const origLogin = window.loginSuccess;
-    window.loginSuccess = function(user) {
-        console.log('🔐 Login detected:', user?.name);
-        
-        if (typeof origLogin === 'function') {
-            origLogin(user);
-        }
-        
-        // ✅ Show welcome popup on login
-        if (user && user.name) {
-            // ✅ Set currentUser first
-            window.currentUser = user;
-            
-            setTimeout(() => {
-                window.showInWindowPopup(
-                    `👋 Welcome ${user.name}!`,
-                    'Notifications are enabled. You will receive in-window popups.',
-                    'success'
-                );
-            }, 1500);
-        }
-    };
-    
-    // ====== ✅ FIX: CHECK LOGIN STATUS ON LOAD ======
-    function checkLoginAndShowPopup() {
-        // ✅ Check if user is already logged in
-        const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-            try {
-                const user = JSON.parse(savedUser);
-                if (user && user.name) {
-                    window.currentUser = user;
-                    console.log('👤 User already logged in:', user.name);
-                    
-                    // ✅ Show welcome back popup (only once)
-                    const welcomeShown = localStorage.getItem('welcomeShown');
-                    if (!welcomeShown) {
-                        setTimeout(() => {
-                            window.showInWindowPopup(
-                                `👋 Welcome back ${user.name}!`,
-                                'You are successfully logged in.',
-                                'success'
-                            );
-                            localStorage.setItem('welcomeShown', 'true');
-                        }, 2000);
-                    }
-                }
-            } catch(e) {
-                console.error('Error parsing user:', e);
-            }
-        }
-    }
-    
-    // ====== ✅ CHECK AFTER LOGIN (Interval) ======
-    let loginCheckInterval = setInterval(function() {
-        if (window.currentUser && window.currentUser.name) {
-            console.log('✅ User logged in detected by interval');
-            clearInterval(loginCheckInterval);
-            
-            // ✅ Show welcome popup if not shown
-            const welcomeShown = localStorage.getItem('welcomeShown');
-            if (!welcomeShown) {
-                setTimeout(() => {
-                    window.showInWindowPopup(
-                        `👋 Welcome ${window.currentUser.name}!`,
-                        'Notifications are enabled.',
-                        'success'
-                    );
-                    localStorage.setItem('welcomeShown', 'true');
-                }, 1000);
-            }
-        }
-    }, 2000);
-    
-    // Stop interval after 30 seconds
-    setTimeout(function() {
-        clearInterval(loginCheckInterval);
-    }, 30000);
-    
-    // ====== ✅ EXECUTE ON PAGE LOAD ======
-    console.log('✅ Chrome popup - COMPLETE FIX!');
-    console.log('📋 Popup will appear AFTER login only.');
-    console.log(`📱 ${isMobile ? 'Mobile' : 'Desktop'} Chrome optimized.`);
-    console.log(`🔒 HTTPS: ${isSecure ? '✅ Secure' : '⚠️ Not Secure - Using Swal fallback'}`);
-    console.log('🚫 Login page par popup nahi aayega!');
-    
-    // ✅ Check login status on load
-    setTimeout(checkLoginAndShowPopup, 1000);
-    
-})();
-//===============================================================================================================
 // ======================= FINAL INITIALIZATION =======================//
 updateSchoolLogoInHeader();
 let savedTheme = localStorage.getItem('theme');
