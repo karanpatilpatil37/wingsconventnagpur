@@ -11367,281 +11367,6 @@ console.log('✅ LOGO LOAD FROM PROFILE TABLE FIXED!');
 console.log('✅ SYNC BANNER LOAD FROM PROFILE TABLE FIXED!');
 }
 // =================================== START PART 03-R- ENDS HERE =========================================================================
-// =================================== START PART 03-S- ENDS HERE =========================================================================
-// ============================================
-// PART 03-S: AUTO-REFRESH ALL MODULES
-// ============================================
-
-// ======================= COMPLETE REFRESH FUNCTION =======================
-async function refreshAllModules() {
-    console.log('🔄 refreshAllModules called - Refreshing all data...');
-    
-    // Show loader
-    if (typeof showLoader === 'function') showLoader();
-    if (typeof showNotification === 'function') {
-        showNotification('🔄 Refreshing all data from cloud...', 'info');
-    }
-    
-    try {
-        // ========== 1. REFRESH STUDENTS ==========
-        if (typeof loadStudentsFromSupabase === 'function') {
-            await loadStudentsFromSupabase();
-            console.log('✅ Students refreshed');
-        }
-        
-        // ========== 2. REFRESH EMPLOYEES ==========
-        if (typeof loadEmployeesFromSupabase === 'function') {
-            await loadEmployeesFromSupabase();
-            console.log('✅ Employees refreshed');
-        }
-        
-        // ========== 3. REFRESH FEES ==========
-        if (typeof loadFeesFromSupabase === 'function') {
-            await loadFeesFromSupabase();
-            console.log('✅ Fees refreshed');
-        }
-        
-        // ========== 4. REFRESH ATTENDANCE ==========
-        if (typeof loadAttendanceFromSupabase === 'function') {
-            await loadAttendanceFromSupabase();
-            console.log('✅ Attendance refreshed');
-        }
-        
-        // ========== 5. REFRESH EXPENSES ==========
-        if (typeof loadExpensesFromSupabase === 'function') {
-            await loadExpensesFromSupabase();
-            console.log('✅ Expenses refreshed');
-        }
-        
-        // ========== 6. REFRESH LEDGER ==========
-        if (typeof loadLedgerFromSupabase === 'function') {
-            await loadLedgerFromSupabase();
-            console.log('✅ Ledger refreshed');
-        }
-        
-        // ========== 7. REFRESH EVENTS ==========
-        if (typeof loadEventsFromSupabase === 'function') {
-            await loadEventsFromSupabase();
-            console.log('✅ Events refreshed');
-        }
-        
-        // ========== 8. REFRESH NOTIFICATIONS ==========
-        if (typeof loadNotificationsFromSupabase === 'function') {
-            await loadNotificationsFromSupabase();
-            console.log('✅ Notifications refreshed');
-        }
-        
-        // ========== 9. REFRESH HOMEWORK ==========
-        if (typeof loadHomeworkFromSupabase === 'function') {
-            await loadHomeworkFromSupabase();
-            console.log('✅ Homework refreshed');
-        }
-        
-        // ========== 10. REFRESH RESULTS ==========
-        if (typeof loadResultsFromSupabase === 'function') {
-            await loadResultsFromSupabase();
-            console.log('✅ Results refreshed');
-        }
-        
-        // ========== 11. REFRESH EXAMS ==========
-        if (typeof loadExamsFromSupabase === 'function') {
-            await loadExamsFromSupabase();
-            console.log('✅ Exams refreshed');
-        }
-        
-        // ========== 12. REFRESH CLASSES ==========
-        if (typeof loadClassesFromSupabase === 'function') {
-            await loadClassesFromSupabase();
-            console.log('✅ Classes refreshed');
-        }
-        
-        // ========== 13. REFRESH TRANSPORT ==========
-        if (typeof loadTransportFromSupabase === 'function') {
-            await loadTransportFromSupabase();
-            console.log('✅ Transport refreshed');
-        }
-        
-        // ========== 14. REFRESH FEEDBACKS ==========
-        if (typeof loadFeedbacksFromSupabase === 'function') {
-            await loadFeedbacksFromSupabase();
-            console.log('✅ Feedbacks refreshed');
-        }
-        
-        // ========== 15. REFRESH TIMETABLE ==========
-        if (typeof loadTimetableFromSupabase === 'function') {
-            await loadTimetableFromSupabase();
-            console.log('✅ Timetable refreshed');
-        }
-        
-        // ========== 16. REFRESH LEAVES ==========
-        if (typeof loadLeavesFromSupabase === 'function') {
-            await loadLeavesFromSupabase();
-            console.log('✅ Leaves refreshed');
-        }
-        
-        // ========== 17. REFRESH EMP ATTENDANCE ==========
-        if (typeof loadEmpAttendanceFromSupabase === 'function') {
-            await loadEmpAttendanceFromSupabase();
-            console.log('✅ Employee Attendance refreshed');
-        }
-        
-        // ========== 18. PROCESS ALL PENDING QUEUES ==========
-        if (typeof processPendingQueue === 'function') {
-            await processPendingQueue();
-            console.log('✅ Pending queues processed');
-        }
-        
-        // ========== 19. SYNC SCHOOL LOGO ==========
-        if (typeof loadSchoolLogoFromProfile === 'function') {
-            await loadSchoolLogoFromProfile();
-            console.log('✅ School Logo refreshed');
-        }
-        
-        // ========== 20. SYNC SYNC BANNER ==========
-        if (typeof loadSyncBannerFromSupabase === 'function') {
-            await loadSyncBannerFromSupabase();
-            console.log('✅ Sync Banner refreshed');
-        }
-        
-        // ========== 21. UPDATE DASHBOARD ==========
-        if (typeof renderDashboard === 'function') {
-            renderDashboard();
-            console.log('✅ Dashboard refreshed');
-        }
-        
-        // ========== 22. UPDATE NOTIFICATIONS ==========
-        if (typeof updateNotificationBell === 'function') {
-            updateNotificationBell();
-            console.log('✅ Notification bell updated');
-        }
-        
-        // ========== 23. SAVE ALL DATA TO CACHE ==========
-        if (typeof saveAllData === 'function') {
-            saveAllData();
-            console.log('✅ All data cached');
-        }
-        
-        // ========== 24. RELOAD CURRENT MODULE ==========
-        const moduleTitle = document.getElementById('moduleTitle');
-        if (moduleTitle) {
-            const titleText = moduleTitle.innerText || moduleTitle.textContent || '';
-            
-            const moduleMap = {
-                'PROFILE': loadProfile,
-                'STUDENTS': loadStudentManagement,
-                'FEES': loadFeeCollection,
-                'ATTENDANCE': loadAttendance,
-                'EMP ATTENDANCE': loadEmpAttendance,
-                'EMPLOYEES': loadEmployeeManagement,
-                'HOMEWORK': loadHomeworkManagement,
-                'EXAMS': loadExamsModule,
-                'RESULTS': loadResults,
-                'LEAVE': loadLeaveManagement,
-                'CLASSES': loadClassManagement,
-                'TIMETABLE': loadTimetable,
-                'TRANSPORT': loadTransport,
-                'EXPENSES': loadExpenses,
-                'LEDGER': loadLedger,
-                'EVENTS': loadEvents,
-                'FEEDBACK': loadFeedback,
-                'NOTIFICATIONS': loadNotificationsModule,
-                'PROFIT/LOSS': loadProfitLoss,
-                'LIVING CERTIFICATE': loadLivingCertificateModule,
-                'SETTINGS': loadSettingsModule
-            };
-            
-            for (const [key, func] of Object.entries(moduleMap)) {
-                if (titleText.toUpperCase().includes(key) && typeof func === 'function') {
-                    console.log(`🔄 Reloading module: ${key}`);
-                    await func();
-                    break;
-                }
-            }
-        }
-        
-        if (typeof showNotification === 'function') {
-            showNotification('✅ All modules refreshed successfully!', 'success');
-        }
-        
-    } catch (error) {
-        console.error('❌ Refresh error:', error);
-        if (typeof showNotification === 'function') {
-            showNotification('❌ Error refreshing modules: ' + error.message, 'error');
-        }
-    } finally {
-        if (typeof hideLoader === 'function') hideLoader();
-    }
-}
-
-// ======================= AUTO-REFRESH SETUP =======================
-function setupAutoRefresh() {
-    console.log('🔧 Setting up auto-refresh...');
-    
-    // 1. Tab Focus - Jab user wapas aaye
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden && window.currentUser) {
-            console.log('👁️ Tab focused - Auto-refreshing...');
-            if (typeof refreshAllModules === 'function') {
-                refreshAllModules();
-            }
-        }
-    });
-    
-    // 2. Internet Online - Jab internet wapas aaye
-    window.addEventListener('online', async function() {
-        console.log('🟢 Online - Auto-refreshing...');
-        if (typeof refreshAllModules === 'function') {
-            await refreshAllModules();
-        }
-    });
-    
-    // 3. Login ke baad refresh
-    const originalLogin = window.login;
-    if (originalLogin) {
-        window.login = async function() {
-            await originalLogin();
-            if (typeof refreshAllModules === 'function') {
-                setTimeout(async () => {
-                    await refreshAllModules();
-                }, 1000);
-            }
-        };
-    }
-    
-    // 4. Dashboard open par refresh
-    const originalShowDashboard = window.showDashboard;
-    if (originalShowDashboard) {
-        window.showDashboard = function() {
-            originalShowDashboard();
-            if (typeof refreshAllModules === 'function') {
-                setTimeout(() => {
-                    refreshAllModules();
-                }, 500);
-            }
-        };
-    }
-    
-    console.log('✅ Auto-refresh setup complete!');
-}
-
-// ======================= EXPOSE FUNCTIONS =======================
-window.refreshAllModules = refreshAllModules;
-window.setupAutoRefresh = setupAutoRefresh;
-
-// ======================= INITIALIZE =======================
-// Auto-refresh setup when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(setupAutoRefresh, 1000);
-});
-
-console.log('✅ PART 03-Z: Auto-Refresh Module Loaded!');
-console.log('📌 Features:');
-console.log('   ✅ Tab focus - Auto refresh');
-console.log('   ✅ Internet online - Auto refresh');
-console.log('   ✅ After login - Auto refresh');
-console.log('   ✅ Dashboard open - Auto refresh');
-console.log('   ✅ Manual: window.refreshAllModules()');
-// =================================== START PART 03-S- ENDS HERE =========================================================================
 // =================================== START PART 03-T- Start HERE =========================================================================
 // ======================= ✅ UNIVERSAL DOWNLOAD FUNCTION (APK + WEB) =======================
 window.downloadFile = function(data, filename, mimeType = 'application/pdf') {
@@ -14920,11 +14645,10 @@ console.log('   ✅ Fully Responsive - Web + Android APK');
 // ====================================== PART 5 PROFILE MODULE (COMPLETE) ENDS HERE =================================================================================
 // ====================================== PART 5 PROFILE MODULE (COMPLETE) ENDS HERE =================================================================================
 //==================================================================== START PART 06 STUDENTS MODULE (COMPLETE) ==========================================================//
-// ======================= PART 6: STUDENTS MODULE (COMPLETE - WEB + APK FIXED) =======================
-// ======================= WITH REAL-TIME PHOTO UPDATE =======================
-// ======================= ONLINE/OFFLINE FLOW =======================
-// ======================= FULLY RESPONSIVE - WEB + ANDROID APK =======================
+// ======================= PART 06: STUDENTS MODULE (COMPLETE - WEBSITE + APK) =======================
+// ======================= COMPLETE FIXED VERSION =======================
 
+// ======================= CHECK FOR DUPLICATE DECLARATIONS =======================
 if (typeof window.studentsModuleComplete === 'undefined') {
     window.studentsModuleComplete = true;
 
@@ -14946,24 +14670,154 @@ let currentStudentOtherDocs = [];
 let currentSelectedInstallment = 'annual';
 let currentStudentTotalFee = 35000;
 let isStudentLoading = false;
-
 let genderChartInstance = null;
 let classChartInstance = null;
 
-// ======================= ✅ APK DETECTION =======================
-function isAndroidWebView() {
-    const ua = navigator.userAgent;
-    return /Android/i.test(ua) && (
-        ua.includes('wv') ||
-        ua.includes('WebView') ||
-        ua.includes('; wv') ||
-        window.navigator.standalone === true ||
-        window.matchMedia('(display-mode: standalone)').matches
-    );
+// ======================= CROPPER.JS LOAD CHECK =======================
+async function ensureCropperJS() {
+    console.log('🔍 Checking Cropper.js...');
+    
+    if (typeof Cropper !== 'undefined') {
+        console.log('✅ Cropper.js already loaded');
+        return true;
+    }
+    
+    console.log('📥 Loading Cropper.js...');
+    
+    try {
+        // Load CSS
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = 'https://cdn.jsdelivr.net/npm/cropperjs@1.5.12/dist/cropper.min.css';
+        document.head.appendChild(cssLink);
+        
+        // Load JS
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/cropperjs@1.5.12/dist/cropper.min.js';
+            script.onload = resolve;
+            script.onerror = function() {
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = 'https://unpkg.com/cropperjs@1.5.12/dist/cropper.min.js';
+                fallbackScript.onload = resolve;
+                fallbackScript.onerror = reject;
+                document.head.appendChild(fallbackScript);
+            };
+            document.head.appendChild(script);
+        });
+        
+        let attempts = 0;
+        while (typeof Cropper === 'undefined' && attempts < 30) {
+            await new Promise(r => setTimeout(r, 100));
+            attempts++;
+        }
+        
+        if (typeof Cropper !== 'undefined') {
+            console.log('✅ Cropper.js loaded successfully');
+            return true;
+        } else {
+            console.error('❌ Cropper.js not loaded after timeout');
+            return false;
+        }
+        
+    } catch(e) {
+        console.error('❌ Cropper.js load error:', e);
+        return false;
+    }
 }
 
-function isMobile() { return window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+// ======================= HELPER FUNCTIONS =======================
+window.escapeHtml = function(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+window.formatFullCurrency = function(amount) {
+    if (amount === undefined || amount === null) return '₹0';
+    return '₹' + amount.toLocaleString('en-IN');
+}
+
+function isMobile() { return window.innerWidth < 768; }
 function isTablet() { return window.innerWidth >= 768 && window.innerWidth < 1024; }
+
+window.getTeacherForClass = function(cls, sec) {
+    console.log(`🔍 getTeacherForClass called for: ${cls} ${sec}`);
+    
+    const teacherClassMap = {
+        'Playgroup A': 'Priya Sharma',
+        'Playgroup B': 'Neha Gupta',
+        'Nursery A': 'Rajesh Singh',
+        'Nursery B': 'Sneha Sharma',
+        'KG1 A': 'Anjali Kapoor',
+        'KG1 B': 'Vikram Joshi',
+        'KG2 A': 'Meera Nair',
+        'KG2 B': 'Rahul Mehta'
+    };
+    
+    const className = `${cls} ${sec}`;
+    const teacher = teacherClassMap[className] || null;
+    
+    console.log(`📚 Class: ${className} -> Teacher: ${teacher || 'Not Assigned'}`);
+    return teacher;
+};
+
+window.dataURLtoBlob = function(dataURL) {
+    try {
+        const arr = dataURL.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        const n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        for (let i = 0; i < n; i++) {
+            u8arr[i] = bstr.charCodeAt(i);
+        }
+        return new Blob([u8arr], { type: mime });
+    } catch(e) {
+        console.error('Blob conversion error:', e);
+        return null;
+    }
+}
+
+// ======================= GET SUPABASE CLIENT =======================
+window.getSupabaseClientWorking = function() {
+    if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) return window.supabaseClient;
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) return supabaseClient;
+    if (typeof supabase !== 'undefined' && supabase.createClient) {
+        try {
+            const url = "https://hghwbysjvkqcxdoqwkim.supabase.co";
+            const key = "sb_publishable_6T05auZDBn2okYevOxMjUg_TIF9nZ1w";
+            window.supabaseClient = supabase.createClient(url, key);
+            console.log('✅ Supabase client initialized');
+            return window.supabaseClient;
+        } catch(e) {
+            console.error('Supabase init error:', e);
+        }
+    }
+    return null;
+}
+
+// ======================= COMPRESS IMAGE =======================
+window.compressImage = async function(dataUrl, maxWidth, maxHeight, quality = 0.8) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width, height = img.height;
+            if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
+            if (height > maxHeight) { width = (width * maxHeight) / height; height = maxHeight; }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = dataUrl;
+    });
+}
 
 // ======================= GET CLASS LIST =======================
 window.getClassList = function() {
@@ -14991,66 +14845,7 @@ window.getClassFeeData = function(className) {
     };
 }
 
-// ======================= HELPER FUNCTIONS =======================
-window.escapeHtml = function(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
-
-window.formatFullCurrency = function(amount) {
-    if (amount === undefined || amount === null) return '₹0';
-    return '₹' + amount.toLocaleString('en-IN');
-}
-
-window.getTeacherForClass = function(cls, sec) {
-    const teacherClassMap = {
-        'Playgroup A': 'Priya Sharma',
-        'Playgroup B': 'Neha Gupta',
-        'Nursery A': 'Rajesh Singh',
-        'Nursery B': 'Sneha Sharma',
-        'KG1 A': 'Anjali Kapoor',
-        'KG1 B': 'Vikram Joshi',
-        'KG2 A': 'Meera Nair',
-        'KG2 B': 'Rahul Mehta'
-    };
-    const className = `${cls} ${sec}`;
-    return teacherClassMap[className] || null;
-};
-
-window.dataURLtoBlob = function(dataURL) {
-    const arr = dataURL.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    const n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
-    return new Blob([u8arr], { type: mime });
-}
-
-// ======================= GET SUPABASE CLIENT =======================
-window.getSupabaseClientWorking = function() {
-    if (typeof window.supabaseClient !== 'undefined' && window.supabaseClient) return window.supabaseClient;
-    if (typeof supabaseClient !== 'undefined' && supabaseClient) return supabaseClient;
-    if (typeof supabase !== 'undefined' && supabase.createClient) {
-        try {
-            const url = "https://hghwbysjvkqcxdoqwkim.supabase.co";
-            const key = "sb_publishable_6T05auZDBn2okYevOxMjUg_TIF9nZ1w";
-            window.supabaseClient = supabase.createClient(url, key);
-            console.log('✅ Supabase client initialized');
-            return window.supabaseClient;
-        } catch(e) {
-            console.error('Supabase init error:', e);
-        }
-    }
-    return null;
-}
-
-// ======================= PENDING QUEUE =======================
+// ======================= PENDING STUDENTS QUEUE =======================
 if (typeof window.pendingStudentsQueue === 'undefined') {
     window.pendingStudentsQueue = [];
 }
@@ -15088,7 +14883,9 @@ function addToPendingStudentsQueue(operation, data) {
 function updateStudentPendingStatus() {
     const pendingIndicator = document.getElementById('pendingIndicator');
     if (!pendingIndicator) return;
+    
     const pendingCount = window.pendingStudentsQueue ? window.pendingStudentsQueue.length : 0;
+    
     if (pendingCount > 0 && navigator.onLine) {
         pendingIndicator.style.display = 'flex';
         pendingIndicator.innerHTML = `
@@ -15106,19 +14903,28 @@ function updateStudentPendingStatus() {
 // ======================= PROCESS PENDING QUEUE =======================
 window.processPendingStudentsQueue = async function() {
     if (!navigator.onLine) {
+        console.log('📴 Offline - Cannot process queue');
         showNotification('📴 You are offline. Please connect to internet.', 'warning');
         return;
     }
+    
     if (window.pendingStudentsQueue.length === 0) {
+        console.log('📭 No pending students');
         showNotification('✅ No pending items to sync', 'success');
         return;
     }
+    
     const supabase = getSupabaseClientWorking();
-    if (!supabase) return;
+    if (!supabase) {
+        console.log('❌ No Supabase client');
+        return;
+    }
+    
     console.log(`🔄 Processing ${window.pendingStudentsQueue.length} pending operations...`);
     let completedIds = [];
     let successCount = 0;
     let failedCount = 0;
+    
     for (const item of window.pendingStudentsQueue) {
         try {
             if (item.operation === 'add' || item.operation === 'update') {
@@ -15160,7 +14966,11 @@ window.processPendingStudentsQueue = async function() {
                     other_docs: item.data.other_docs || [],
                     updated_at: new Date().toISOString()
                 };
-                const { error } = await supabase.from('students').upsert(dbData, { onConflict: 'id' });
+                
+                const { error } = await supabase
+                    .from('students')
+                    .upsert(dbData, { onConflict: 'id' });
+                
                 if (!error) {
                     completedIds.push(item.id);
                     successCount++;
@@ -15168,52 +14978,61 @@ window.processPendingStudentsQueue = async function() {
                 } else {
                     item.retryCount++;
                     failedCount++;
-                    if (item.retryCount >= 5) completedIds.push(item.id);
+                    console.error(`⚠️ Failed to sync: ${item.data.name}`, error);
+                    if (item.retryCount >= 5) {
+                        completedIds.push(item.id);
+                        console.log(`⏭️ Skipping after ${item.retryCount} retries`);
+                    }
                 }
             }
             else if (item.operation === 'delete') {
-                const { error } = await supabase.from('students').delete().eq('id', item.data.id);
+                const { error } = await supabase
+                    .from('students')
+                    .delete()
+                    .eq('id', item.data.id);
+                
                 if (!error) {
                     completedIds.push(item.id);
                     successCount++;
+                    console.log(`✅ Deleted: ${item.data.id}`);
                 } else {
                     item.retryCount++;
                     failedCount++;
-                    if (item.retryCount >= 5) completedIds.push(item.id);
+                    console.error(`⚠️ Failed to delete: ${item.data.id}`, error);
+                    if (item.retryCount >= 5) {
+                        completedIds.push(item.id);
+                    }
                 }
             }
         } catch(err) {
+            console.error('❌ Pending error:', err);
             item.retryCount++;
             failedCount++;
-            if (item.retryCount > 5) completedIds.push(item.id);
+            if (item.retryCount > 5) {
+                completedIds.push(item.id);
+            }
         }
         await new Promise(r => setTimeout(r, 100));
     }
+    
     window.pendingStudentsQueue = window.pendingStudentsQueue.filter(item => !completedIds.includes(item.id));
     savePendingStudentsQueue();
     updateStudentPendingStatus();
-    if (successCount > 0) showNotification(`✅ ${successCount} student(s) synced!`, 'success');
-    if (failedCount > 0) showNotification(`⚠️ ${failedCount} item(s) failed. Retrying later.`, 'warning');
+    
+    console.log(`✅ Sync completed: ${successCount} success, ${failedCount} failed`);
+    
+    if (successCount > 0) {
+        showNotification(`✅ ${successCount} student(s) synced to Database!`, 'success');
+    }
+    if (failedCount > 0) {
+        showNotification(`⚠️ ${failedCount} item(s) failed. Retrying later.`, 'warning');
+    }
+    if (window.pendingStudentsQueue.length === 0) {
+        showNotification('✅ All pending items synced!', 'success');
+    }
+    
     await loadStudentsFromSupabase();
     loadStudentManagement();
-}
-
-// ======================= COMPRESS IMAGE =======================
-window.compressImage = async function(dataUrl, maxWidth, maxHeight, quality = 0.8) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-            let width = img.width, height = img.height;
-            if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
-            if (height > maxHeight) { width = (width * maxHeight) / height; height = maxHeight; }
-            const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.src = dataUrl;
-    });
 }
 
 // ======================= UPLOAD STUDENT DOCUMENT =======================
@@ -15223,6 +15042,7 @@ window.uploadStudentDocumentToSupabase = async function(fileData, folderPath, fi
         console.log('📴 Offline - saved locally');
         return null;
     }
+    
     try {
         let fileDataToUpload = fileData;
         if (fileType === 'image/jpeg' || fileType === 'image/png') {
@@ -15230,18 +15050,35 @@ window.uploadStudentDocumentToSupabase = async function(fileData, folderPath, fi
                 fileDataToUpload = await compressImage(fileData, 800, 800, 0.7);
             }
         }
+        
         const blob = dataURLtoBlob(fileDataToUpload);
+        if (!blob) {
+            console.error('Failed to convert to blob');
+            return null;
+        }
+        
         const fileObj = new File([blob], fileName, { type: fileType });
         const fullPath = `${folderPath}/${fileName}`;
+        
         const { data: buckets } = await supabase.storage.listBuckets();
         if (!buckets.some(b => b.name === 'student_docs')) {
             await supabase.storage.createBucket('student_docs', { public: true });
+            console.log('✅ Created student_docs bucket');
         }
-        const { error } = await supabase.storage.from('student_docs').upload(fullPath, fileObj, { upsert: true });
+        
+        const { error } = await supabase.storage
+            .from('student_docs')
+            .upload(fullPath, fileObj, { upsert: true });
+        
         if (error) throw error;
-        const { data: urlData } = supabase.storage.from('student_docs').getPublicUrl(fullPath);
+        
+        const { data: urlData } = supabase.storage
+            .from('student_docs')
+            .getPublicUrl(fullPath);
+        
         console.log('✅ Uploaded to student_docs:', urlData.publicUrl);
         return urlData.publicUrl;
+        
     } catch(error) {
         console.error('Upload error:', error);
         return null;
@@ -15252,15 +15089,10 @@ window.uploadStudentDocumentToSupabase = async function(fileData, folderPath, fi
 window.openStudentPhotoCapture = function(callback) {
     console.log('📸 openStudentPhotoCapture called');
     
-    if (typeof callback !== 'function') {
-        console.error('❌ Callback is not a function!');
-        return;
-    }
+    const isAndroidWebView = /Android/i.test(navigator.userAgent) && 
+                             (navigator.userAgent.includes('wv') || 
+                              navigator.userAgent.includes('WebView'));
     
-    const isApk = isAndroidWebView();
-    console.log('📱 APK Mode:', isApk);
-    
-    // ========== SOURCE SELECTION MODAL ==========
     const sourceModal = document.createElement('div');
     sourceModal.className = 'modal-overlay';
     sourceModal.style.cssText = `
@@ -15271,42 +15103,39 @@ window.openStudentPhotoCapture = function(callback) {
         animation: modalFadeIn 0.25s ease;
     `;
     
-    const isMobileDevice = isMobile();
     sourceModal.innerHTML = `
         <div style="
             background: var(--bg-surface, #ffffff);
-            border-radius: ${isMobileDevice ? '24px' : '28px'};
+            border-radius: 28px;
             width: 90%; max-width: 350px;
-            padding: ${isMobileDevice ? '20px' : '24px'};
+            padding: 24px;
             text-align: center;
             box-shadow: 0 20px 35px rgba(0,0,0,0.3);
         ">
-            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
                 <i class="fas fa-camera" style="font-size: 28px; color: white;"></i>
             </div>
-            <h3 style="margin: 0 0 6px; font-size: ${isMobileDevice ? '16px' : '18px'}; color: #1e293b;">Choose Image Source</h3>
-            <p style="margin: 0 0 16px; font-size: ${isMobileDevice ? '11px' : '12px'}; color: #64748b;">Select how to add student photo</p>
+            <h3 style="margin: 0 0 6px; font-size: 18px; color: #1e293b;">Choose Image Source</h3>
+            <p style="margin: 0 0 16px; font-size: 12px; color: #64748b;">Select how to add student photo</p>
             
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button id="cameraOptBtn" class="btn btn-primary" style="
-                    width: 100%; padding: ${isApk ? '16px' : '14px'};
-                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
+                    width: 100%; padding: 14px;
+                    border-radius: 30px; font-size: 14px;
                     display: flex; align-items: center; justify-content: center; gap: 10px;
-                    background: linear-gradient(135deg, #2563eb, #1e40af);
+                    background: linear-gradient(135deg, var(--primary), var(--secondary));
                     color: white; border: none; cursor: pointer;
-                    min-height: ${isApk ? '56px' : '50px'};
-                    touch-action: manipulation;
+                    min-height: 50px;
                 ">
                     <i class="fas fa-camera"></i> 📸 Take Photo
                 </button>
                 <button id="galleryOptBtn" class="btn btn-secondary" style="
-                    width: 100%; padding: ${isApk ? '16px' : '14px'};
-                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
+                    width: 100%; padding: 14px;
+                    border-radius: 30px; font-size: 14px;
                     display: flex; align-items: center; justify-content: center; gap: 10px;
                     background: var(--bg-body, #f1f5f9);
                     color: var(--text-primary); border: 1px solid var(--border-light);
-                    cursor: pointer; min-height: ${isApk ? '56px' : '50px'};
-                    touch-action: manipulation;
+                    cursor: pointer; min-height: 50px;
                 ">
                     <i class="fas fa-images"></i> 🖼️ Choose from Gallery
                 </button>
@@ -15316,9 +15145,8 @@ window.openStudentPhotoCapture = function(callback) {
                 margin-top: 16px;
                 background: none; border: none;
                 color: var(--text-secondary);
-                cursor: pointer; padding: ${isApk ? '14px' : '10px'};
-                font-size: ${isApk ? '16px' : '14px'};
-                touch-action: manipulation;
+                cursor: pointer; padding: 10px;
+                font-size: 14px;
             ">
                 <i class="fas fa-times"></i> Cancel
             </button>
@@ -15328,15 +15156,15 @@ window.openStudentPhotoCapture = function(callback) {
     document.body.appendChild(sourceModal);
     
     const closeSourceModal = () => {
-        if (sourceModal && sourceModal.parentNode) sourceModal.remove();
+        if (sourceModal && sourceModal.parentNode) {
+            sourceModal.remove();
+        }
     };
     
-    // ========== OPEN FILE PICKER ==========
-    const openFilePicker = (useCamera) => {
+    const openFileInput = (useCamera) => {
         closeSourceModal();
-        console.log('📸 Opening file picker, camera:', useCamera);
+        console.log('📸 Opening file input, camera:', useCamera);
         
-        // ✅ Create input element
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/jpeg,image/jpg,image/png';
@@ -15348,7 +15176,6 @@ window.openStudentPhotoCapture = function(callback) {
         
         document.body.appendChild(input);
         
-        // ✅ APK: Multiple click attempts
         const triggerClick = () => {
             try {
                 input.click();
@@ -15356,416 +15183,64 @@ window.openStudentPhotoCapture = function(callback) {
             } catch(e) {
                 console.error('❌ Click error:', e);
                 try {
-                    const touchEvent = new TouchEvent('touchstart', { bubbles: true });
+                    const touchEvent = new TouchEvent('touchstart', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    });
                     input.dispatchEvent(touchEvent);
                     console.log('✅ Touch event triggered');
                 } catch(e2) {
-                    console.error('❌ Touch error:', e2);
-                    input.remove();
-                    showNotification('❌ Cannot open camera', 'error');
+                    console.error('❌ Touch event error:', e2);
+                    showNotification('❌ Cannot open camera. Please try gallery option.', 'error');
                 }
             }
         };
         
         setTimeout(triggerClick, 300);
         
-        // ✅ ✅ CRITICAL: Multiple event listeners
-        let processed = false;
-        
-        const handleFile = (e) => {
-            if (processed) return;
-            processed = true;
-            
-            const files = e.target.files;
-            if (!files || files.length === 0) {
+        input.onchange = function(e) {
+            console.log('📸 File selected event fired');
+            const file = e.target.files[0];
+            if (!file) {
                 console.log('❌ No file selected');
                 if (input.parentNode) input.remove();
                 return;
             }
             
-            const file = files[0];
-            console.log('📸 File selected:', file.name, file.type, file.size);
+            console.log('📸 File:', file.name, file.type, file.size);
             
-            // ✅ Read file with multiple methods
-            readFileAPK(file, callback, input);
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                console.log('✅ File read successfully');
+                if (input.parentNode) input.remove();
+                showCropModalForStudent(ev.target.result, callback);
+            };
+            reader.onerror = function(err) {
+                console.error('❌ FileReader error:', err);
+                if (input.parentNode) input.remove();
+                showNotification('❌ Error reading file', 'error');
+            };
+            reader.readAsDataURL(file);
         };
         
-        input.addEventListener('change', handleFile);
-        input.addEventListener('input', handleFile);
-        
-        // ✅ Fallback: Check after timeout
         setTimeout(() => {
-            if (!processed && input.parentNode) {
-                console.log('⏰ File selection timeout');
+            if (input.parentNode && !input.value) {
+                console.log('⏰ Input timeout - removing');
                 input.remove();
             }
         }, 30000);
     };
     
-    // ========== READ FILE (APK COMPATIBLE) ==========
-    function readFileAPK(file, callback, inputElement) {
-        console.log('📖 readFileAPK for:', file.name);
+    function showCropModalForStudent(imageData, callback) {
+        console.log('✂️ showCropModalForStudent called');
         
-        // ✅ METHOD 1: FileReader with addEventListener
-        const reader = new FileReader();
-        
-        reader.addEventListener('load', function(ev) {
-            console.log('✅ FileReader load event fired');
-            if (inputElement && inputElement.parentNode) inputElement.remove();
-            const imageData = ev.target.result;
-            if (imageData && imageData.length > 100) {
-                compressAndReturn(imageData, callback);
-            } else {
-                console.warn('⚠️ Invalid image data, trying alternative');
-                readFileAlternative(file, callback);
-            }
-        });
-        
-        reader.addEventListener('error', function(err) {
-            console.error('❌ FileReader error:', err);
-            if (inputElement && inputElement.parentNode) inputElement.remove();
-            readFileAlternative(file, callback);
-        });
-        
-        reader.addEventListener('loadend', function() {
-            console.log('📖 FileReader loadend');
-        });
-        
-        try {
-            reader.readAsDataURL(file);
-            console.log('✅ FileReader started');
-        } catch(e) {
-            console.error('❌ FileReader start error:', e);
-            readFileAlternative(file, callback);
-        }
-        
-        // ✅ Fallback timeout
-        setTimeout(() => {
-            if (inputElement && inputElement.parentNode) {
-                console.log('⏰ FileReader timeout');
-                readFileAlternative(file, callback);
-            }
-        }, 5000);
-    }
-    
-    // ========== ALTERNATIVE FILE READ ==========
-    function readFileAlternative(file, callback) {
-        console.log('📖 readFileAlternative for:', file.name);
-        
-        try {
-            // ✅ METHOD 2: URL.createObjectURL
-            const url = URL.createObjectURL(file);
-            console.log('✅ Object URL created');
-            
-            const img = new Image();
-            img.onload = function() {
-                console.log('✅ Image loaded from URL');
-                const canvas = document.createElement('canvas');
-                const maxSize = 800;
-                let width = img.width;
-                let height = img.height;
-                
-                if (width > height) {
-                    if (width > maxSize) {
-                        height = (height * maxSize) / width;
-                        width = maxSize;
-                    }
-                } else {
-                    if (height > maxSize) {
-                        width = (width * maxSize) / height;
-                        height = maxSize;
-                    }
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                const dataUri = canvas.toDataURL('image/jpeg', 0.8);
-                console.log('✅ Canvas data URI created');
-                URL.revokeObjectURL(url);
-                callback(dataUri);
-            };
-            img.onerror = function() {
-                console.error('❌ Image load error');
-                URL.revokeObjectURL(url);
-                // ✅ Last resort
-                generatePlaceholder(callback, file.name);
-            };
-            img.src = url;
-            
-        } catch(e) {
-            console.error('❌ Alternative read error:', e);
-            generatePlaceholder(callback, file.name);
-        }
-    }
-    
-    // ========== GENERATE PLACEHOLDER ==========
-    function generatePlaceholder(callback, name) {
-        console.log('📸 Generating placeholder for:', name);
-        const canvas = document.createElement('canvas');
-        canvas.width = 200;
-        canvas.height = 200;
-        const ctx = canvas.getContext('2d');
-        
-        const gradient = ctx.createLinearGradient(0, 0, 200, 200);
-        gradient.addColorStop(0, '#2563eb');
-        gradient.addColorStop(1, '#1e40af');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 200, 200);
-        
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(10, 10, 180, 180);
-        
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 24px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('📸', 100, 80);
-        ctx.font = '14px Arial';
-        ctx.fillText(name.substring(0, 15) || 'Photo', 100, 130);
-        ctx.font = '10px Arial';
-        ctx.fillText('(Captured)', 100, 160);
-        
-        const dataUri = canvas.toDataURL('image/jpeg', 0.8);
-        callback(dataUri);
-    }
-    
-    // ========== COMPRESS AND RETURN ==========
-    function compressAndReturn(imageData, callback) {
-        try {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                const maxSize = 500;
-                
-                if (width > height) {
-                    if (width > maxSize) {
-                        height = (height * maxSize) / width;
-                        width = maxSize;
-                    }
-                } else {
-                    if (height > maxSize) {
-                        width = (width * maxSize) / height;
-                        height = maxSize;
-                    }
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                const compressed = canvas.toDataURL('image/jpeg', 0.7);
-                console.log('✅ Image compressed');
-                callback(compressed);
-            };
-            img.onerror = function() {
-                console.log('⚠️ Compress failed, using original');
-                callback(imageData);
-            };
-            img.src = imageData;
-        } catch(e) {
-            console.log('⚠️ Compress error:', e);
+        if (typeof Cropper === 'undefined') {
+            console.warn('⚠️ Cropper.js not loaded, skipping crop');
             callback(imageData);
-        }
-    }
-    
-    // ========== BUTTON EVENTS ==========
-    document.getElementById('cameraOptBtn').onclick = function() {
-        openFilePicker(true);
-    };
-    
-    document.getElementById('galleryOptBtn').onclick = function() {
-        openFilePicker(false);
-    };
-    
-    document.getElementById('closeSourceModal').onclick = closeSourceModal;
-    
-    // ✅ APK: Touch events for buttons
-    if (isApk) {
-        ['cameraOptBtn', 'galleryOptBtn', 'closeSourceModal'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    this.click();
-                });
-            }
-        });
-    }
-    
-    // ✅ Close on overlay click
-    sourceModal.addEventListener('click', function(e) {
-        if (e.target === sourceModal) closeSourceModal();
-    });
-}
-
-// ======================= OPEN DOCUMENT UPLOAD =======================
-window.openDocumentUpload = function(callback, acceptType = 'image/*,application/pdf') {
-    console.log('📄 openDocumentUpload called');
-    
-    const isApk = isAndroidWebView();
-    const isMobileDevice = isMobile();
-    
-    // ========== SOURCE SELECTION MODAL ==========
-    const sourceModal = document.createElement('div');
-    sourceModal.className = 'modal-overlay';
-    sourceModal.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
-        display: flex; align-items: center; justify-content: center;
-        z-index: 100001; padding: 16px;
-        animation: modalFadeIn 0.25s ease;
-    `;
-    
-    sourceModal.innerHTML = `
-        <div style="
-            background: var(--bg-surface, #ffffff);
-            border-radius: ${isMobileDevice ? '24px' : '28px'};
-            width: 90%; max-width: 350px;
-            padding: ${isMobileDevice ? '20px' : '24px'};
-            text-align: center;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
-        ">
-            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
-                <i class="fas fa-upload" style="font-size: 28px; color: white;"></i>
-            </div>
-            <h3 style="margin: 0 0 6px; font-size: ${isMobileDevice ? '16px' : '18px'}; color: #1e293b;">Upload Document</h3>
-            <p style="margin: 0 0 16px; font-size: ${isMobileDevice ? '11px' : '12px'}; color: #64748b;">Select document source</p>
-            
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button id="cameraDocBtn" class="btn btn-primary" style="
-                    width: 100%; padding: ${isApk ? '16px' : '14px'};
-                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
-                    display: flex; align-items: center; justify-content: center; gap: 10px;
-                    background: linear-gradient(135deg, #2563eb, #1e40af);
-                    color: white; border: none; cursor: pointer;
-                    min-height: ${isApk ? '56px' : '50px'};
-                    touch-action: manipulation;
-                ">
-                    <i class="fas fa-camera"></i> 📸 Take Photo
-                </button>
-                <button id="galleryDocBtn" class="btn btn-secondary" style="
-                    width: 100%; padding: ${isApk ? '16px' : '14px'};
-                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
-                    display: flex; align-items: center; justify-content: center; gap: 10px;
-                    background: var(--bg-body, #f1f5f9);
-                    color: var(--text-primary); border: 1px solid var(--border-light);
-                    cursor: pointer; min-height: ${isApk ? '56px' : '50px'};
-                    touch-action: manipulation;
-                ">
-                    <i class="fas fa-images"></i> 🖼️ Choose from Gallery
-                </button>
-                <button id="pdfDocBtn" class="btn btn-info" style="
-                    width: 100%; padding: ${isApk ? '16px' : '14px'};
-                    border-radius: 30px; font-size: ${isApk ? '16px' : '14px'};
-                    display: flex; align-items: center; justify-content: center; gap: 10px;
-                    background: #dbeafe; color: #1e40af; border: none;
-                    cursor: pointer; min-height: ${isApk ? '56px' : '50px'};
-                    touch-action: manipulation;
-                ">
-                    <i class="fas fa-file-pdf"></i> 📄 Upload PDF
-                </button>
-            </div>
-            
-            <button id="closeDocModal" style="
-                margin-top: 16px;
-                background: none; border: none;
-                color: var(--text-secondary);
-                cursor: pointer; padding: ${isApk ? '14px' : '10px'};
-                font-size: ${isApk ? '16px' : '14px'};
-                touch-action: manipulation;
-            ">
-                <i class="fas fa-times"></i> Cancel
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(sourceModal);
-    
-    const closeSourceModal = () => {
-        if (sourceModal && sourceModal.parentNode) sourceModal.remove();
-    };
-    
-    // ========== OPEN FILE PICKER ==========
-    const openFileInput = (useCamera, acceptType) => {
-        closeSourceModal();
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = acceptType;
-        input.style.cssText = 'position:absolute; opacity:0; pointer-events:none; z-index:-1;';
-        
-        if (useCamera && acceptType.includes('image/')) {
-            input.setAttribute('capture', 'environment');
+            return;
         }
         
-        document.body.appendChild(input);
-        
-        const triggerClick = () => {
-            try { input.click(); } catch(e) {
-                try {
-                    const touchEvent = new TouchEvent('touchstart', { bubbles: true });
-                    input.dispatchEvent(touchEvent);
-                } catch(e2) {
-                    input.remove();
-                    showNotification('❌ Cannot open file picker', 'error');
-                }
-            }
-        };
-        
-        setTimeout(triggerClick, 300);
-        
-        let processed = false;
-        
-        const handleFile = (e) => {
-            if (processed) return;
-            processed = true;
-            
-            const files = e.target.files;
-            if (!files || files.length === 0) {
-                if (input.parentNode) input.remove();
-                return;
-            }
-            
-            const file = files[0];
-            console.log('📄 File selected:', file.name, file.type, file.size);
-            
-            const reader = new FileReader();
-            reader.addEventListener('load', function(ev) {
-                if (input.parentNode) input.remove();
-                const fileData = ev.target.result;
-                const fileName = file.name;
-                const fileType = file.type;
-                
-                if (fileType.startsWith('image/')) {
-                    // Show crop for images
-                    showCropForDocument(fileData, fileName, fileType, callback);
-                } else {
-                    callback(fileData, fileName, fileType);
-                }
-            });
-            reader.addEventListener('error', function() {
-                if (input.parentNode) input.remove();
-                showNotification('❌ Error reading file', 'error');
-            });
-            reader.readAsDataURL(file);
-        };
-        
-        input.addEventListener('change', handleFile);
-        input.addEventListener('input', handleFile);
-        
-        setTimeout(() => {
-            if (!processed && input.parentNode) input.remove();
-        }, 30000);
-    };
-    
-    // ========== SHOW CROP FOR DOCUMENT ==========
-    function showCropForDocument(imageData, fileName, fileType, callback) {
         const cropModal = document.createElement('div');
         cropModal.className = 'modal-overlay';
         cropModal.style.cssText = `
@@ -15779,7 +15254,7 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
         cropModal.innerHTML = `
             <div style="
                 background: var(--bg-surface, #ffffff);
-                border-radius: ${isMobileDevice ? '24px' : '28px'};
+                border-radius: 28px;
                 width: 95%; max-width: 550px;
                 max-height: 92vh;
                 overflow: hidden;
@@ -15789,13 +15264,15 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
                 animation: modalSlideUp 0.3s ease;
             ">
                 <div style="
-                    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+                    background: linear-gradient(135deg, var(--primary), var(--secondary));
                     padding: 16px 20px;
-                    display: flex; justify-content: space-between; align-items: center;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                     flex-shrink: 0;
                 ">
-                    <h2 style="color: white; margin: 0; font-size: 17px;">
-                        <i class="fas fa-crop-alt"></i> Crop Document
+                    <h2 style="color: white; margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-crop-alt"></i> Crop Photo (1:1)
                     </h2>
                     <button class="close-btn" onclick="this.closest('.modal-overlay').remove()" style="
                         background: rgba(255,255,255,0.2);
@@ -15803,30 +15280,51 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
                         width: 34px; height: 34px;
                         border-radius: 50%;
                         cursor: pointer; font-size: 18px;
+                        display: flex; align-items: center; justify-content: center;
                     ">
                         &times;
                     </button>
                 </div>
                 
-                <div style="padding: 16px; flex: 1; overflow-y: auto; background: var(--bg-body, #f1f5f9);">
-                    <div style="background: white; border-radius: 12px; padding: 8px; max-height: 55vh; overflow: hidden;">
-                        <img id="cropDocImg" src="${imageData}" style="max-width: 100%; max-height: 50vh; display: block;">
+                <div style="
+                    padding: 16px;
+                    flex: 1;
+                    overflow-y: auto;
+                    background: var(--bg-body, #f1f5f9);
+                ">
+                    <div style="
+                        background: white;
+                        border-radius: 12px;
+                        padding: 8px;
+                        max-height: 55vh;
+                        overflow: hidden;
+                    ">
+                        <img id="cropStudentImg" src="${imageData}" style="max-width: 100%; max-height: 50vh; display: block;">
                     </div>
                     
-                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
-                        <button id="cropDocSaveBtn" class="btn btn-primary" style="
+                    <div style="
+                        display: flex;
+                        gap: 10px;
+                        justify-content: center;
+                        margin-top: 16px;
+                        flex-wrap: wrap;
+                    ">
+                        <button id="cropSaveBtn" class="btn btn-primary" style="
                             padding: 12px 24px;
                             border-radius: 30px;
-                            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+                            background: linear-gradient(135deg, var(--primary), var(--secondary));
                             color: white; border: none;
                             cursor: pointer; font-size: 14px;
                             font-weight: 600;
                             min-height: 48px;
                             min-width: 120px;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
                         ">
                             <i class="fas fa-check"></i> Crop & Save
                         </button>
-                        <button id="cropDocCancelBtn" class="btn btn-secondary" style="
+                        <button id="cropCancelBtn" class="btn btn-secondary" style="
                             padding: 12px 24px;
                             border-radius: 30px;
                             background: var(--bg-body, #f1f5f9);
@@ -15836,6 +15334,9 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
                             font-weight: 600;
                             min-height: 48px;
                             min-width: 120px;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
                         ">
                             <i class="fas fa-times"></i> Cancel
                         </button>
@@ -15846,86 +15347,259 @@ window.openDocumentUpload = function(callback, acceptType = 'image/*,application
         
         document.body.appendChild(cropModal);
         
-        const img = document.getElementById('cropDocImg');
+        const img = document.getElementById('cropStudentImg');
+        if (!img) {
+            console.error('❌ Crop image element not found');
+            cropModal.remove();
+            callback(imageData);
+            return;
+        }
+        
         let cropper = null;
         
         setTimeout(() => {
-            if (typeof Cropper !== 'undefined') {
-                try {
-                    cropper = new Cropper(img, {
-                        aspectRatio: null,
-                        viewMode: 1,
-                        autoCropArea: 1,
-                        movable: true,
-                        zoomable: true,
-                        rotatable: false,
-                        scalable: false
-                    });
-                    console.log('✅ Cropper initialized');
-                } catch(e) {
-                    console.error('Cropper init error:', e);
-                    cropModal.remove();
-                    callback(imageData, fileName, fileType);
-                    return;
-                }
-            } else {
-                console.warn('⚠️ Cropper not available');
+            try {
+                cropper = new Cropper(img, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 0.9,
+                    movable: true,
+                    zoomable: true,
+                    rotatable: false,
+                    scalable: false,
+                    dragMode: 'move',
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    guides: true,
+                    center: true,
+                    highlight: true,
+                    background: true,
+                    responsive: true,
+                    restore: true,
+                    checkCrossOrigin: true,
+                    checkOrientation: true
+                });
+                console.log('✅ Cropper initialized successfully');
+            } catch(e) {
+                console.error('❌ Cropper init error:', e);
                 cropModal.remove();
-                callback(imageData, fileName, fileType);
+                callback(imageData);
                 return;
             }
         }, 200);
         
-        document.getElementById('cropDocSaveBtn').onclick = function() {
+        document.getElementById('cropSaveBtn').onclick = function() {
+            console.log('✂️ Crop save clicked');
             try {
                 if (cropper) {
                     const canvas = cropper.getCroppedCanvas();
                     const croppedData = canvas.toDataURL('image/jpeg', 0.9);
+                    console.log('✅ Crop successful');
                     cropper.destroy();
+                    cropper = null;
                     cropModal.remove();
-                    callback(croppedData, fileName, fileType);
+                    callback(croppedData);
                 } else {
+                    console.warn('⚠️ Cropper not initialized');
                     cropModal.remove();
-                    callback(imageData, fileName, fileType);
+                    callback(imageData);
                 }
             } catch(err) {
-                console.error('Crop error:', err);
+                console.error('❌ Crop error:', err);
+                showNotification('❌ Error cropping image', 'error');
                 cropModal.remove();
-                callback(imageData, fileName, fileType);
+                callback(imageData);
             }
         };
         
-        document.getElementById('cropDocCancelBtn').onclick = function() {
-            if (cropper) { try { cropper.destroy(); } catch(e) {} }
+        document.getElementById('cropCancelBtn').onclick = function() {
+            console.log('✂️ Crop cancelled');
+            if (cropper) {
+                try { cropper.destroy(); } catch(e) {}
+                cropper = null;
+            }
             cropModal.remove();
-            callback(imageData, fileName, fileType);
+            callback(imageData);
         };
-    }
-    
-    // ========== BUTTON EVENTS ==========
-    document.getElementById('cameraDocBtn').onclick = () => openFileInput(true, 'image/*');
-    document.getElementById('galleryDocBtn').onclick = () => openFileInput(false, 'image/*');
-    document.getElementById('pdfDocBtn').onclick = () => openFileInput(false, 'application/pdf');
-    document.getElementById('closeDocModal').onclick = closeSourceModal;
-    
-    // ✅ APK: Touch events
-    if (isApk) {
-        ['cameraDocBtn', 'galleryDocBtn', 'pdfDocBtn', 'closeDocModal'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    this.click();
-                });
+        
+        cropModal.addEventListener('click', function(e) {
+            if (e.target === cropModal) {
+                if (cropper) {
+                    try { cropper.destroy(); } catch(e) {}
+                    cropper = null;
+                }
+                cropModal.remove();
+                callback(imageData);
             }
         });
     }
-}
+    
+    document.getElementById('cameraOptBtn').onclick = function() {
+        openFileInput(true);
+    };
+    
+    document.getElementById('galleryOptBtn').onclick = function() {
+        openFileInput(false);
+    };
+    
+    document.getElementById('closeSourceModal').onclick = closeSourceModal;
+    
+    sourceModal.addEventListener('click', function(e) {
+        if (e.target === sourceModal) {
+            closeSourceModal();
+        }
+    });
+};
+
+// ======================= OPEN DOCUMENT UPLOAD =======================
+window.openDocumentUpload = function(callback, acceptType = 'image/*,application/pdf') {
+    console.log('📄 openDocumentUpload called');
+    
+    const isMobileDevice = isMobile();
+    const isAndroidWebView = navigator.userAgent.toLowerCase().includes('android') && 
+                             !navigator.userAgent.toLowerCase().includes('chrome');
+    
+    if (isAndroidWebView) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = acceptType;
+        if (acceptType.includes('image/')) {
+            input.setAttribute('capture', 'environment');
+        }
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    let fileData = ev.target.result;
+                    let fileName = file.name;
+                    let fileType = file.type;
+                    
+                    if (file.type.startsWith('image/')) {
+                        const cropModal = document.createElement('div');
+                        cropModal.className = 'modal-overlay';
+                        cropModal.style.zIndex = '100001';
+                        cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+                        cropModal.innerHTML = `
+                            <div class="modal-content" style="max-width:500px; width:95%; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:90vh; overflow-y:auto;">
+                                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:16px;">Crop Document</h3>
+                                <img id="cropDocImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:50vh;">
+                                <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                                    <button id="cropSaveBtn" class="btn btn-primary" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
+                                    <button id="cancelBtn" class="btn btn-danger" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(cropModal);
+                        const img = document.getElementById('cropDocImg');
+                        let cropper = new Cropper(img, { aspectRatio: null, viewMode: 1, autoCropArea: 1 });
+                        document.getElementById('cropSaveBtn').onclick = function() {
+                            const canvas = cropper.getCroppedCanvas();
+                            cropper.destroy();
+                            cropModal.remove();
+                            callback(canvas.toDataURL('image/jpeg', 0.9), fileName, fileType);
+                        };
+                        document.getElementById('cancelBtn').onclick = function() {
+                            if (cropper) cropper.destroy();
+                            cropModal.remove();
+                        };
+                    } else {
+                        callback(fileData, fileName, fileType);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    } else {
+        const sourceModal = document.createElement('div');
+        sourceModal.className = 'modal-overlay';
+        sourceModal.style.zIndex = '100000';
+        sourceModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100000; padding:16px;';
+        sourceModal.innerHTML = `
+            <div style="background:var(--bg-surface); border-radius:28px; width:${isMobileDevice ? '95%' : '350px'}; max-width:350px; padding:20px; text-align:center;">
+                <i class="fas fa-upload" style="font-size:${isMobileDevice ? '36px' : '48px'}; color:var(--primary); margin-bottom:15px; display:block;"></i>
+                <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:${isMobileDevice ? '16px' : '18px'};">Upload Document</h3>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button id="cameraOptBtn" class="btn btn-primary" style="width:100%; padding:${isMobileDevice ? '12px' : '14px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">📸 Take Photo</button>
+                    <button id="galleryOptBtn" class="btn btn-secondary" style="width:100%; padding:${isMobileDevice ? '12px' : '14px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:var(--bg-body); color:var(--text-primary);">🖼️ Gallery</button>
+                    <button id="pdfOptBtn" class="btn btn-info" style="width:100%; padding:${isMobileDevice ? '12px' : '14px'}; border-radius:30px; font-size:${isMobileDevice ? '13px' : '14px'}; border:none; cursor:pointer; background:#3b82f6; color:white;">📄 Upload PDF</button>
+                </div>
+                <button id="closeSourceModal" style="margin-top:15px; background:none; border:none; color:var(--text-secondary); cursor:pointer; padding:10px; font-size:${isMobileDevice ? '13px' : '14px'};">Cancel</button>
+            </div>
+        `;
+        document.body.appendChild(sourceModal);
+        
+        const closeModal = function() { sourceModal.remove(); };
+        
+        const openFileInput = function(useCamera, acceptType) {
+            closeModal();
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = acceptType;
+            if (useCamera && acceptType.includes('image/')) {
+                input.setAttribute('capture', 'environment');
+            }
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                        let fileData = ev.target.result;
+                        let fileName = file.name;
+                        let fileType = file.type;
+                        
+                        if (file.type.startsWith('image/')) {
+                            const cropModal = document.createElement('div');
+                            cropModal.className = 'modal-overlay';
+                            cropModal.style.zIndex = '100001';
+                            cropModal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100001; padding:16px;';
+                            cropModal.innerHTML = `
+                                <div class="modal-content" style="max-width:500px; width:95%; text-align:center; background:var(--bg-surface); border-radius:24px; padding:20px; max-height:90vh; overflow-y:auto;">
+                                    <h3 style="margin-bottom:15px; color:var(--text-primary); font-size:16px;">Crop Document</h3>
+                                    <img id="cropDocImg" src="${ev.target.result}" style="max-width:100%; border-radius:12px; max-height:50vh;">
+                                    <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                                        <button id="cropSaveBtn" class="btn btn-primary" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;">✂️ Crop & Save</button>
+                                        <button id="cancelBtn" class="btn btn-danger" style="padding:8px 16px; border-radius:30px; font-size:12px; border:none; cursor:pointer; background:#ef4444; color:white;">Cancel</button>
+                                    </div>
+                                </div>
+                            `;
+                            document.body.appendChild(cropModal);
+                            const img = document.getElementById('cropDocImg');
+                            let cropper = new Cropper(img, { aspectRatio: null, viewMode: 1, autoCropArea: 1 });
+                            document.getElementById('cropSaveBtn').onclick = function() {
+                                const canvas = cropper.getCroppedCanvas();
+                                cropper.destroy();
+                                cropModal.remove();
+                                callback(canvas.toDataURL('image/jpeg', 0.9), fileName, fileType);
+                            };
+                            document.getElementById('cancelBtn').onclick = function() {
+                                if (cropper) cropper.destroy();
+                                cropModal.remove();
+                            };
+                        } else {
+                            callback(fileData, fileName, fileType);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        };
+        
+        document.getElementById('cameraOptBtn').onclick = function() { openFileInput(true, 'image/*'); };
+        document.getElementById('galleryOptBtn').onclick = function() { openFileInput(false, 'image/*'); };
+        document.getElementById('pdfOptBtn').onclick = function() { openFileInput(false, 'application/pdf'); };
+        document.getElementById('closeSourceModal').onclick = closeModal;
+    }
+};
 
 // ======================= LOAD STUDENTS FROM SUPABASE =======================
 window.loadStudentsFromSupabase = async function() {
     console.log('🔄 Loading students from Supabase...');
+    
     const supabase = getSupabaseClientWorking();
+    
     if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Loading from cache');
         const cached = localStorage.getItem('cache_students');
@@ -15936,17 +15610,26 @@ window.loadStudentsFromSupabase = async function() {
                 for (let stu of parsed) window.students.push(stu);
                 console.log(`📦 Loaded ${window.students.length} students from cache`);
                 return true;
-            } catch(e) { console.error('Cache parse error:', e); }
+            } catch(e) {
+                console.error('Cache parse error:', e);
+            }
         }
         window.students = [];
         return false;
     }
+    
     try {
-        const { data, error } = await supabase.from('students').select('*').order('name', { ascending: true });
+        const { data, error } = await supabase
+            .from('students')
+            .select('*')
+            .order('name', { ascending: true });
+        
         if (error) throw error;
+        
         if (data && data.length > 0) {
             const existing = [...window.students];
             window.students.length = 0;
+            
             for (let stu of data) {
                 let old = existing.find(e => e.id === stu.id);
                 window.students.push({
@@ -16004,13 +15687,16 @@ window.loadStudentsFromSupabase = async function() {
 // ======================= SAVE STUDENT TO SUPABASE =======================
 window.saveStudentToSupabase = async function(studentData) {
     console.log(`📤 Saving student: ${studentData.name}`);
+    
     const supabase = getSupabaseClientWorking();
+    
     if (!supabase || !navigator.onLine) {
         console.log('📴 Offline - Adding to pending queue');
         addToPendingStudentsQueue('add', studentData);
         showNotification('📴 Offline: Student saved locally.', 'warning');
         return false;
     }
+    
     try {
         const dbData = {
             id: studentData.id,
@@ -16050,34 +15736,49 @@ window.saveStudentToSupabase = async function(studentData) {
             class_teacher: studentData.class_teacher || null,
             updated_at: new Date().toISOString()
         };
-        const { error } = await supabase.from('students').upsert(dbData, { onConflict: 'id' });
+        
+        const { error } = await supabase
+            .from('students')
+            .upsert(dbData, { onConflict: 'id' });
+        
         if (error) {
             console.error('❌ Supabase error:', error);
-            const minimalData = {
-                id: studentData.id,
-                name: studentData.name,
-                cls: studentData.cls,
-                sec: studentData.sec || 'A',
-                roll: studentData.roll,
-                gender: studentData.gender || 'Male',
-                mobile: studentData.mobile || '',
-                total_fee: studentData.total_fee || 0,
-                photo_url: studentData.photo_url || null,
-                updated_at: new Date().toISOString()
-            };
-            const { error: retryError } = await supabase.from('students').upsert(minimalData, { onConflict: 'id' });
-            if (!retryError) {
-                console.log('✅ Saved with minimal data');
-                showNotification('✅ Student saved!', 'success');
-                return true;
+            
+            if (error.message && error.message.includes('column')) {
+                console.log('🔄 Retrying with minimal data...');
+                const minimalData = {
+                    id: studentData.id,
+                    name: studentData.name,
+                    cls: studentData.cls,
+                    sec: studentData.sec || 'A',
+                    roll: studentData.roll,
+                    gender: studentData.gender || 'Male',
+                    mobile: studentData.mobile || '',
+                    total_fee: studentData.total_fee || 0,
+                    photo_url: studentData.photo_url || null,
+                    updated_at: new Date().toISOString()
+                };
+                
+                const { error: retryError } = await supabase
+                    .from('students')
+                    .upsert(minimalData, { onConflict: 'id' });
+                
+                if (!retryError) {
+                    console.log('✅ Saved with minimal data');
+                    showNotification('✅ Student saved!', 'success');
+                    return true;
+                }
             }
+            
             addToPendingStudentsQueue('add', studentData);
             showNotification(`⚠️ Failed: ${error.message}`, 'warning');
             return false;
         }
+        
         console.log(`✅ ${studentData.name} saved to Supabase`);
         showNotification('✅ Student saved to Database!', 'success');
         return true;
+        
     } catch(e) {
         console.error('❌ Save error:', e);
         addToPendingStudentsQueue('add', studentData);
@@ -16093,15 +15794,29 @@ window.deleteStudentFromSupabase = async function(studentId) {
         addToPendingStudentsQueue('delete', { id: studentId });
         return false;
     }
+    
     try {
-        const { error } = await supabase.from('students').delete().eq('id', studentId);
+        const { error } = await supabase
+            .from('students')
+            .delete()
+            .eq('id', studentId);
+        
         if (error) throw error;
-        console.log(`✅ Student ${studentId} deleted from students table`);
+        
         try {
-            const { error: userError } = await supabase.from('users').delete().eq('id', studentId);
-            if (!userError) console.log(`✅ Student ${studentId} deleted from users table`);
-        } catch(e) { console.error('Users delete error:', e); }
+            const { error: userError } = await supabase
+                .from('users')
+                .delete()
+                .eq('id', studentId);
+            if (!userError) {
+                console.log(`✅ Student ${studentId} deleted from users table`);
+            }
+        } catch(e) {
+            console.error('Users delete error:', e);
+        }
+        
         return true;
+        
     } catch(e) {
         console.error('Delete error:', e);
         addToPendingStudentsQueue('delete', { id: studentId });
@@ -16122,7 +15837,10 @@ window.refreshStudentsData = async function() {
 
 // ======================= GET FILTERED STUDENTS =======================
 window.getFilteredStudentsForCurrentUser = function() {
+    console.log('🔍 getFilteredStudentsForCurrentUser called');
+    
     if (!window.currentUser) return [];
+    
     if (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant') {
         let filtered = [...(window.students || [])];
         if (studentFilterText !== '') {
@@ -16135,6 +15853,7 @@ window.getFilteredStudentsForCurrentUser = function() {
         }
         return filtered;
     }
+    
     if (window.currentUser.role === 'teacher') {
         const teacherName = window.currentUser.name;
         const teacherClassMap = {
@@ -16147,82 +15866,141 @@ window.getFilteredStudentsForCurrentUser = function() {
             'Meera Nair': 'KG2 A',
             'Rahul Mehta': 'KG2 B'
         };
-        let targetClass = teacherClassMap[teacherName] || window.currentUser.class_teacher || localStorage.getItem('teacherClass');
+        
+        let targetClass = teacherClassMap[teacherName] || window.currentUser.class_teacher || null;
+        
+        if (!targetClass && window.employees) {
+            for (let emp of window.employees) {
+                if (emp.name === teacherName) {
+                    targetClass = emp.class_teacher || emp.classTeacher || null;
+                    if (targetClass) break;
+                }
+            }
+        }
+        
         if (!targetClass) return [];
-        let filtered = (window.students || []).filter(s => `${s.cls || ''} ${s.sec || ''}`.trim() === targetClass);
+        
+        let filtered = (window.students || []).filter(s => {
+            let studentClass = `${s.cls || ''} ${s.sec || ''}`.trim();
+            return studentClass === targetClass;
+        });
+        
         if (studentFilterText !== '') {
             const searchTerm = studentFilterText.toLowerCase();
-            filtered = filtered.filter(s => s.name.toLowerCase().includes(searchTerm) || s.roll.toString().includes(searchTerm));
+            filtered = filtered.filter(s => 
+                s.name.toLowerCase().includes(searchTerm) || 
+                s.roll.toString().includes(searchTerm)
+            );
         }
+        
         return filtered;
     }
+    
     if (window.currentUser.role === 'student') {
-        return (window.students || []).filter(s => s.name === window.currentUser.name);
+        const studentName = window.currentUser.name;
+        let filtered = (window.students || []).filter(s => s.name === studentName);
+        return filtered;
     }
+    
     return [];
 }
 
-// ======================= SAVE STUDENT =======================
+// ======================= SAVE STUDENT (FIXED) =======================
 window.saveStudent = async function(editId) {
     console.log('💾 saveStudent called, editId:', editId);
+    
     const name = document.getElementById('stuName')?.value.trim();
     const cls = document.getElementById('stuClass')?.value;
     const sec = document.getElementById('stuSec')?.value;
     const roll = parseInt(document.getElementById('stuRoll')?.value);
+    
     if (!name || !cls || !roll) {
         showNotification('Please fill: Name, Class, Roll Number', 'error');
         return;
     }
+    
     const isEdit = editId !== null && editId !== '';
     const studentId = isEdit ? editId : ('S' + Date.now());
     const folderPath = `${studentId}_${name.replace(/\s/g, '_')}`;
     
     let photoUrl = currentStudentPhotoUrl;
+    
     if (currentStudentPhotoData) {
         showLoader();
-        showNotification('📸 Processing photo...', 'info');
+        showNotification('📸 Uploading photo...', 'info');
+        
         try {
             let compressedData = currentStudentPhotoData;
             if (typeof compressImage === 'function') {
                 compressedData = await compressImage(currentStudentPhotoData, 500, 500, 0.7);
             }
+            
             if (navigator.onLine) {
                 const supabase = getSupabaseClientWorking();
                 if (supabase) {
                     const blob = dataURLtoBlob(compressedData);
                     const fileName = `photo_${Date.now()}.jpg`;
                     const fullPath = `students/${folderPath}/${fileName}`;
-                    const { error } = await supabase.storage.from('profile_photos').upload(fullPath, blob, { upsert: true });
+                    
+                    const { error } = await supabase.storage
+                        .from('profile_photos')
+                        .upload(fullPath, blob, { upsert: true });
+                    
                     if (!error) {
-                        const { data: urlData } = supabase.storage.from('profile_photos').getPublicUrl(fullPath);
+                        const { data: urlData } = supabase.storage
+                            .from('profile_photos')
+                            .getPublicUrl(fullPath);
                         photoUrl = urlData.publicUrl;
                         console.log('✅ Photo uploaded to cloud:', photoUrl);
+                    } else {
+                        console.error('Upload error:', error);
+                        photoUrl = null;
                     }
                 }
             }
-            if (!photoUrl) photoUrl = compressedData;
+            
+            if (!photoUrl) {
+                photoUrl = compressedData;
+                console.log('📁 Photo saved as base64');
+            }
+            
         } catch(e) {
             console.error('Photo upload error:', e);
             photoUrl = currentStudentPhotoData;
         }
+        
         hideLoader();
     }
     
     let aadharUrl = currentStudentAadharUrl;
     if (navigator.onLine && currentStudentAadharData && !aadharUrl) {
-        aadharUrl = await uploadStudentDocumentToSupabase(currentStudentAadharData, folderPath, `aadhar_${Date.now()}.pdf`, 'application/pdf');
+        aadharUrl = await uploadStudentDocumentToSupabase(
+            currentStudentAadharData, 
+            folderPath, 
+            `aadhar_${Date.now()}.pdf`, 
+            'application/pdf'
+        );
     }
+    
     let birthUrl = currentStudentBirthUrl;
     if (navigator.onLine && currentStudentBirthData && !birthUrl) {
-        birthUrl = await uploadStudentDocumentToSupabase(currentStudentBirthData, folderPath, `birth_${Date.now()}.pdf`, 'application/pdf');
+        birthUrl = await uploadStudentDocumentToSupabase(
+            currentStudentBirthData, 
+            folderPath, 
+            `birth_${Date.now()}.pdf`, 
+            'application/pdf'
+        );
     }
     
     const totalFee = currentStudentTotalFee || 35000;
     let attendanceValue = 0;
+    
     if (isEdit) {
         let existingStudent = window.students.find(s => s.id === editId);
         if (existingStudent && window.attendance && window.attendance.length > 0) {
-            let studentRecords = window.attendance.filter(a => a && a.student_name === existingStudent.name);
+            let studentRecords = window.attendance.filter(a => 
+                a && a.student_name && a.student_name === existingStudent.name
+            );
             if (studentRecords.length > 0) {
                 let present = studentRecords.filter(a => a.status === 'Present').length;
                 attendanceValue = Math.round((present / studentRecords.length) * 100);
@@ -16232,6 +16010,7 @@ window.saveStudent = async function(editId) {
             attendanceValue = existingStudent.attendance;
         }
     }
+    
     console.log(`📊 Attendance for ${name}: ${attendanceValue}%`);
     
     const newStudent = {
@@ -16274,7 +16053,9 @@ window.saveStudent = async function(editId) {
     
     if (isEdit) {
         let index = window.students.findIndex(s => s.id === editId);
-        if (index !== -1) window.students[index] = { ...window.students[index], ...newStudent };
+        if (index !== -1) {
+            window.students[index] = { ...window.students[index], ...newStudent };
+        }
     } else {
         window.students.push(newStudent);
     }
@@ -16285,11 +16066,13 @@ window.saveStudent = async function(editId) {
     
     renderStudentUI();
     setTimeout(() => refreshStudentCharts(), 100);
+    
     showNotification(`✅ ${isEdit ? 'Updated' : 'Added'} "${name}"!`, 'success');
     
     showLoader();
     let success = await saveStudentToSupabase(newStudent);
     hideLoader();
+    
     if (!success) {
         addToPendingStudentsQueue('add', newStudent);
         updateStudentPendingStatus();
@@ -16311,11 +16094,13 @@ window.deleteStudent = async function(id) {
         showNotification('Only administrators and accountants can delete students!', 'error');
         return;
     }
+    
     let student = window.students.find(s => s.id === id);
     if (!student) {
         showNotification('Student not found!', 'error');
         return;
     }
+    
     Swal.fire({
         title: 'Delete Student?',
         text: `Delete "${student.name}"? This cannot be undone!`,
@@ -16328,12 +16113,16 @@ window.deleteStudent = async function(id) {
         if (result.isConfirmed) {
             showLoader();
             const success = await deleteStudentFromSupabase(id);
+            
             if (success) {
                 const supabase = getSupabaseClientWorking();
                 if (supabase && navigator.onLine) {
-                    try { await supabase.from('users').delete().eq('id', id); } catch(e) {}
+                    try {
+                        await supabase.from('users').delete().eq('id', id);
+                    } catch(e) {}
                 }
             }
+            
             window.students = window.students.filter(s => s.id !== id);
             localStorage.setItem('cache_students', JSON.stringify(window.students));
             loadStudentManagement();
@@ -16341,7 +16130,7 @@ window.deleteStudent = async function(id) {
             showNotification(`✅ "${student.name}" deleted successfully!`, 'success');
         }
     });
-}
+};
 
 // ======================= SHOW ADD STUDENT FORM =======================
 window.showAddStudentForm = function(editId = null) {
@@ -16377,7 +16166,6 @@ window.showAddStudentForm = function(editId = null) {
     let castCategoryHtml = castCategoryOptions.map(c => `<option ${isEdit && studentData?.cast_category === c ? 'selected' : ''}>${c}</option>`).join('');
     
     let isMobileDevice = isMobile();
-    let isApk = isAndroidWebView();
     
     let modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -16565,9 +16353,10 @@ window.showAddStudentForm = function(editId = null) {
     `;
     document.body.appendChild(modal);
     
-    // ✅ Setup Photo Upload Handler (UPDATED)
+    // ========== ✅ FIXED: PHOTO UPLOAD HANDLER ==========
     document.getElementById('studentPhotoUpload').onclick = function() {
         console.log('📸 Photo upload clicked');
+        
         if (window._photoUploadInProgress) {
             showNotification('⏳ Upload already in progress', 'warning');
             return;
@@ -16580,10 +16369,13 @@ window.showAddStudentForm = function(editId = null) {
             
             try {
                 showLoader();
+                
                 let compressedData = croppedData;
                 if (typeof compressImage === 'function') {
                     compressedData = await compressImage(croppedData, 500, 500, 0.7);
+                    console.log('✅ Image compressed');
                 }
+                
                 currentStudentPhotoData = compressedData;
                 currentStudentPhotoUrl = null;
                 
@@ -16621,6 +16413,7 @@ window.showAddStudentForm = function(editId = null) {
                 
                 hideLoader();
                 showNotification('📸 Photo captured! Click Save to update.', 'success');
+                
             } catch(e) {
                 console.error('Photo capture error:', e);
                 window._photoUploadInProgress = false;
@@ -16630,7 +16423,6 @@ window.showAddStudentForm = function(editId = null) {
         });
     };
     
-    // Setup other upload handlers
     document.getElementById('studentAadharUpload').onclick = () => {
         openDocumentUpload((data, filename) => {
             currentStudentAadharData = data;
@@ -16664,7 +16456,6 @@ window.showAddStudentForm = function(editId = null) {
         });
     };
     
-    // Mark existing uploaded documents
     if (isEdit) {
         if (currentStudentPhotoData || currentStudentPhotoUrl) {
             document.getElementById('studentPhotoUpload').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981;"></i><br style="color:var(--text-primary);">✅ Photo';
@@ -16733,23 +16524,40 @@ window.updateTotalFee = function() {
     currentStudentTotalFee = totalFee;
 }
 
-// ======================= GET REAL ATTENDANCE =======================
-function getStudentAttendance(studentName) {
-    if (!window.attendance || window.attendance.length === 0) return 0;
-    let studentRecords = window.attendance.filter(a => a && a.student_name === studentName);
-    if (studentRecords.length === 0) return 0;
-    let present = studentRecords.filter(a => a.status === 'Present').length;
-    return Math.round((present / studentRecords.length) * 100);
-}
-
 // ======================= RENDER STUDENT LIST =======================
 function renderStudentList(studentsToRender) {
     console.log('🎨 renderStudentList called with', studentsToRender.length, 'students');
+    
     let showEditDeleteButtons = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant'));
+    
+    let studentsFromCache = [];
+    try {
+        const cached = localStorage.getItem('cache_students');
+        if (cached) {
+            studentsFromCache = JSON.parse(cached);
+        }
+    } catch(e) {}
+    
     let html = '';
     for (let s of studentsToRender) {
-        let finalAttendance = s.attendance || 0;
-        let attendanceBadge = finalAttendance >= 75 ? 'badge-success' : finalAttendance >= 50 ? 'badge-warning' : 'badge-danger';
+        let cachedStudent = studentsFromCache.find(c => c.id === s.id);
+        let latestAttendance = cachedStudent ? cachedStudent.attendance : s.attendance;
+        
+        let realAttendance = 0;
+        if (window.attendance && window.attendance.length > 0) {
+            let studentRecords = window.attendance.filter(a => 
+                a && a.student_name && a.student_name === s.name
+            );
+            if (studentRecords.length > 0) {
+                let present = studentRecords.filter(a => a.status === 'Present').length;
+                realAttendance = Math.round((present / studentRecords.length) * 100);
+            }
+        }
+        
+        let finalAttendance = realAttendance > 0 ? realAttendance : (latestAttendance || 0);
+        
+        let attendanceBadge = finalAttendance >= 75 ? 'badge-success' : 
+                             finalAttendance >= 50 ? 'badge-warning' : 'badge-danger';
         let attendanceText = finalAttendance > 0 ? `${finalAttendance}%` : '📊 Not Marked';
         
         let photoSrc = s.photo_url || s.photo_data || (s.gender === 'Male' ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%232563eb'/%3E%3Ctext x='50' y='67' font-size='45' text-anchor='middle' fill='white'%3E👨%3C/text%3E%3C/svg%3E" : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23ec489a'/%3E%3Ctext x='50' y='67' font-size='45' text-anchor='middle' fill='white'%3E👩%3C/text%3E%3C/svg%3E");
@@ -16758,9 +16566,11 @@ function renderStudentList(studentsToRender) {
         let totalFeeAmount = s.total_fee || 35000;
         let dueAmount = s.fee_due || 0;
         let feeStatus = s.fee_paid_status || 'Pending';
+        
         let dueClass = dueAmount > 0 ? 'badge-danger' : 'badge-success';
         let dueText = dueAmount > 0 ? `⚠️ Due ₹${dueAmount.toLocaleString()}` : '✅ Paid';
         let statusColor = feeStatus === 'Fully Paid' ? '#10b981' : feeStatus === 'Partial Paid' ? '#f59e0b' : '#ef4444';
+        
         let isMobileDevice = isMobile();
         
         html += `
@@ -16816,17 +16626,25 @@ function renderStudentList(studentsToRender) {
 // ======================= VIEW STUDENT DETAILS =======================
 window.viewStudentDetails = function(id) {
     let s = window.students.find(s => s.id === id);
-    if (!s) { showNotification('Student not found!', 'error'); return; }
+    if (!s) {
+        showNotification('Student not found!', 'error');
+        return;
+    }
+    
     let attendance = 0;
     if (window.attendance && window.attendance.length > 0) {
-        let studentRecords = window.attendance.filter(a => a && a.student_name === s.name);
+        let studentRecords = window.attendance.filter(a => 
+            a && a.student_name && a.student_name === s.name
+        );
         if (studentRecords.length > 0) {
             let present = studentRecords.filter(a => a.status === 'Present').length;
             attendance = Math.round((present / studentRecords.length) * 100);
         }
     }
+    
     let finalAttendance = attendance > 0 ? attendance : (s.attendance || 0);
     let attendanceText = finalAttendance > 0 ? `${finalAttendance}%` : '📊 Not Marked';
+    
     let paidAmount = s.total_paid_fee || 0;
     let dueAmount = s.fee_due || 0;
     
@@ -16882,8 +16700,10 @@ window.viewStudentDetails = function(id) {
 window.shareStudent = function(id) {
     let s = window.students.find(s => s.id === id);
     if (!s) return;
+    
     let paidAmount = s.total_paid_fee || 0;
     let dueAmount = s.fee_due || 0;
+    
     let msg = `🏫 Student: ${s.name}\nClass: ${s.cls} ${s.sec}\nRoll: ${s.roll}\nID: ${s.id}\nTotal Fee: ${formatFullCurrency(s.total_fee || 35000)}\nPaid: ${formatFullCurrency(paidAmount)}\nDue: ${formatFullCurrency(dueAmount)}\nStatus: ${s.fee_paid_status || 'Pending'}\nFather: ${s.father_name}\nMobile: ${s.mobile}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
@@ -16891,21 +16711,30 @@ window.shareStudent = function(id) {
 // ======================= EXPORT CSV =======================
 window.exportStudentsCSV = function() {
     let filteredData = getFilteredStudentsForCurrentUser();
-    if (filteredData.length === 0) { showNotification('No students to export!', 'warning'); return; }
+    if (filteredData.length === 0) {
+        showNotification('No students to export!', 'warning');
+        return;
+    }
+    
     let csv = "ID,Name,Class,Section,Roll,Gender,Father Name,Mother Name,Mobile,Email,Total Fee,Paid Fee,Due Fee,Payment Status,Attendance\n";
     filteredData.forEach(s => {
-        csv += `"${s.id}","${s.name}","${s.cls}","${s.sec}","${s.roll}","${s.gender}","${s.father_name || ''}","${s.mother_name || ''}","${s.mobile}","${s.email}","${s.total_fee}","${s.total_paid_fee || 0}","${s.fee_due}","${s.fee_paid_status || 'Pending'}","${s.attendance || 0}"\n`;
+        csv += `"${s.id}","${s.name}","${s.cls}","${s.sec}","${s.roll}","${s.gender}","${s.father_name || ''}","${s.mother_name || ''}","${s.mobile}","${s.email}","${s.total_fee}","${s.total_paid_fee || 0}","${s.fee_due}","${s.fee_paid_status || 'Pending'}","${s.attendance}"\n`;
     });
-    let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `students_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    showNotification('CSV exported!', 'success');
+    
+    // Use downloadCSV if available, otherwise use blob
+    if (typeof downloadCSV !== 'undefined') {
+        downloadCSV(csv, `students_${new Date().toISOString().split('T')[0]}.csv`);
+    } else {
+        let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `students_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        showNotification('CSV exported!', 'success');
+    }
 }
 
 // ======================= EXPORT PDF =======================
-// ======================= ✅ FIXED: STUDENTS PDF EXPORT =======================
 window.exportStudentsPDF = async function() {
     if (typeof html2canvas === 'undefined') {
         showNotification('html2canvas library not loaded! Please refresh.', 'error');
@@ -16966,21 +16795,30 @@ window.exportStudentsPDF = async function() {
         <html>
         <head><meta charset="UTF-8"><title>Students Report</title>
         <style>
-            @page{size:A4 landscape;margin:0.5cm}
-            body{font-family:'Segoe UI',Arial,sans-serif;padding:10px;background:white}
-            .header{text-align:center;margin-bottom:15px;border-bottom:2px solid #2563eb;padding-bottom:10px}
-            .header h1{font-size:18px;margin:5px 0}.header p{font-size:9px;color:#64748b;margin:2px 0}
-            .header h3{font-size:14px;color:#2563eb;margin:8px 0}
-            table{width:100%;border-collapse:collapse;margin:15px 0;font-size:9px}
-            th{background:#2563eb;color:white;padding:8px;font-size:9px}
-            td{border:1px solid #e2e8f0;padding:6px;font-size:8px}
-            .summary{display:flex;justify-content:space-around;margin:15px 0;flex-wrap:wrap;gap:10px}
-            .summary-card{background:linear-gradient(135deg,#2563eb,#1e40af);color:white;padding:8px 16px;border-radius:10px;text-align:center}
-            .footer{margin-top:15px;text-align:center;font-size:8px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px}
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            @page { size: A4 landscape; margin: 0.5cm; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; background: white; }
+            .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+            .header h1 { font-size: 18px; margin: 5px 0; }
+            .header p { font-size: 9px; color: #64748b; margin: 2px 0; }
+            .header h3 { font-size: 14px; color: #2563eb; margin: 8px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9px; }
+            th { background: #2563eb; color: white; padding: 8px; font-size: 9px; }
+            td { border: 1px solid #e2e8f0; padding: 6px; font-size: 8px; }
+            .summary { display: flex; justify-content: space-around; margin: 15px 0; flex-wrap: wrap; gap: 10px; }
+            .summary-card { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 8px 16px; border-radius: 10px; text-align: center; }
+            .footer { margin-top: 15px; text-align: center; font-size: 8px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
         </style>
         </head>
         <body>
-            <div class="header">${logoHtml}<h1>${escapeHtml(schoolName)}</h1><p>${escapeHtml(schoolAddress)}</p><p>📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</p><h3>📋 STUDENTS REPORT - ${escapeHtml(academicYear)}</h3><p>Generated: ${new Date().toLocaleString()} | Total Students: ${filteredData.length}</p></div>
+            <div class="header">
+                ${logoHtml}
+                <h1>${escapeHtml(schoolName)}</h1>
+                <p>${escapeHtml(schoolAddress)}</p>
+                <p>📞 ${escapeHtml(schoolPhone)} | ✉️ ${escapeHtml(schoolEmail)}</p>
+                <h3>📋 STUDENTS REPORT - ${escapeHtml(academicYear)}</h3>
+                <p>Generated: ${new Date().toLocaleString()} | Total Students: ${filteredData.length}</p>
+            </div>
             <div class="summary">
                 <div class="summary-card"><div class="number">${filteredData.length}</div><div class="label">Total Students</div></div>
                 <div class="summary-card"><div class="number">${filteredData.filter(s => s.gender === 'Male').length}</div><div class="label">Boys</div></div>
@@ -17028,6 +16866,7 @@ window.exportStudentsPDF = async function() {
         let position = 0;
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         let heightLeft = imgHeight - pdfHeight;
+        
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
@@ -17035,8 +16874,12 @@ window.exportStudentsPDF = async function() {
             heightLeft -= pdfHeight;
         }
         
-        // ✅ FIXED: Use downloadPDF instead of pdf.save()
-        await window.downloadPDF(pdf, `Students_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        // Use downloadPDF if available
+        if (typeof downloadPDF !== 'undefined') {
+            await downloadPDF(pdf, `Students_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        } else {
+            pdf.save(`Students_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        }
         
         showNotification('✅ PDF exported successfully!', 'success');
         
@@ -17048,13 +16891,15 @@ window.exportStudentsPDF = async function() {
     }
     
     hideLoader();
-};
+}
+
 // ======================= PROMOTE STUDENTS =======================
 window.promoteStudentsToNextClass = async function() {
     if (!window.currentUser || (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant')) {
         showNotification('Only administrators and accountants can promote students!', 'error');
         return;
     }
+    
     const promotionMap = {
         'Playgroup A': 'Nursery A',
         'Playgroup B': 'Nursery B',
@@ -17065,6 +16910,7 @@ window.promoteStudentsToNextClass = async function() {
         'KG2 A': 'Class 1 A',
         'KG2 B': 'Class 1 B'
     };
+    
     Swal.fire({
         title: 'Promote Students?',
         text: 'This will promote all students to the next class.',
@@ -17077,6 +16923,7 @@ window.promoteStudentsToNextClass = async function() {
         if (result.isConfirmed) {
             showLoader();
             let promotedCount = 0;
+            
             for (let s of window.students) {
                 const fullClass = `${s.cls} ${s.sec}`;
                 let nextClass = promotionMap[fullClass];
@@ -17087,6 +16934,7 @@ window.promoteStudentsToNextClass = async function() {
                     promotedCount++;
                 }
             }
+            
             if (promotedCount > 0) {
                 localStorage.setItem('cache_students', JSON.stringify(window.students));
                 for (let s of window.students) {
@@ -17108,24 +16956,70 @@ window.refreshStudentCharts = function() {
         let visibleStudents = getFilteredStudentsForCurrentUser();
         let boys = visibleStudents.filter(s => s.gender === 'Male').length;
         let girls = visibleStudents.filter(s => s.gender === 'Female').length;
+        
         let genderCtx = document.getElementById('genderChart')?.getContext('2d');
         if (genderCtx && (boys > 0 || girls > 0)) {
             if (genderChartInstance) genderChartInstance.destroy();
             genderChartInstance = new Chart(genderCtx, { 
                 type: 'doughnut', 
                 data: { labels: ['Boys', 'Girls'], datasets: [{ data: [boys, girls], backgroundColor: ['#3b82f6', '#ec489a'] }] },
-                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: isMobile() ? 'bottom' : 'top', labels: { font: { size: isMobile() ? 10 : 12 } } } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: isMobile() ? 'bottom' : 'top',
+                            labels: { font: { size: isMobile() ? 10 : 12 } }
+                        }
+                    }
+                }
             });
         }
+        
         let classCount = {};
-        for (let s of visibleStudents) { let cls = s.cls; if (cls) classCount[cls] = (classCount[cls] || 0) + 1; }
+        for (let s of visibleStudents) {
+            let cls = s.cls;
+            if (cls) classCount[cls] = (classCount[cls] || 0) + 1;
+        }
+        
         let classCtx = document.getElementById('classStrengthChart')?.getContext('2d');
         if (classCtx && Object.keys(classCount).length > 0) {
             if (classChartInstance) classChartInstance.destroy();
             classChartInstance = new Chart(classCtx, { 
                 type: 'bar', 
-                data: { labels: Object.keys(classCount), datasets: [{ label: 'Students', data: Object.values(classCount), backgroundColor: '#2563eb', borderRadius: 6 }] },
-                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { font: { size: isMobile() ? 10 : 12 } } } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: isMobile() ? 9 : 11 } } }, x: { ticks: { font: { size: isMobile() ? 9 : 11 }, maxRotation: isMobile() ? 45 : 0 } } } }
+                data: { 
+                    labels: Object.keys(classCount), 
+                    datasets: [{ 
+                        label: 'Students', 
+                        data: Object.values(classCount), 
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6
+                    }] 
+                },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: { font: { size: isMobile() ? 10 : 12 } }
+                        }
+                    },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { 
+                                stepSize: 1,
+                                font: { size: isMobile() ? 9 : 11 }
+                            } 
+                        },
+                        x: {
+                            ticks: {
+                                font: { size: isMobile() ? 9 : 11 },
+                                maxRotation: isMobile() ? 45 : 0
+                            }
+                        }
+                    }
+                }
             });
         }
     } catch(e) { console.error('Chart error:', e); }
@@ -17133,7 +17027,8 @@ window.refreshStudentCharts = function() {
 
 // ======================= RENDER STUDENT UI =======================
 window.renderStudentUI = function() {
-    console.log('🎨 renderStudentUI called - REAL-TIME SYNC ENABLED');
+    console.log('🎨 renderStudentUI called');
+    
     const cached = localStorage.getItem('cache_students');
     if (cached) {
         try {
@@ -17144,24 +17039,46 @@ window.renderStudentUI = function() {
                     if (!stu.attendance || stu.attendance === 85) {
                         let hasAttendance = false;
                         if (window.attendance && window.attendance.length > 0) {
-                            let records = window.attendance.filter(a => a && a.student_name === stu.name);
+                            let records = window.attendance.filter(a => 
+                                a && a.student_name && a.student_name === stu.name
+                            );
                             if (records.length > 0) {
                                 hasAttendance = true;
                                 let present = records.filter(a => a.status === 'Present').length;
                                 stu.attendance = Math.round((present / records.length) * 100);
                             }
                         }
-                        if (!hasAttendance) stu.attendance = 0;
+                        if (!hasAttendance) {
+                            stu.attendance = 0;
+                        }
                     }
                     window.students.push(stu);
                 }
                 localStorage.setItem('cache_students', JSON.stringify(window.students));
-                console.log(`📦 Real-time sync: ${window.students.length} students from cache`);
+                console.log(`📦 Real-time sync: ${window.students.length} students from cache (attendance corrected)`);
             }
-        } catch(e) { console.error('Cache parse error:', e); }
+        } catch(e) {
+            console.error('Cache parse error:', e);
+        }
     }
     
     let filteredStudents = getFilteredStudentsForCurrentUser();
+    let myClass = null;
+    
+    if (window.currentUser && window.currentUser.role === 'teacher') {
+        const teacherMap = {
+            'Priya Sharma': 'Playgroup A',
+            'Neha Gupta': 'Playgroup B',
+            'Rajesh Singh': 'Nursery A',
+            'Sneha Sharma': 'Nursery B',
+            'Anjali Kapoor': 'KG1 A',
+            'Vikram Joshi': 'KG1 B',
+            'Meera Nair': 'KG2 A',
+            'Rahul Mehta': 'KG2 B'
+        };
+        myClass = teacherMap[window.currentUser.name] || window.currentUser.class_teacher || 'Playgroup A';
+    }
+    
     let total = filteredStudents.length;
     let boys = filteredStudents.filter(s => s.gender === 'Male').length;
     let girls = filteredStudents.filter(s => s.gender === 'Female').length;
@@ -17177,6 +17094,7 @@ window.renderStudentUI = function() {
     let showAddButton = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant'));
     let showPromoteButton = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant'));
     let showExportButtons = (window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.role === 'accountant' || window.currentUser.role === 'teacher'));
+    
     let pendingCount = window.pendingStudentsQueue ? window.pendingStudentsQueue.length : 0;
     let isMobileDevice = isMobile();
     
@@ -17293,99 +17211,68 @@ window.renderStudentUI = function() {
     setTimeout(() => refreshStudentCharts(), 300);
 }
 
-// ======================= MAIN LOAD FUNCTION =======================
-window.loadStudentManagement = async function() {
-    console.log('📚 loadStudentManagement called');
-    if (isStudentLoading) { console.log('⚠️ Already loading, skipping...'); return; }
-    isStudentLoading = true;
-    const moduleContent = document.getElementById('moduleContent');
-    if (!moduleContent) { isStudentLoading = false; return; }
-    if (!window.currentUser) {
-        moduleContent.innerHTML = `
-            <div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'};">
-                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
-                <h3>Please Login First</h3>
-                <button class="btn btn-primary" onclick="demoLoginAsAdmin()" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; margin:5px;">Login as Admin</button>
-                <button class="btn btn-success" onclick="demoLoginAsTeacher()" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; margin:5px;">Login as Teacher</button>
-            </div>
-        `;
-        isStudentLoading = false;
-        return;
-    }
-    if (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant' && window.currentUser.role !== 'teacher') {
-        moduleContent.innerHTML = `
-            <div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'};">
-                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
-                <h3>⛔ Access Denied</h3>
-                <p>Only Admin, Accountant, and Teacher can access this module.</p>
-            </div>
-        `;
-        isStudentLoading = false;
-        return;
-    }
-    moduleContent.innerHTML = `<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--primary);"></i><p>Loading students...</p></div>`;
-    try {
-        if (navigator.onLine) {
-            if (typeof loadAttendanceFromSupabase === 'function') {
-                await loadAttendanceFromSupabase();
-                console.log('✅ Attendance loaded, records:', window.attendance?.length || 0);
-            }
-            await loadStudentsFromSupabase();
-            await processPendingStudentsQueue();
-        }
-        let students = window.students || [];
-        for (let s of students) {
-            if (s.attendance === 85 || s.attendance === undefined) {
-                let hasAttendance = false;
-                if (window.attendance && window.attendance.length > 0) {
-                    let records = window.attendance.filter(a => a && a.student_name === s.name);
-                    if (records.length > 0) {
-                        hasAttendance = true;
-                        let present = records.filter(a => a.status === 'Present').length;
-                        s.attendance = Math.round((present / records.length) * 100);
-                    }
-                }
-                if (!hasAttendance) s.attendance = 0;
-            }
-        }
-        localStorage.setItem('cache_students', JSON.stringify(students));
-        renderStudentUI();
-    } catch(error) {
-        console.error('Error:', error);
-        moduleContent.innerHTML = `<div style="color:#ef4444; padding:40px;">Error: ${error.message}</div>`;
-    }
-    isStudentLoading = false;
-}
-
 // ======================= PAGINATION =======================
-window.previousStudentPage = function() { if (studentCurrentPage > 1) { studentCurrentPage--; loadStudentManagement(); } }
-window.nextStudentPage = function() { if (studentCurrentPage < studentTotalPages) { studentCurrentPage++; loadStudentManagement(); } }
-window.changeStudentRowsPerPage = function() { studentRowsPerPage = parseInt(document.getElementById('studentRowsPerPage').value); studentCurrentPage = 1; loadStudentManagement(); }
-window.filterStudentList = function() { studentFilterText = document.getElementById('studentSearch')?.value || ''; studentCurrentPage = 1; loadStudentManagement(); }
-window.clearStudentFilter = function() { studentFilterText = ''; if (document.getElementById('studentSearch')) document.getElementById('studentSearch').value = ''; loadStudentManagement(); }
+window.previousStudentPage = function() { 
+    if (studentCurrentPage > 1) { 
+        studentCurrentPage--; 
+        loadStudentManagement(); 
+    } 
+}
+window.nextStudentPage = function() { 
+    if (studentCurrentPage < studentTotalPages) { 
+        studentCurrentPage++; 
+        loadStudentManagement(); 
+    } 
+}
+window.changeStudentRowsPerPage = function() { 
+    studentRowsPerPage = parseInt(document.getElementById('studentRowsPerPage').value); 
+    studentCurrentPage = 1; 
+    loadStudentManagement(); 
+}
+window.filterStudentList = function() { 
+    studentFilterText = document.getElementById('studentSearch')?.value || ''; 
+    studentCurrentPage = 1; 
+    loadStudentManagement(); 
+}
+window.clearStudentFilter = function() { 
+    studentFilterText = ''; 
+    if (document.getElementById('studentSearch')) document.getElementById('studentSearch').value = ''; 
+    loadStudentManagement(); 
+}
 
 // ======================= ID CARD MODAL =======================
 window.openIDCardModal = function(id) {
     let s = window.students.find(s => s.id === id);
-    if (!s) { showNotification('Student not found!', 'error'); return; }
+    if (!s) { 
+        showNotification('Student not found!', 'error'); 
+        return; 
+    }
+    
     const schoolNameSetting = localStorage.getItem('schoolName') || 'WINGS CONVENT SCHOOL';
     const schoolAddressSetting = localStorage.getItem('schoolAddress') || 'Plot No. 366, Om Nagar, Koradi Road, Nagpur - 440030';
     const schoolPhoneSetting = localStorage.getItem('schoolPhone') || '+91-9876543210';
     const schoolEmailSetting = localStorage.getItem('schoolEmail') || 'info@wingsconvent.edu';
     const principalNameSetting = localStorage.getItem('principalName') || 'Dr. A. Sharma';
     const academicYear = localStorage.getItem('academicYear') || '2026-27';
+    
     let photoSrc = '';
-    if (s.photo_data && s.photo_data.startsWith('data:image')) photoSrc = s.photo_data;
-    else if (s.photo_url && s.photo_url.startsWith('http')) photoSrc = s.photo_url;
+    if (s.photo_data && s.photo_data.startsWith('data:image')) {
+        photoSrc = s.photo_data;
+    } else if (s.photo_url && s.photo_url.startsWith('http')) {
+        photoSrc = s.photo_url;
+    }
+    
     let logoSrc = '';
     const logoUrl = localStorage.getItem('schoolLogoUrl');
     const logoData = localStorage.getItem('schoolLogo');
     if (logoUrl && logoUrl.startsWith('http')) logoSrc = logoUrl;
     else if (logoData && logoData.startsWith('data:image')) logoSrc = logoData;
+    
     const issueDate = new Date().toLocaleDateString('en-GB');
     const validTill = new Date();
     validTill.setFullYear(validTill.getFullYear() + 1);
     const validTillDate = validTill.toLocaleDateString('en-GB');
+    
     const studentName = s.name || 'N/A';
     const fatherName = s.father_name || 'N/A';
     const className = s.cls || 'N/A';
@@ -17396,6 +17283,7 @@ window.openIDCardModal = function(id) {
     const bloodGroup = s.blood_group || 'O+';
     const studentMobile = s.mobile || 'N/A';
     const studentAddress = s.address || schoolAddressSetting;
+    
     const modalWidth = isMobile() ? '95%' : '380px';
     
     const idCardHTML = `
@@ -17458,6 +17346,7 @@ window.openIDCardModal = function(id) {
         </div>
     `;
     
+    // ID Card Modal HTML
     const modal = openCustomModal(`
         <div style="border-radius: 24px; overflow: hidden;">
             <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: ${isMobile() ? '10px 16px' : '12px 20px'}; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -17477,6 +17366,7 @@ window.openIDCardModal = function(id) {
         </div>
     `, modalWidth);
     
+    // Print/Download handlers
     document.getElementById('printIDCardBtn').onclick = () => {
         let printContent = document.getElementById('idCardForExport').cloneNode(true);
         let win = window.open('', '_blank');
@@ -17520,10 +17410,15 @@ window.openIDCardModal = function(id) {
             await new Promise(r => setTimeout(r, 100));
             const canvas = await html2canvas(cloneElement, { scale: 3.5, backgroundColor: '#ffffff', logging: false, useCORS: true, width: 204, windowWidth: 204 });
             document.body.removeChild(cloneElement);
-            const link = document.createElement('a');
-            link.download = `Student_ID_${studentName.replace(/\s/g, '_')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            
+            if (typeof downloadPNG !== 'undefined') {
+                await downloadPNG(canvas, `Student_ID_${studentName.replace(/\s/g, '_')}.png`);
+            } else {
+                const link = document.createElement('a');
+                link.download = `Student_ID_${studentName.replace(/\s/g, '_')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
             showNotification('PNG downloaded successfully!', 'success');
         } catch (err) { showNotification('Error generating PNG', 'error'); }
         hideLoader();
@@ -17549,8 +17444,13 @@ window.openIDCardModal = function(id) {
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ unit: 'mm', format: [54, 86], orientation: 'portrait' });
             pdf.addImage(imgData, 'PNG', 0, 0, 54, 86);
-            pdf.save(`Student_ID_${studentName.replace(/\s/g, '_')}.pdf`);
-            showNotification('PDF downloaded successfully! (54×86mm)', 'success');
+            
+            if (typeof downloadPDF !== 'undefined') {
+                await downloadPDF(pdf, `Student_ID_${studentName.replace(/\s/g, '_')}.pdf`);
+            } else {
+                pdf.save(`Student_ID_${studentName.replace(/\s/g, '_')}.pdf`);
+            }
+            showNotification('PDF downloaded successfully!', 'success');
         } catch (err) { showNotification('Error generating PDF', 'error'); }
         hideLoader();
     };
@@ -17572,11 +17472,20 @@ window.openCustomModal = function(htmlContent, width = '500px') {
         display: flex; align-items: center; justify-content: center;
         z-index: 100000; padding: 16px; animation: modalFadeIn 0.25s ease;
     `;
+    
     let modalWidth = width;
     let maxHeight = '90vh';
     let borderRadius = '28px';
-    if (isMobile()) { modalWidth = '95%'; maxHeight = '95vh'; borderRadius = '24px'; }
-    else if (isTablet()) { modalWidth = width === '500px' ? '85%' : width; maxHeight = '90vh'; }
+    
+    if (isMobile()) {
+        modalWidth = '95%';
+        maxHeight = '95vh';
+        borderRadius = '24px';
+    } else if (isTablet()) {
+        modalWidth = width === '500px' ? '85%' : width;
+        maxHeight = '90vh';
+    }
+    
     overlay.innerHTML = `
         <div class="custom-modal-container" style="
             background: var(--bg-surface, #ffffff);
@@ -17589,6 +17498,7 @@ window.openCustomModal = function(htmlContent, width = '500px') {
             ${htmlContent}
         </div>
     `;
+    
     if (!document.getElementById('customModalStyles')) {
         const style = document.createElement('style');
         style.id = 'customModalStyles';
@@ -17631,6 +17541,7 @@ window.openCustomModal = function(htmlContent, width = '500px') {
         `;
         document.head.appendChild(style);
     }
+    
     document.body.appendChild(overlay);
     return overlay;
 }
@@ -17639,7 +17550,9 @@ window.closeCustomModal = function(modalElement) {
     if (modalElement) {
         modalElement.style.opacity = '0';
         modalElement.style.transition = 'opacity 0.2s ease';
-        setTimeout(function() { if (modalElement.parentNode) modalElement.remove(); }, 200);
+        setTimeout(function() {
+            if (modalElement.parentNode) modalElement.remove();
+        }, 200);
     }
 }
 
@@ -17657,6 +17570,92 @@ window.demoLoginAsTeacher = function() {
     localStorage.setItem('teacherClass', 'Playgroup A');
     showNotification('👨‍🏫 Logged in as Teacher Priya Sharma', 'success');
     loadStudentManagement();
+}
+
+// ======================= MAIN LOAD FUNCTION =======================
+window.loadStudentManagement = async function() {
+    console.log('📚 loadStudentManagement called');
+    
+    if (isStudentLoading) {
+        console.log('⚠️ Already loading, skipping...');
+        return;
+    }
+    isStudentLoading = true;
+    
+    const moduleContent = document.getElementById('moduleContent');
+    if (!moduleContent) {
+        isStudentLoading = false;
+        return;
+    }
+    
+    if (!window.currentUser) {
+        moduleContent.innerHTML = `
+            <div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'};">
+                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
+                <h3>Please Login First</h3>
+                <button class="btn btn-primary" onclick="demoLoginAsAdmin()" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; margin:5px;">Login as Admin</button>
+                <button class="btn btn-success" onclick="demoLoginAsTeacher()" style="padding:10px 20px; border-radius:30px; border:none; cursor:pointer; background:#10b981; color:white; margin:5px;">Login as Teacher</button>
+            </div>
+        `;
+        isStudentLoading = false;
+        return;
+    }
+    
+    if (window.currentUser.role !== 'admin' && window.currentUser.role !== 'accountant' && window.currentUser.role !== 'teacher') {
+        moduleContent.innerHTML = `
+            <div class="profile-card" style="text-align:center; padding:${isMobile() ? '30px' : '40px'};">
+                <i class="fas fa-lock" style="font-size:48px; color:#ef4444;"></i>
+                <h3>⛔ Access Denied</h3>
+                <p>Only Admin, Accountant, and Teacher can access this module.</p>
+            </div>
+        `;
+        isStudentLoading = false;
+        return;
+    }
+    
+    moduleContent.innerHTML = `<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--primary);"></i><p>Loading students...</p></div>`;
+    
+    try {
+        // ✅ Load Cropper.js first
+        await ensureCropperJS();
+        
+        if (navigator.onLine) {
+            if (typeof loadAttendanceFromSupabase === 'function') {
+                await loadAttendanceFromSupabase();
+                console.log('✅ Attendance loaded, records:', window.attendance?.length || 0);
+            }
+            await loadStudentsFromSupabase();
+            await processPendingStudentsQueue();
+        }
+        
+        let students = window.students || [];
+        for (let s of students) {
+            if (s.attendance === 85 || s.attendance === undefined) {
+                let hasAttendance = false;
+                if (window.attendance && window.attendance.length > 0) {
+                    let records = window.attendance.filter(a => 
+                        a && a.student_name && a.student_name === s.name
+                    );
+                    if (records.length > 0) {
+                        hasAttendance = true;
+                        let present = records.filter(a => a.status === 'Present').length;
+                        s.attendance = Math.round((present / records.length) * 100);
+                    }
+                }
+                if (!hasAttendance) {
+                    s.attendance = 0;
+                }
+            }
+        }
+        localStorage.setItem('cache_students', JSON.stringify(students));
+        
+        renderStudentUI();
+    } catch(error) {
+        console.error('Error:', error);
+        moduleContent.innerHTML = `<div style="color:#ef4444; padding:40px;">Error: ${error.message}</div>`;
+    }
+    
+    isStudentLoading = false;
 }
 
 // ======================= ONLINE/OFFLINE HANDLERS =======================
@@ -17677,18 +17676,21 @@ window.addEventListener('offline', function() {
 loadPendingStudentsQueue();
 updateStudentPendingStatus();
 
-console.log('✅ PART 6 COMPLETE - Students Module (WEB + APK FIXED)');
+console.log('✅ PART 6 COMPLETE - Students Module (ALL FEATURES)');
 console.log('📌 Features:');
-console.log('   ✅ Real-time Photo Update (APK Fixed)');
-console.log('   ✅ APK Camera + Gallery Working');
+console.log('   ✅ Real-time Photo Update');
 console.log('   ✅ Online/Offline Flow');
 console.log('   ✅ All 8 Classes');
 console.log('   ✅ Fully Responsive');
+console.log('   ✅ Camera + Gallery + PDF');
 console.log('   ✅ ID Card (Print/PNG/PDF/WhatsApp)');
 console.log('   ✅ Export CSV/PDF');
 console.log('   ✅ Promote Students');
+console.log('   ✅ Cropper.js Auto-Load');
+console.log('   ✅ APK Compatible Photo Capture');
 
-}
+} // End of duplicate check
+// ======================= PART 06 ENDS HERE =======================
 // ====================================== PART 6 STUDENTS MODULE (COMPLETE) ENDS HERE =================================================================================
 //======================================= START PART 07 FEES MODULE (COMPLETE) ===========================================================================//
 // ======================= PART 7: FEES MODULE (COMPLETE - ERROR FREE) =======================
