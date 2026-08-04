@@ -17921,6 +17921,27 @@ androidMobileStyles.textContent = `
             grid-template-columns: 1fr !important;
             gap: 6px !important;
         }
+        .chart-container {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+        }
+        .chart-card {
+            padding: 10px !important;
+        }
+        .chart-card canvas {
+            max-height: 150px !important;
+            width: 100% !important;
+        }
+        .summary-cards {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 6px !important;
+        }
+        .summary-item {
+            padding: 10px !important;
+        }
+        .summary-item .summary-value {
+            font-size: 18px !important;
+        }
     }
     
     @media (max-width: 480px) {
@@ -17943,7 +17964,6 @@ androidMobileStyles.textContent = `
             font-size: 13px !important;
             padding: 10px 14px !important;
             min-height: 44px !important;
-            min-width: 80px !important;
             min-width: 80px !important;
         }
         .data-card .info-grid {
@@ -17980,15 +18000,25 @@ androidMobileStyles.textContent = `
             font-size: 14px !important;
             min-height: 48px !important;
         }
+        .chart-container {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+        }
+        .chart-card canvas {
+            max-height: 130px !important;
+        }
         .summary-cards {
             grid-template-columns: 1fr 1fr !important;
             gap: 6px !important;
         }
         .summary-item {
-            padding: 10px !important;
+            padding: 8px !important;
         }
         .summary-item .summary-value {
-            font-size: 18px !important;
+            font-size: 16px !important;
+        }
+        .summary-item div:last-child {
+            font-size: 10px !important;
         }
     }
     
@@ -18103,9 +18133,8 @@ function getSupabaseClient() {
     }
     return null;
 }
-// ======================= FIX: FEES MODULE UPI QR CODE =======================
 
-// ✅ Add this function at the top of Fees Module (after getSupabaseClient)
+// ======================= LOAD UPI QR CODE =======================
 async function loadUPIQRCodeForFees() {
     console.log('🔄 [FEE] Loading UPI QR Code from Supabase...');
     
@@ -18130,7 +18159,6 @@ async function loadUPIQRCodeForFees() {
         if (data) {
             console.log('✅ [FEE] UPI loaded from Supabase:', data);
             
-            // ✅ Update localStorage with cloud data
             if (data.upi_qr_url) {
                 localStorage.setItem('upiQRCodeUrl', data.upi_qr_url);
                 localStorage.removeItem('upiQRCode');
@@ -18167,152 +18195,16 @@ function getUPIFromLocalStorage() {
     };
 }
 
-// ✅ FIXED: showCollectFeeForm() with UPI from Supabase
-function showCollectFeeForm() {
-    try {
-        feeReceiptProofData = null;
-        feeReceiptProofUrl = null;
-        
-        if (!window.students || window.students.length === 0) {
-            showNotification('No students found! Please add students first.', 'warning');
-            return;
-        }
-        
-        // ✅ Load UPI from Supabase FIRST
-        let upiData = {
-            qrUrl: null,
-            qrData: null,
-            upiId: '',
-            instructions: ''
-        };
-        
-        // ✅ Async load UPI data
-        loadUPIQRCodeForFees().then(data => {
-            upiData = data;
-            updateUPIInModal(upiData);
-        }).catch(() => {
-            upiData = getUPIFromLocalStorage();
-            updateUPIInModal(upiData);
-        });
-        
-        // ✅ Build UPI HTML with loading state
-        let upiQRHTML = `
-            <div class="upi-qr-container" id="upiQRContainer" style="display: none; text-align: center; margin-top: 10px; background: white; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0;">
-                <div id="upiStatusBadge" style="padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-bottom: 8px; display: inline-block; background: #f1f5f9; color: #64748b;">
-                    🔄 Loading UPI...
-                </div>
-                <img id="upiQRCodeImg" style="max-width: 100px; max-height: 100px; margin: 0 auto; display: none; border-radius: 8px;" 
-                     onerror="this.style.display='none'; document.getElementById('upiError').style.display='block';">
-                <p id="upiIdDisplay" style="font-size: 11px; color: #1e293b; margin-top: 4px; font-weight: 600;">Loading...</p>
-                <p id="upiInstructionsDisplay" style="font-size: 9px; color: #64748b; margin-top: 2px;">Loading...</p>
-                <p id="upiError" style="display:none; font-size: 10px; color: #ef4444; margin-top: 4px;">
-                    <i class="fas fa-exclamation-triangle"></i> QR Code not found
-                </p>
-                <button id="refreshUpiBtn" style="background: #8b5cf6; color: white; border: none; padding: 4px 12px; border-radius: 20px; font-size: 9px; cursor: pointer; margin-top: 4px; touch-action: manipulation;">
-                    <i class="fas fa-sync-alt"></i> Refresh
-                </button>
-            </div>
-        `;
-        
-        // ... rest of the modal code ...
-        
-        // ✅ After modal is created, update UPI
-        function updateUPIInModal(data) {
-            const qrImg = document.getElementById('upiQRCodeImg');
-            const upiIdDisplay = document.getElementById('upiIdDisplay');
-            const upiInstructionsDisplay = document.getElementById('upiInstructionsDisplay');
-            const statusBadge = document.getElementById('upiStatusBadge');
-            const qrContainer = document.getElementById('upiQRContainer');
-            const errorEl = document.getElementById('upiError');
-            
-            if (upiIdDisplay) {
-                upiIdDisplay.textContent = data.upiId || 'Not Configured';
-            }
-            
-            if (upiInstructionsDisplay) {
-                upiInstructionsDisplay.textContent = data.instructions || 'Scan QR code to pay';
-            }
-            
-            if (qrImg) {
-                if (data.qrUrl && data.qrUrl.startsWith('http')) {
-                    qrImg.src = data.qrUrl;
-                    qrImg.style.display = 'block';
-                    if (errorEl) errorEl.style.display = 'none';
-                    console.log('✅ [FEE] QR Code from cloud URL');
-                    if (statusBadge) {
-                        statusBadge.textContent = '✅ Synced from cloud';
-                        statusBadge.style.background = '#10b981';
-                        statusBadge.style.color = 'white';
-                    }
-                } else if (data.qrData && data.qrData.startsWith('data:image')) {
-                    qrImg.src = data.qrData;
-                    qrImg.style.display = 'block';
-                    if (errorEl) errorEl.style.display = 'none';
-                    console.log('✅ [FEE] QR Code from base64');
-                    if (statusBadge) {
-                        statusBadge.textContent = '📁 Using local data';
-                        statusBadge.style.background = '#f59e0b';
-                        statusBadge.style.color = '#1e293b';
-                    }
-                } else {
-                    qrImg.style.display = 'none';
-                    if (errorEl) errorEl.style.display = 'block';
-                    console.log('❌ [FEE] No QR Code');
-                    if (statusBadge) {
-                        statusBadge.textContent = '⚠️ No UPI configured';
-                        statusBadge.style.background = '#ef4444';
-                        statusBadge.style.color = 'white';
-                    }
-                }
-            }
-            
-            if (qrContainer) {
-                qrContainer.style.display = 'block';
-            }
-            
-            // ✅ Refresh button
-            const refreshBtn = document.getElementById('refreshUpiBtn');
-            if (refreshBtn) {
-                refreshBtn.onclick = function() {
-                    if (statusBadge) {
-                        statusBadge.textContent = '🔄 Refreshing...';
-                        statusBadge.style.background = '#f59e0b';
-                        statusBadge.style.color = '#1e293b';
-                    }
-                    loadUPIQRCodeForFees().then(newData => {
-                        updateUPIInModal(newData);
-                        showNotification('UPI QR Code refreshed!', 'success');
-                    });
-                };
-            }
-        }
-        
-        // ... rest of the modal code ...
-        
-        // ✅ After modal is created, load UPI
-        setTimeout(() => {
-            loadUPIQRCodeForFees().then(data => {
-                updateUPIInModal(data);
-            });
-        }, 500);
-        
-    } catch(e) {
-        console.error('Show collect fee error:', e);
-        showNotification('Error opening fee collection form: ' + e.message, 'error');
-    }
-}
 // ======================= GET STUDENT TOTAL FEE =======================
 function getStudentTotalFee(studentName) { 
     try {
         let student = window.students ? window.students.find(s => s && s.name === studentName) : null; 
         if (!student) return 25000; 
         
-        // ✅ Check if student has total_fee directly
         if (student.total_fee) return student.total_fee;
         if (student.totalFee) return student.totalFee;
         if (student.fee) return student.fee;
         
-        // ✅ Check fee structure
         let feeData = null;
         if (typeof window.feeStructureData !== 'undefined' && window.feeStructureData) {
             feeData = window.feeStructureData[student.cls] || null;
@@ -18418,12 +18310,28 @@ function savePendingFeesQueue() {
         localStorage.setItem('pendingFeesQueue', JSON.stringify(window.pendingFeesQueue));
     } catch(e) {
         console.error('Error saving pending queue:', e);
+        // ✅ If quota error, clear pending queue
+        if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+            console.warn('⚠️ [FEE] Pending queue quota exceeded, clearing...');
+            window.pendingFeesQueue = [];
+            try {
+                localStorage.setItem('pendingFeesQueue', JSON.stringify([]));
+            } catch(e2) {
+                localStorage.removeItem('pendingFeesQueue');
+            }
+        }
     }
     updatePendingStatus();
 }
 
 function addToPendingFeesQueue(operation, data) {
     try {
+        // ✅ Limit pending queue to 50 items
+        if (window.pendingFeesQueue.length >= 50) {
+            console.warn('⚠️ [FEE] Pending queue full, removing oldest...');
+            window.pendingFeesQueue.shift();
+        }
+        
         const pendingItem = {
             id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 6),
             operation: operation,
@@ -18464,6 +18372,45 @@ function updatePendingStatus() {
     }
 }
 
+// ======================= SAFE CACHE FUNCTIONS =======================
+function safeSetCache(key, data) {
+    try {
+        // ✅ Limit data to 50 records
+        if (Array.isArray(data) && data.length > 50) {
+            data = data.slice(0, 50);
+        }
+        localStorage.setItem(key, JSON.stringify(data));
+        return true;
+    } catch(e) {
+        console.warn(`⚠️ [FEE] Cache quota exceeded for ${key}, clearing...`);
+        try {
+            localStorage.removeItem(key);
+            // ✅ Try again with limited data
+            if (Array.isArray(data) && data.length > 30) {
+                data = data.slice(0, 30);
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            }
+        } catch(e2) {
+            console.error('❌ [FEE] Failed to save cache:', e2);
+        }
+        return false;
+    }
+}
+
+function safeGetCache(key) {
+    try {
+        const data = localStorage.getItem(key);
+        if (data) {
+            return JSON.parse(data);
+        }
+    } catch(e) {
+        console.warn(`⚠️ [FEE] Failed to read cache for ${key}`);
+        localStorage.removeItem(key);
+    }
+    return null;
+}
+
 // ======================= PROCESS PENDING FEES QUEUE =======================
 async function processPendingFeesQueue() {
     if (!navigator.onLine) {
@@ -18486,8 +18433,16 @@ async function processPendingFeesQueue() {
     let completedIds = [];
     let successCount = 0;
     
-    for (const item of window.pendingFeesQueue) {
+    // ✅ 3 SECOND DELAY BETWEEN EACH ITEM
+    for (let index = 0; index < window.pendingFeesQueue.length; index++) {
+        const item = window.pendingFeesQueue[index];
+        
         try {
+            if (index > 0) {
+                console.log(`⏳ Waiting 3 seconds for triggers to complete...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+            
             if (item.operation === 'upsert') {
                 const dbData = {
                     id: item.data.id,
@@ -18556,7 +18511,6 @@ async function processPendingFeesQueue() {
                 console.error('❌ [FEE] Pending error:', err);
             }
         }
-        await new Promise(r => setTimeout(r, 100));
     }
     
     window.pendingFeesQueue = window.pendingFeesQueue.filter(item => !completedIds.includes(item.id));
@@ -18575,20 +18529,14 @@ async function loadFeesFromSupabase() {
     
     if (!supabase || !navigator.onLine) {
         console.log('📴 [FEE] Offline - Loading from cache');
-        const cached = localStorage.getItem('cache_fees');
-        if (cached) {
-            try {
-                const parsed = JSON.parse(cached);
-                window.fees.length = 0;
-                for (let fee of parsed) {
-                    window.fees.push(fee);
-                }
-                console.log(`📦 [FEE] Loaded ${window.fees.length} fees from cache`);
-                return true;
-            } catch(e) {
-                console.error('❌ [FEE] Cache parse error:', e);
-                window.fees = [];
+        const cached = safeGetCache('cache_fees');
+        if (cached && cached.length > 0) {
+            window.fees.length = 0;
+            for (let fee of cached.slice(0, 50)) {
+                window.fees.push(fee);
             }
+            console.log(`📦 [FEE] Loaded ${window.fees.length} fees from cache`);
+            return true;
         }
         return false;
     }
@@ -18598,7 +18546,8 @@ async function loadFeesFromSupabase() {
         const { data, error } = await supabase
             .from('fees')
             .select('*')
-            .order('date', { ascending: false });
+            .order('date', { ascending: false })
+            .limit(50);
         
         if (error) {
             console.error('❌ [FEE] Supabase error:', error);
@@ -18631,61 +18580,68 @@ async function loadFeesFromSupabase() {
                     updated_at: fee.updated_at || fee.updatedAt || null
                 });
             }
-            localStorage.setItem('cache_fees', JSON.stringify(window.fees));
+            // ✅ Safe cache - limited to 50
+            safeSetCache('cache_fees', window.fees.slice(0, 50));
             console.log(`✅ [FEE] Loaded ${window.fees.length} fees from Supabase`);
             return true;
         } else {
             console.log('📭 [FEE] No fees found in Supabase, checking cache...');
-            const cached = localStorage.getItem('cache_fees');
-            if (cached) {
-                try {
-                    const parsed = JSON.parse(cached);
-                    window.fees.length = 0;
-                    for (let fee of parsed) {
-                        window.fees.push(fee);
-                    }
-                    console.log(`📦 [FEE] Loaded ${window.fees.length} fees from cache (fallback)`);
-                    return true;
-                } catch(e) {
-                    console.error('❌ [FEE] Cache fallback error:', e);
+            const cached = safeGetCache('cache_fees');
+            if (cached && cached.length > 0) {
+                window.fees.length = 0;
+                for (let fee of cached.slice(0, 50)) {
+                    window.fees.push(fee);
                 }
+                console.log(`📦 [FEE] Loaded ${window.fees.length} fees from cache (fallback)`);
+                return true;
             }
             window.fees = [];
             return false;
         }
     } catch(e) {
         console.error('❌ [FEE] Error loading fees:', e);
-        const cached = localStorage.getItem('cache_fees');
-        if (cached) {
-            try {
-                const parsed = JSON.parse(cached);
-                window.fees.length = 0;
-                for (let fee of parsed) {
-                    window.fees.push(fee);
-                }
-                console.log(`📦 [FEE] Loaded ${window.fees.length} fees from cache (error fallback)`);
-                return true;
-            } catch(err) {
-                console.error('❌ [FEE] Cache fallback error:', err);
+        const cached = safeGetCache('cache_fees');
+        if (cached && cached.length > 0) {
+            window.fees.length = 0;
+            for (let fee of cached.slice(0, 50)) {
+                window.fees.push(fee);
             }
+            console.log(`📦 [FEE] Loaded ${window.fees.length} fees from cache (error fallback)`);
+            return true;
         }
         return false;
     }
 }
 
-// ======================= SAVE FEE TO SUPABASE =======================
+// ======================= SAVE FEE TO SUPABASE (MAIN FLOW) =======================
 async function saveFeeToSupabase(feeData) {
     console.log('📤 [FEE] Saving fee to Supabase...', feeData);
     
+    // ✅ STEP 1: Update LocalStorage Cache (UI Renders Immediately)
+    const existingIndex = window.fees.findIndex(f => f.id === feeData.id);
+    if (existingIndex !== -1) {
+        window.fees[existingIndex] = { ...feeData };
+    } else {
+        window.fees.unshift({ ...feeData });
+    }
+    // ✅ Limit cache to 50 records
+    if (window.fees.length > 50) {
+        window.fees = window.fees.slice(0, 50);
+    }
+    safeSetCache('cache_fees', window.fees);
+    console.log('📦 [FEE] Cache updated, UI rendered');
+    
     const supabase = getSupabaseClient();
     
+    // ✅ STEP 2: If offline, add to pending queue
     if (!supabase || !navigator.onLine) {
         console.log('📴 [FEE] Offline - Adding to pending queue');
         addToPendingFeesQueue('upsert', feeData);
-        updatePendingStatus();
+        showNotification('📴 Offline: Saved locally', 'warning');
         return true;
     }
     
+    // ✅ STEP 3: Try to save to Supabase
     try {
         const dbData = {
             id: feeData.id,
@@ -18712,38 +18668,58 @@ async function saveFeeToSupabase(feeData) {
             .upsert(dbData, { onConflict: 'id' });
         
         if (error) {
-            console.error('❌ [FEE] Supabase upsert error:', error);
-            throw error;
+            console.error('❌ [FEE] Supabase error:', error);
+            // ✅ If Supabase fails, add to pending queue
+            addToPendingFeesQueue('upsert', feeData);
+            showNotification('⚠️ Cloud save failed. Saved locally, will retry.', 'warning');
+            return true;
         }
         
         console.log(`✅ [FEE] Fee "${dbData.receipt_no}" saved to Supabase`);
         
-        // ✅ Remove from pending queue if exists
+        // ✅ STEP 4: Wait for triggers
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // ✅ STEP 5: Remove from pending queue if exists
         if (window.pendingFeesQueue && window.pendingFeesQueue.length > 0) {
             window.pendingFeesQueue = window.pendingFeesQueue.filter(item => 
                 !(item.operation === 'upsert' && item.data.id === feeData.id)
             );
             savePendingFeesQueue();
-            updatePendingStatus();
         }
         
+        // ✅ STEP 6: Update cache with latest data
+        const updatedIndex = window.fees.findIndex(f => f.id === feeData.id);
+        if (updatedIndex !== -1) {
+            window.fees[updatedIndex] = { ...feeData, ...dbData };
+        }
+        safeSetCache('cache_fees', window.fees.slice(0, 50));
+        
+        showNotification('✅ Saved to cloud!', 'success');
         return true;
         
     } catch(e) {
         console.error('❌ [FEE] Save error:', e);
+        // ✅ If any error, add to pending queue
         addToPendingFeesQueue('upsert', feeData);
-        updatePendingStatus();
-        return false;
+        showNotification('⚠️ Cloud save failed. Saved locally.', 'warning');
+        return true;
     }
 }
 
+// ======================= DELETE FEE FROM SUPABASE =======================
 async function deleteFeeFromSupabase(feeId) {
     console.log('🗑️ [FEE] Deleting fee from Supabase:', feeId);
+    
+    // ✅ Update local cache first
+    window.fees = window.fees.filter(f => f.id !== feeId);
+    safeSetCache('cache_fees', window.fees.slice(0, 50));
     
     const supabase = getSupabaseClient();
     if (!supabase || !navigator.onLine) {
         addToPendingFeesQueue('delete', { id: feeId });
-        return false;
+        showNotification('📴 Offline: Delete saved locally', 'warning');
+        return true;
     }
     
     try {
@@ -18754,11 +18730,25 @@ async function deleteFeeFromSupabase(feeId) {
         
         if (error) throw error;
         console.log(`✅ [FEE] Fee ${feeId} deleted from Supabase`);
+        
+        // ✅ Wait for triggers
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // ✅ Remove from pending queue
+        if (window.pendingFeesQueue && window.pendingFeesQueue.length > 0) {
+            window.pendingFeesQueue = window.pendingFeesQueue.filter(item => 
+                !(item.operation === 'delete' && item.data.id === feeId)
+            );
+            savePendingFeesQueue();
+        }
+        
+        showNotification('✅ Deleted from cloud!', 'success');
         return true;
     } catch(e) {
         console.error('❌ [FEE] Delete error:', e);
         addToPendingFeesQueue('delete', { id: feeId });
-        return false;
+        showNotification('⚠️ Cloud delete failed. Saved locally.', 'warning');
+        return true;
     }
 }
 
@@ -18970,7 +18960,6 @@ function openReceiptProofCapture(callback) {
                                     scalable: false
                                 });
                             } else {
-                                // No cropper available, just use the original
                                 cropModal.querySelector('#cropSaveBtn').onclick = function() {
                                     cropModal.remove();
                                     callback(ev.target.result, file.name, file.type);
@@ -19219,7 +19208,6 @@ async function refreshFeesData() {
 }
 
 // ======================= VIEW RECEIPT =======================
-// ======================= VIEW RECEIPT (FINAL - PNG + PDF PERFECT) =======================
 function viewReceipt(id) {
     try {
         let f = window.fees.find(f => f && f.id === id);
@@ -19302,9 +19290,8 @@ function viewReceipt(id) {
         let receiptTitleSize = isVerySmall ? '11px' : (isMobile ? '13px' : (isTablet ? '17px' : '15px'));
         let addressFontSize = isVerySmall ? '7px' : (isMobile ? '8px' : (isTablet ? '10px' : '9px'));
         
-        // ===== RECEIPT CONTENT - MINIMAL PADDING =====
+        // ===== RECEIPT CONTENT =====
         let receiptContentHTML = `
-            <!-- SCHOOL HEADER -->
             <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 4px; margin-bottom: 6px;">
                 <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 1px; flex-wrap: wrap;">
                     ${logoHTML}
@@ -19315,7 +19302,6 @@ function viewReceipt(id) {
                 <h3 style="margin: 3px 0 0; font-size: ${receiptTitleSize}; color: #2563eb; font-weight: 700; letter-spacing: 1px;">💰 FEE RECEIPT</h3>
             </div>
             
-            <!-- RECEIPT DETAILS -->
             <div style="background: #f8fafc; border-radius: 6px; padding: ${isMobile ? '6px 8px' : '8px 12px'}; margin-bottom: 6px; border: 1px solid #e2e8f0;">
                 <div style="display: grid; grid-template-columns: ${gridColumns}; gap: ${gridGap}; font-size: ${detailFontSize};">
                     
@@ -19372,7 +19358,6 @@ function viewReceipt(id) {
                 </div>
             </div>
             
-            <!-- PAYMENT HISTORY -->
             ${allPayments.length > 1 ? `
             <div style="margin-top: 4px;">
                 <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 3px; flex-wrap: wrap;">
@@ -19402,7 +19387,6 @@ function viewReceipt(id) {
                 </div>
             </div>` : ''}
             
-            <!-- SIGNATURE -->
             <div style="margin-top: ${isMobile ? '10px' : '16px'}; text-align: center; padding-top: ${isMobile ? '6px' : '10px'}; border-top: 2px solid #e2e8f0;">
                 <div style="width: ${signatureWidth}; margin: 0 auto; max-width: 100%;">
                     <div style="border-top: 2px solid #1e293b; margin-bottom: 3px; width: 100%;"></div>
@@ -19411,7 +19395,6 @@ function viewReceipt(id) {
                 </div>
             </div>
             
-            <!-- FOOTER -->
             <div style="margin-top: ${isMobile ? '4px' : '8px'}; text-align: center; font-size: ${footerFontSize}; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: ${isMobile ? '3px' : '5px'}; word-break: break-word;">
                 📌 This is a computer generated receipt | Valid with school stamp
             </div>
@@ -19421,7 +19404,6 @@ function viewReceipt(id) {
         const modalHTML = `
             <div style="border-radius: ${modalBorderRadius}; overflow: hidden; display: flex; flex-direction: column; height: 100%; background: #ffffff; max-width: 100%;">
                 
-                <!-- HEADER -->
                 <div style="background: linear-gradient(135deg, #1a56db, #1e40af); padding: ${containerPadding}; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; gap: 8px;">
                     <h2 style="color: white; margin: 0; font-size: ${headingSize}; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                         <span>🧾 ${isVerySmall ? 'Receipt' : 'Receipt - ' + (f.receipt_no || 'N/A')}</span>
@@ -19429,14 +19411,12 @@ function viewReceipt(id) {
                     <button onclick="closeCustomModal(this.closest('.custom-modal-overlay'))" style="background: rgba(255,255,255,0.2); border: none; color: white; width: ${isMobile ? '32px' : '38px'}; height: ${isMobile ? '32px' : '38px'}; border-radius: 50%; cursor: pointer; font-size: ${isMobile ? '18px' : '22px'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">✕</button>
                 </div>
                 
-                <!-- BODY -->
                 <div class="custom-modal-body-scroll" style="flex: 1; overflow-y: auto; padding: ${bodyPadding}; background: #ffffff; overflow-x: hidden;">
                     <div id="receiptForPrint" style="background: #ffffff; max-width: 100%; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; overflow: visible; width: 100%;">
                         ${receiptContentHTML}
                     </div>
                 </div>
                 
-                <!-- FOOTER BUTTONS -->
                 <div style="display: flex; gap: ${isMobile ? '4px' : '8px'}; flex-wrap: wrap; justify-content: center; padding: ${isMobile ? '6px 8px' : '10px 16px'}; background: #f8fafc; border-top: 1px solid #e2e8f0; flex-shrink: 0;">
                     <button id="printReceiptBtn" style="padding: ${buttonPadding}; background: #3b82f6; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: ${buttonFontSize}; display: inline-flex; align-items: center; gap: 4px; min-height: ${buttonMinHeight}; touch-action: manipulation; flex: ${isMobile ? '1 1 45%' : '0 1 auto'}; justify-content: center; min-width: ${isMobile ? '60px' : 'auto'};">
                         🖨️ ${isVerySmall ? '' : 'Print'}
@@ -19524,157 +19504,137 @@ function viewReceipt(id) {
             };
         };
         
-// ======================= PNG DOWNLOAD (FIXED - PROPER SCALE) =======================
-document.getElementById('downloadPngBtn').onclick = async function() {
-    try {
-        if (typeof html2canvas === 'undefined') {
-            showNotification('html2canvas library not loaded!', 'error');
-            return;
-        }
-        showLoader();
-        showNotification('Generating PNG...', 'info');
-        
-        let element = document.getElementById('receiptForPrint');
-        await new Promise(resolve => setTimeout(resolve, 400));
-        
-        // ✅ DEVICE DETECTION
-        const isDesktopDevice = window.innerWidth >= 768;
-        const scaleValue = isDesktopDevice ? 2.0 : 1.8;
-        
-        // ✅ GET DIMENSIONS
-        let width = element.scrollWidth || 500;
-        let height = element.scrollHeight || 700;
-        
-        let canvas = await html2canvas(element, { 
-            scale: scaleValue,
-            backgroundColor: '#ffffff', 
-            useCORS: true, 
-            allowTaint: true,
-            logging: false,
-            width: width,
-            height: height,
-            windowWidth: width,
-            windowHeight: height,
-            onclone: function(doc) {
-                let elements = doc.querySelectorAll('*');
-                elements.forEach(el => {
-                    if (el.style.overflow === 'hidden') {
-                        el.style.overflow = 'visible';
+        // ======================= PNG DOWNLOAD =======================
+        document.getElementById('downloadPngBtn').onclick = async function() {
+            try {
+                if (typeof html2canvas === 'undefined') {
+                    showNotification('html2canvas library not loaded!', 'error');
+                    return;
+                }
+                showLoader();
+                showNotification('Generating PNG...', 'info');
+                
+                let element = document.getElementById('receiptForPrint');
+                await new Promise(resolve => setTimeout(resolve, 400));
+                
+                const isDesktopDevice = window.innerWidth >= 768;
+                const scaleValue = isDesktopDevice ? 2.0 : 1.8;
+                
+                let width = element.scrollWidth || 500;
+                let height = element.scrollHeight || 700;
+                
+                let canvas = await html2canvas(element, { 
+                    scale: scaleValue,
+                    backgroundColor: '#ffffff', 
+                    useCORS: true, 
+                    allowTaint: true,
+                    logging: false,
+                    width: width,
+                    height: height,
+                    windowWidth: width,
+                    windowHeight: height,
+                    onclone: function(doc) {
+                        let elements = doc.querySelectorAll('*');
+                        elements.forEach(el => {
+                            if (el.style.overflow === 'hidden') {
+                                el.style.overflow = 'visible';
+                            }
+                        });
                     }
                 });
+                
+                let link = document.createElement('a');
+                link.download = `Receipt_${f.receipt_no || 'N/A'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showNotification('✅ PNG downloaded successfully!', 'success');
+                hideLoader();
+            } catch(err) {
+                console.error('PNG Error:', err);
+                showNotification('❌ Error generating PNG: ' + err.message, 'error');
+                hideLoader();
             }
-        });
+        };
         
-        // ✅ PNG को CENTERED EXPORT करें
-        // एक नया Canvas बनाएं जिसमें Image Center हो
-        const pngWidth = canvas.width;
-        const pngHeight = canvas.height;
-        
-        // ✅ PNG Download - Direct canvas (already centered because html2canvas captures full element)
-        let link = document.createElement('a');
-        link.download = `Receipt_${f.receipt_no || 'N/A'}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        showNotification('✅ PNG downloaded successfully!', 'success');
-        hideLoader();
-    } catch(err) {
-        console.error('PNG Error:', err);
-        showNotification('❌ Error generating PNG: ' + err.message, 'error');
-        hideLoader();
-    }
-};
-
-// ======================= PDF DOWNLOAD (PERFECT CENTER) =======================
-document.getElementById('downloadPdfBtn').onclick = async function() {
-    try {
-        if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
-            showNotification('PDF libraries not loaded! Please refresh.', 'error');
-            return;
-        }
-        showLoader();
-        showNotification('Generating PDF...', 'info');
-        
-        let element = document.getElementById('receiptForPrint');
-        await new Promise(resolve => setTimeout(resolve, 400));
-        
-        // ✅ DEVICE DETECTION
-        const isDesktopDevice = window.innerWidth >= 768;
-        const scaleValue = isDesktopDevice ? 2.5 : 2.0;
-        const marginValue = isDesktopDevice ? 0.5 : 0;
-        
-        console.log(`📐 PDF - ${isDesktopDevice ? 'Desktop' : 'Mobile'} Scale: ${scaleValue}, Margin: ${marginValue}mm`);
-        
-        // ✅ GET DIMENSIONS
-        let width = element.scrollWidth || 500;
-        let height = element.scrollHeight || 700;
-        
-        let canvas = await html2canvas(element, { 
-            scale: scaleValue,
-            backgroundColor: '#ffffff', 
-            useCORS: true, 
-            allowTaint: true,
-            logging: false,
-            width: width,
-            height: height,
-            windowWidth: width,
-            windowHeight: height,
-            onclone: function(doc) {
-                let elements = doc.querySelectorAll('*');
-                elements.forEach(el => {
-                    if (el.style.overflow === 'hidden') {
-                        el.style.overflow = 'visible';
+        // ======================= PDF DOWNLOAD =======================
+        document.getElementById('downloadPdfBtn').onclick = async function() {
+            try {
+                if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
+                    showNotification('PDF libraries not loaded! Please refresh.', 'error');
+                    return;
+                }
+                showLoader();
+                showNotification('Generating PDF...', 'info');
+                
+                let element = document.getElementById('receiptForPrint');
+                await new Promise(resolve => setTimeout(resolve, 400));
+                
+                const isDesktopDevice = window.innerWidth >= 768;
+                const scaleValue = isDesktopDevice ? 2.5 : 2.0;
+                const marginValue = isDesktopDevice ? 0.5 : 0;
+                
+                let width = element.scrollWidth || 500;
+                let height = element.scrollHeight || 700;
+                
+                let canvas = await html2canvas(element, { 
+                    scale: scaleValue,
+                    backgroundColor: '#ffffff', 
+                    useCORS: true, 
+                    allowTaint: true,
+                    logging: false,
+                    width: width,
+                    height: height,
+                    windowWidth: width,
+                    windowHeight: height,
+                    onclone: function(doc) {
+                        let elements = doc.querySelectorAll('*');
+                        elements.forEach(el => {
+                            if (el.style.overflow === 'hidden') {
+                                el.style.overflow = 'visible';
+                            }
+                        });
                     }
                 });
+                
+                let imgData = canvas.toDataURL('image/png');
+                let { jsPDF } = window.jspdf;
+                
+                const pageWidth = 148;
+                const pageHeight = 210;
+                
+                let maxWidth = pageWidth - (marginValue * 2);
+                let maxHeight = pageHeight - (marginValue * 2);
+                
+                let imgRatio = canvas.width / canvas.height;
+                let imgWidth = maxWidth;
+                let imgHeight = imgWidth / imgRatio;
+                
+                if (imgHeight > maxHeight) {
+                    imgHeight = maxHeight;
+                    imgWidth = imgHeight * imgRatio;
+                }
+                if (imgWidth > maxWidth) {
+                    imgWidth = maxWidth;
+                    imgHeight = imgWidth / imgRatio;
+                }
+                
+                let xOffset = (pageWidth - imgWidth) / 2;
+                let yOffset = (pageHeight - imgHeight) / 2;
+                
+                let pdf = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
+                pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
+                pdf.save(`Receipt_${f.receipt_no || 'N/A'}.pdf`);
+                showNotification('✅ PDF downloaded successfully!', 'success');
+                hideLoader();
+                
+            } catch(err) {
+                console.error('PDF Error:', err);
+                showNotification('❌ Error generating PDF: ' + err.message, 'error');
+                hideLoader();
             }
-        });
+        };
         
-        let imgData = canvas.toDataURL('image/png');
-        let { jsPDF } = window.jspdf;
-        
-        // ✅ A5 Page Settings
-        const pageWidth = 148;
-        const pageHeight = 210;
-        
-        let maxWidth = pageWidth - (marginValue * 2);
-        let maxHeight = pageHeight - (marginValue * 2);
-        
-        // ✅ Calculate fit
-        let imgRatio = canvas.width / canvas.height;
-        let imgWidth = maxWidth;
-        let imgHeight = imgWidth / imgRatio;
-        
-        // ✅ अगर image height page से बड़ी है तो scale down करें
-        if (imgHeight > maxHeight) {
-            imgHeight = maxHeight;
-            imgWidth = imgHeight * imgRatio;
-        }
-        // ✅ अगर image width page से बड़ी है तो scale down करें
-        if (imgWidth > maxWidth) {
-            imgWidth = maxWidth;
-            imgHeight = imgWidth / imgRatio;
-        }
-        
-        // ✅ PERFECT CENTERING - Calculate offsets
-        let xOffset = (pageWidth - imgWidth) / 2;
-        let yOffset = (pageHeight - imgHeight) / 2;
-        
-        console.log(`📐 Image: ${imgWidth.toFixed(2)} x ${imgHeight.toFixed(2)} mm`);
-        console.log(`📐 Offset: X=${xOffset.toFixed(2)}mm, Y=${yOffset.toFixed(2)}mm`);
-        
-        // ✅ Create PDF with CENTERED image
-        let pdf = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
-        pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
-        pdf.save(`Receipt_${f.receipt_no || 'N/A'}.pdf`);
-        showNotification('✅ PDF downloaded successfully!', 'success');
-        hideLoader();
-        
-    } catch(err) {
-        console.error('PDF Error:', err);
-        showNotification('❌ Error generating PDF: ' + err.message, 'error');
-        hideLoader();
-    }
-};  
-// ======================= SHARE BUTTON =======================
+        // ======================= SHARE BUTTON =======================
         document.getElementById('shareReceiptBtn').onclick = function() {
             let message = `🏫 ${localStorage.getItem('schoolName') || 'Wings Convent School'}\n━━━━━━━━━━━━━━━━━━━━\n💰 FEE RECEIPT\n━━━━━━━━━━━━━━━━━━━━\n\nStudent: ${f.student_name || 'N/A'}\nClass: ${studentClass}\nRoll No: ${rollNo}\nDate: ${formatDateDMY(receiptDate)}\nReceipt No: ${f.receipt_no || 'N/A'}\nMode: ${f.mode || 'N/A'}\nTotal Fee: ${formatFullCurrency(totalFee)}\nPaid: ${formatFullCurrency(amountPaid)}\nDue: ${formatFullCurrency(balanceFee)}\nCollected By: ${f.collected_by || 'Administrator'}\n\n━━━━━━━━━━━━━━━━━━━━\n📞 ${localStorage.getItem('schoolPhone') || ''}\n📧 ${localStorage.getItem('schoolEmail') || ''}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
@@ -19685,6 +19645,7 @@ document.getElementById('downloadPdfBtn').onclick = async function() {
         showNotification('Error viewing receipt: ' + e.message, 'error');
     }
 }
+
 // ======================= SHOW COLLECT FEE FORM =======================
 function showCollectFeeForm() {
     try {
@@ -19893,10 +19854,8 @@ function showCollectFeeForm() {
             }
             
             try {
-                // ✅ Get total_fee from student or calculate
                 let totalFee = student.total_fee || student.totalFee || student.fee || 0;
                 
-                // ✅ If totalFee is still 0, calculate from fee structure
                 if (totalFee === 0 && typeof window.feeStructureData !== 'undefined' && window.feeStructureData) {
                     let feeData = window.feeStructureData[student.cls] || null;
                     if (feeData) {
@@ -19911,10 +19870,8 @@ function showCollectFeeForm() {
                     }
                 }
                 
-                // ✅ If totalFee is still 0, use default
                 if (totalFee === 0) totalFee = 25000;
                 
-                // ✅ Calculate paid amount from fees table
                 let totalPaidAmount = 0;
                 if (window.fees && window.fees.length > 0) {
                     let studentFees = window.fees.filter(f => f && f.student_name === student.name);
@@ -19923,11 +19880,9 @@ function showCollectFeeForm() {
                         .reduce((sum, f) => sum + (f.amount || 0), 0);
                 }
                 
-                // ✅ Calculate pending fee
                 let pendingFee = totalFee - totalPaidAmount;
                 if (pendingFee < 0) pendingFee = 0;
                 
-                // ✅ Check latest due_amount from fee records
                 let studentFeeRecords = window.fees.filter(f => f && f.student_name === student.name);
                 if (studentFeeRecords.length > 0) {
                     let sortedRecords = [...studentFeeRecords].sort((a, b) => {
@@ -19941,13 +19896,11 @@ function showCollectFeeForm() {
                     }
                 }
                 
-                // ✅ Store in student
                 student._totalFee = totalFee;
                 student._paidAmount = totalPaidAmount;
                 student._pendingFee = pendingFee;
                 student._feeRecords = studentFeeRecords;
                 
-                // ✅ Display student photo
                 let photoDiv = document.getElementById('studentPhotoDiv');
                 if (photoDiv) {
                     let photoSrc = student.photo_url || student.photoUrl || student.photoData || null;
@@ -19958,7 +19911,6 @@ function showCollectFeeForm() {
                     }
                 }
                 
-                // ✅ Display student details
                 document.getElementById('studentNameDisplay').innerHTML = `<i class="fas fa-user" style="color: #2563eb;"></i> ${escapeHtml(student.name || 'N/A')}`;
                 document.getElementById('studentClassDisplay').innerHTML = `${escapeHtml(student.cls || 'N/A')} ${escapeHtml(student.sec || '')}`;
                 document.getElementById('studentRollDisplay').innerHTML = student.roll || 'N/A';
@@ -19974,7 +19926,6 @@ function showCollectFeeForm() {
                 document.getElementById('studentMobileDisplay').innerHTML = student.mobile || 'N/A';
                 document.getElementById('studentAdmissionDisplay').innerHTML = student.admissionNo || student.admission_no || student.id || 'N/A';
                 
-                // ✅ Set suggested amount
                 let feeAmountInput = document.getElementById('feeAmount');
                 let amountHint = document.getElementById('amountHint');
                 if (feeAmountInput) {
@@ -19988,7 +19939,6 @@ function showCollectFeeForm() {
                     }
                 }
                 
-                // ✅ Show fee records count
                 let feeCountDisplay = document.getElementById('feeRecordsCount');
                 if (feeCountDisplay) {
                     feeCountDisplay.innerHTML = `📊 ${studentFeeRecords.length} fee records | Total Fee: ₹${totalFee.toLocaleString()} | Paid: ₹${totalPaidAmount.toLocaleString()}`;
@@ -20014,7 +19964,6 @@ function showCollectFeeForm() {
                     return;
                 }
                 
-                // ✅ Make sure window.students exists
                 if (!window.students || window.students.length === 0) {
                     showNotification('No students found! Please add students first.', 'warning');
                     return;
@@ -20120,16 +20069,23 @@ function showCollectFeeForm() {
                         academic_year: document.getElementById('academicYear')?.value || '2026-27'
                     };
                     
+                    // ✅ STEP 1: Update UI immediately
                     window.fees.push(newFee);
                     
-                    // Update student
+                    // ✅ STEP 2: Save to cache
+                    if (window.fees.length > 50) {
+                        window.fees = window.fees.slice(0, 50);
+                    }
+                    safeSetCache('cache_fees', window.fees);
+                    
+                    // ✅ STEP 3: Update student data
                     let studentIndex = window.students.findIndex(s => s.id === selectedStudentForFee.id);
                     if (studentIndex !== -1) {
                         window.students[studentIndex].feeDue = dueAmount;
                         window.students[studentIndex].totalPaidFee = (window.students[studentIndex].totalPaidFee || 0) + amount;
                     }
                     
-                    // Update ledger
+                    // ✅ STEP 4: Update ledger
                     let lastBalance = (window.ledger && window.ledger.length > 0) ? window.ledger[window.ledger.length-1].balance : 500000;
                     if (typeof window.ledger !== 'undefined' && window.ledger) {
                         window.ledger.push({ 
@@ -20142,7 +20098,7 @@ function showCollectFeeForm() {
                         });
                     }
                     
-                    // Update recent activities
+                    // ✅ STEP 5: Update recent activities
                     if (typeof window.recentActivities !== 'undefined' && window.recentActivities) {
                         window.recentActivities.unshift({ 
                             id: 'ACT' + Date.now(), 
@@ -20153,13 +20109,10 @@ function showCollectFeeForm() {
                         });
                     }
                     
-                    // Save to localStorage
-                    localStorage.setItem('cache_fees', JSON.stringify(window.fees));
-                    if (window.students) localStorage.setItem('studentsData', JSON.stringify(window.students));
-                    
-                    // Sync to Supabase
+                    // ✅ STEP 6: Save to Supabase in background
                     let syncSuccess = await saveFeeToSupabase(newFee);
                     
+                    // ✅ STEP 7: Show notification based on sync status
                     if (syncSuccess) {
                         showNotification(`✅ Fee collected from ${selectedStudentForFee.name}! Amount: ₹${amount.toLocaleString()}`, 'success');
                     } else {
@@ -20168,7 +20121,6 @@ function showCollectFeeForm() {
                     
                     closeCustomModal(modal);
                     loadFeeCollection();
-                    
                     setTimeout(() => { viewReceipt(newFee.id); }, 500);
                     
                 } catch(e) {
@@ -20306,8 +20258,7 @@ function renderFeeList(feesToRender) {
                         <i class="fas fa-print"></i> Print
                     </button>
                     ${(!isAccountantViewOnly) ? `<button class="action-chip" onclick="collectMoreFee('${f.student_id || ''}')" style="background:#10b981; color:white; border:none; padding:8px 14px; border-radius:18px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; touch-action:manipulation; min-height:44px;">
-                        <i class="fas fa-rupee-sign"></i> Collect
-                    </button>` : ''}
+                        <i class="fas fa-rupee-sign"></i> Collect                    </button>` : ''}
                     <button class="action-chip" onclick="shareFee('${f.id}')" style="background:#25D366; color:white; border:none; padding:8px 14px; border-radius:18px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; touch-action:manipulation; min-height:44px;">
                         <i class="fab fa-whatsapp"></i> Share
                     </button>
@@ -20376,9 +20327,14 @@ async function deleteFee(feeId) {
         
         if (result.isConfirmed) {
             showLoader();
+            
+            // ✅ Delete from local cache first
             window.fees = window.fees.filter(f => f.id !== feeId);
-            localStorage.setItem('cache_fees', JSON.stringify(window.fees));
+            safeSetCache('cache_fees', window.fees.slice(0, 50));
+            
+            // ✅ Delete from Supabase
             await deleteFeeFromSupabase(feeId);
+            
             hideLoader();
             loadFeeCollection();
             showNotification('✅ Fee record deleted!', 'success');
@@ -20490,7 +20446,6 @@ async function loadFeeCollection() {
     showLoader();
     
     try {
-        // Load fee structure data
         if (typeof window.feeStructureData === 'undefined' || Object.keys(window.feeStructureData).length === 0) {
             const cachedFeeStructure = localStorage.getItem('feeStructureData');
             if (cachedFeeStructure) {
@@ -20503,10 +20458,8 @@ async function loadFeeCollection() {
             }
         }
         
-        // Load pending queue
         loadPendingFeesQueue();
         
-        // Load fees from Supabase
         await loadFeesFromSupabase();
         await processPendingFeesQueue();
         
@@ -20527,7 +20480,6 @@ async function loadFeeCollection() {
             return;
         }
         
-        // STUDENT ROLE
         if (currentUser.role === 'student') {
             let studentFees = window.fees.filter(f => f && f.student_name === currentUser.name);
             let totalPaid = studentFees.filter(f => f.status === 'Paid').reduce((s, f) => s + (f.amount || 0), 0);
@@ -20553,7 +20505,6 @@ async function loadFeeCollection() {
             return;
         }
         
-        // TEACHER ROLE
         if (currentUser.role === 'teacher') {
             document.getElementById('moduleContent').innerHTML = `
                 <div class="profile-card" style="text-align:center; padding:40px;">
@@ -20568,10 +20519,8 @@ async function loadFeeCollection() {
             return;
         }
         
-        // ACCOUNTANT ROLE - View Only
         let isAccountantViewOnly = (currentUser.role === 'accountant');
         
-        // ADMIN, CASHIER, ACCOUNTANT - Access granted
         if (currentUser.role !== 'admin' && currentUser.role !== 'cashier' && currentUser.role !== 'accountant') {
             document.getElementById('moduleContent').innerHTML = `
                 <div class="profile-card" style="text-align:center; padding:40px;">
@@ -20586,7 +20535,6 @@ async function loadFeeCollection() {
             return;
         }
         
-        // Filter valid fees
         let validFees = window.fees.filter(f => f && f.student_name);
         let filteredFees = validFees.filter(f => {
             let studentName = f.student_name || '';
@@ -20694,21 +20642,126 @@ async function loadFeeCollection() {
         document.getElementById('moduleContent').innerHTML = content;
         renderFeeList(paginatedFees);
         
-        // Initialize charts
+        // ======================= FIX: CHARTS ON MOBILE =======================
         setTimeout(() => {
             try {
+                if (typeof Chart === 'undefined') {
+                    console.warn('Chart.js not loaded. Charts will not render.');
+                    return;
+                }
+                
                 let monthlyCtx = document.getElementById('monthlyFeeChart')?.getContext('2d');
-                if (monthlyCtx && monthlyData.some(v => v > 0) && typeof Chart !== 'undefined') {
-                    new Chart(monthlyCtx, { type: 'bar', data: { labels: months, datasets: [{ label: 'Collection (₹)', data: monthlyData, backgroundColor: '#10b981', borderRadius: 6 }] } });
+                if (monthlyCtx && monthlyData.some(v => v > 0)) {
+                    const isMobile = window.innerWidth < 768;
+                    new Chart(monthlyCtx, { 
+                        type: 'bar', 
+                        data: { 
+                            labels: months, 
+                            datasets: [{ 
+                                label: 'Collection (₹)', 
+                                data: monthlyData, 
+                                backgroundColor: '#10b981', 
+                                borderRadius: isMobile ? 4 : 6,
+                                barPercentage: isMobile ? 0.7 : 0.8,
+                                categoryPercentage: isMobile ? 0.8 : 0.9
+                            }] 
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: isMobile ? false : true,
+                                    labels: { boxWidth: 10, font: { size: isMobile ? 8 : 10 } }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { 
+                                        font: { size: isMobile ? 6 : 9 },
+                                        maxRotation: isMobile ? 45 : 0,
+                                        minRotation: isMobile ? 30 : 0
+                                    },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                    ticks: { 
+                                        font: { size: isMobile ? 6 : 9 },
+                                        callback: function(value) {
+                                            if (value >= 1000) return (value/1000) + 'k';
+                                            return value;
+                                        }
+                                    },
+                                    grid: { color: 'rgba(0,0,0,0.05)' }
+                                }
+                            }
+                        }
+                    });
+                } else if (monthlyCtx) {
+                    new Chart(monthlyCtx, { 
+                        type: 'bar', 
+                        data: { 
+                            labels: months, 
+                            datasets: [{ label: 'Collection (₹)', data: Array(12).fill(0), backgroundColor: '#e2e8f0' }] 
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: { legend: { display: false } },
+                            scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(0,0,0,0.05)' } } }
+                        }
+                    });
                 }
+                
                 let paidCtx = document.getElementById('paidPendingChart')?.getContext('2d');
-                if (paidCtx && (totalCollected > 0 || totalPending > 0) && typeof Chart !== 'undefined') {
-                    new Chart(paidCtx, { type: 'doughnut', data: { labels: ['Paid', 'Pending'], datasets: [{ data: [totalCollected, totalPending], backgroundColor: ['#10b981', '#f59e0b'] }] } });
+                if (paidCtx && (totalCollected > 0 || totalPending > 0)) {
+                    const isMobile = window.innerWidth < 768;
+                    new Chart(paidCtx, { 
+                        type: 'doughnut', 
+                        data: { 
+                            labels: ['Paid', 'Pending'], 
+                            datasets: [{ 
+                                data: [totalCollected, totalPending], 
+                                backgroundColor: ['#10b981', '#f59e0b'],
+                                borderWidth: 0
+                            }] 
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            cutout: isMobile ? '65%' : '60%',
+                            plugins: {
+                                legend: {
+                                    position: isMobile ? 'bottom' : 'top',
+                                    labels: { 
+                                        boxWidth: isMobile ? 10 : 12, 
+                                        font: { size: isMobile ? 10 : 12 },
+                                        padding: isMobile ? 8 : 12
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else if (paidCtx) {
+                    new Chart(paidCtx, { 
+                        type: 'doughnut', 
+                        data: { 
+                            labels: ['No Data'], 
+                            datasets: [{ data: [1], backgroundColor: ['#e2e8f0'], borderWidth: 0 }] 
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: { legend: { display: false } }
+                        }
+                    });
                 }
+                
+                console.log('✅ [FEE] Charts rendered successfully');
             } catch(e) {
-                console.warn('Chart initialization error:', e);
+                console.warn('Chart rendering error:', e);
             }
-        }, 200);
+        }, 300);
         
     } catch(e) {
         console.error('❌ [FEE] Error loading fees:', e);
@@ -20793,27 +20846,24 @@ window.loadPendingFeesQueue = loadPendingFeesQueue;
 window.savePendingFeesQueue = savePendingFeesQueue;
 window.addToPendingFeesQueue = addToPendingFeesQueue;
 window.updatePendingStatus = updatePendingStatus;
+window.safeSetCache = safeSetCache;
+window.safeGetCache = safeGetCache;
 
-// Load pending queue on module load
 loadPendingFeesQueue();
 updatePendingStatus();
 
-console.log('✅ [FEE] PART 7 COMPLETE - ERROR FREE VERSION!');
-console.log('📌 Features:');
-console.log('   ✅ Android Mobile View - Responsive Design');
-console.log('   ✅ SweetAlert2 Mobile Optimized');
-console.log('   ✅ Receipt Modal Mobile Optimized');
-console.log('   ✅ Bigger Touch Targets for Mobile (min-height: 44px)');
-console.log('   ✅ Camera/Gallery/PDF Upload for Android WebView');
-console.log('   ✅ Online/Offline Flow Implemented');
-console.log('   ✅ Student Search Fixed');
-console.log('   ✅ Fee Calculation Fixed');
-console.log('   ✅ Error Handling Added Everywhere');
+console.log('✅ [FEE] PART 7 COMPLETE - FIXED VERSION!');
+console.log('📌 FIXES:');
+console.log('   ✅ Charts render properly on mobile');
+console.log('   ✅ LocalStorage quota handled with safeSetCache/safeGetCache');
+console.log('   ✅ Cache limited to 50 records');
+console.log('   ✅ UI renders immediately, then syncs to cloud');
+console.log('   ✅ Offline support with pending queue');
 console.log('📌 Total fees loaded:', window.fees.length);
 console.log('📌 Pending items:', window.pendingFeesQueue ? window.pendingFeesQueue.length : 0);
 
 } // End of duplicate check
-// ====================================== PART 07 FEES MODULE (COMPLETE) ENDS HERE ====================================================================
+// ====================================== PART 07 FEES MODULE (FIXED) ENDS HERE ====================================================================
 // ====================================== PART 07 FEES MODULE (COMPLETE) ENDS HERE ====================================================================
 // ======================= PART 8: ATTENDANCE MODULE (FIXED - NO REDECLARATION AT ALL) =======================
 // ======================= PART 8: ATTENDANCE MODULE (COMPLETE - RESPONSIVE + ANDROID APK READY) =======================
