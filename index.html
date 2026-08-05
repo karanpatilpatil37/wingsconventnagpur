@@ -1790,6 +1790,7 @@ console.log('   ✅ Auto-initialization');
 // =============================================== PART 02 SUPABASE DATABASE ENDS HERE ==================================================
 // =============================================== PART 03 HELPER FUNCTIONS START HERE ==================================================
 // =============================================== PART 03-A: NOTIFICATION SYSTEM =======================================================
+// =============================================== PART 03-A: NOTIFICATION SYSTEM =======================================================
 console.log('✅ PART 1 - HTML & CSS Loaded');
 console.log('📚 Libraries Loaded:');
 console.log('   ✅ Font Awesome');
@@ -2199,6 +2200,313 @@ function updateNotificationBell() {
     }
 }
 
+// ======================= 🔥 SHOW NOTIFICATION (COMPLETE) =======================
+function showNotification(msg, type) {
+    console.log(`🔔 showNotification: ${msg} (${type})`);
+    console.log(`📌 Notification.permission:`, Notification.permission);
+    
+    const isApk = isApkOrWebView();
+    const isMobile = isMobileBrowser();
+    
+    const title = type === 'success' ? '✅ Success' : 
+                  type === 'error' ? '❌ Error' : 
+                  type === 'warning' ? '⚠️ Warning' : 'ℹ️ Info';
+    
+    // ✅ 1. ALWAYS show Swal toast
+    if (typeof Swal !== 'undefined') {
+        try {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type || 'success',
+                title: msg,
+                showConfirmButton: false,
+                timer: 3000,
+                customClass: {
+                    popup: isMobile ? 'mobile-swal-popup' : ''
+                }
+            });
+        } catch(e) {
+            console.log('Swal error:', e);
+        }
+    }
+    
+    // ✅ 2. Show In-Window Popup (APK + Desktop)
+    showInWindowPopup(msg, type);
+    
+    // ✅ 3. 🔥🔥🔥 SHOW BROWSER NOTIFICATION 🔥🔥🔥
+    if (!isApk) {
+        console.log('📌 Attempting browser notification...');
+        console.log('📌 Permission:', Notification.permission);
+        
+        if (Notification.permission === 'granted') {
+            console.log('✅ Permission granted, showing notification');
+            showBrowserNotification(title, msg, type);
+        } else if (Notification.permission === 'default') {
+            console.log('⚠️ Permission default, requesting...');
+            requestNotificationPermission();
+        } else {
+            console.log('❌ Permission denied:', Notification.permission);
+        }
+    } else {
+        console.log('📱 APK detected - Using in-window popup only');
+    }
+}
+
+// ======================= 🔥 SHOW BROWSER NOTIFICATION =======================
+function showBrowserNotification(title, message, type) {
+    console.log(`🔔 showBrowserNotification: ${title}`);
+    console.log(`📌 Message: ${message}`);
+    console.log(`📌 Type: ${type}`);
+    
+    if (!('Notification' in window)) {
+        console.log('❌ Notification API not supported');
+        showInWindowPopup(title + ': ' + message, type || 'success');
+        return;
+    }
+    
+    if (Notification.permission !== 'granted') {
+        console.log('⚠️ Permission not granted. Current:', Notification.permission);
+        requestNotificationPermission();
+        return;
+    }
+    
+    try {
+        const icon = getNotificationIcon();
+        console.log('📸 Using icon:', icon);
+        
+        const notif = new Notification(title, {
+            body: message || '',
+            icon: icon,
+            badge: icon,
+            vibrate: [200, 100, 200],
+            requireInteraction: true,
+            silent: false,
+            tag: 'wings_notification_' + Date.now()
+        });
+        
+        console.log('✅ Browser notification created successfully!');
+        
+        notif.onclick = function() {
+            console.log('👆 Notification clicked');
+            window.focus();
+            notif.close();
+            if (typeof openModule === 'function') {
+                openModule(19);
+            }
+        };
+        
+        setTimeout(function() {
+            try { notif.close(); } catch(e) {}
+        }, 10000);
+        
+        playNotificationSound();
+        return notif;
+        
+    } catch(e) {
+        console.error('❌ Browser notification error:', e);
+        console.log('📌 Error details:', e.message);
+        showInWindowPopup(title + ': ' + message, type || 'success');
+        return null;
+    }
+}
+
+// ======================= 🔥 IN-WINDOW POPUP =======================
+function showInWindowPopup(msg, type) {
+    console.log(`💬 showInWindowPopup: ${msg} (${type})`);
+    
+    const existing = document.getElementById('inWindowPopup');
+    if (existing) existing.remove();
+    
+    const isApk = isApkOrWebView();
+    const isMobile = isMobileBrowser();
+    
+    const colors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#2563eb' };
+    const icons = { success: '✅', warning: '⚠️', error: '❌', info: 'ℹ️' };
+    const color = colors[type] || '#2563eb';
+    const icon = icons[type] || 'ℹ️';
+    
+    const popup = document.createElement('div');
+    popup.id = 'inWindowPopup';
+    popup.style.cssText = `
+        position: fixed;
+        bottom: ${isMobile ? '80px' : '20px'};
+        ${isMobile ? 'left: 50%; transform: translateX(-50%);' : 'right: 20px;'}
+        background: var(--bg-surface, #ffffff);
+        border-radius: ${isMobile ? '16px' : '16px'};
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        z-index: 999999;
+        max-width: ${isMobile ? '92%' : '400px'};
+        width: ${isMobile ? '340px' : 'auto'};
+        animation: slideUpPopup 0.5s ease;
+        border-left: 5px solid ${color};
+        overflow: hidden;
+        font-family: 'Segoe UI', Arial, sans-serif;
+    `;
+    
+    if (!document.getElementById('popupStyle')) {
+        const style = document.createElement('style');
+        style.id = 'popupStyle';
+        style.textContent = `
+            @keyframes slideUpPopup {
+                from { opacity: 0; transform: ${isMobile ? 'translateX(-50%)' : 'translateX(0)'} translateY(30px); }
+                to { opacity: 1; transform: ${isMobile ? 'translateX(-50%)' : 'translateX(0)'} translateY(0); }
+            }
+            @keyframes slideDownPopup {
+                from { opacity: 1; transform: ${isMobile ? 'translateX(-50%)' : 'translateX(0)'} translateY(0); }
+                to { opacity: 0; transform: ${isMobile ? 'translateX(-50%)' : 'translateX(0)'} translateY(30px); }
+            }
+            .popup-content { padding: ${isMobile ? '12px 14px' : '14px 18px'}; display: flex; align-items: center; gap: ${isMobile ? '10px' : '12px'}; }
+            .popup-icon { font-size: ${isMobile ? '20px' : '24px'}; flex-shrink: 0; width: ${isMobile ? '36px' : '40px'}; height: ${isMobile ? '36px' : '40px'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: ${color}15; }
+            .popup-text { flex: 1; font-size: ${isMobile ? '13px' : '14px'}; color: var(--text-primary, #1e293b); line-height: 1.3; word-break: break-word; }
+            .popup-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: ${isMobile ? '16px' : '18px'}; padding: 4px 8px; border-radius: 50%; flex-shrink: 0; }
+            .popup-progress { height: ${isMobile ? '3px' : '3px'}; width: 100%; animation: progressBarPopup 4s linear forwards; }
+            @keyframes progressBarPopup { from { width: 100%; } to { width: 0%; } }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    popup.innerHTML = `
+        <div class="popup-content">
+            <div class="popup-icon">${icon}</div>
+            <div class="popup-text">${msg}</div>
+            <button class="popup-close" onclick="this.closest('#inWindowPopup').remove()">✕</button>
+        </div>
+        <div class="popup-progress" style="background: ${color};"></div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    if ((isApk || isMobile) && navigator.vibrate) {
+        navigator.vibrate([50, 30, 50]);
+    }
+    
+    setTimeout(() => {
+        if (popup.parentNode) {
+            popup.style.animation = 'slideDownPopup 0.4s ease';
+            setTimeout(() => { if (popup.parentNode) popup.remove(); }, 400);
+        }
+    }, 4000);
+}
+
+// ======================= 🔥 PLAY NOTIFICATION SOUND =======================
+function playNotificationSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.1;
+        
+        oscillator.start();
+        setTimeout(function() {
+            oscillator.stop();
+            audioCtx.close();
+        }, 200);
+    } catch(e) {
+        console.log('Sound play error:', e);
+    }
+}
+
+// ======================= 🔥 REQUEST PERMISSION (COMPLETE FIX) =======================
+function requestNotificationPermission() {
+    console.log('🔔 requestNotificationPermission called...');
+    console.log('📌 Current permission:', Notification.permission);
+    
+    const isApk = isApkOrWebView();
+    const isFirefoxBrowser = isFirefox();
+    const isChromeBrowser = isChrome();
+    
+    if (!('Notification' in window)) {
+        console.log('❌ Notification API not supported');
+        showToast('🔔 Notifications not supported in this browser', 'info');
+        return;
+    }
+    
+    // ✅ APK: Auto-grant
+    if (isApk) {
+        console.log('📱 APK detected - Auto-granting');
+        Notification.permission = 'granted';
+        showToast('🔔 Notifications enabled for App!', 'success');
+        setTimeout(function() {
+            showBrowserNotification('🔔 Wings Convent App', 'Notifications are enabled! You will receive alerts.', 'success');
+        }, 1000);
+        return;
+    }
+    
+    // ✅ Chrome
+    if (isChromeBrowser) {
+        console.log('🌐 Chrome detected');
+        if (Notification.permission === 'granted') {
+            showToast('🔔 Notifications enabled!', 'success');
+            showBrowserNotification('🔔 Welcome!', 'Notifications are enabled.', 'success');
+            return;
+        }
+        if (Notification.permission === 'denied') {
+            showToast('⚠️ Please allow notifications from browser settings.', 'warning');
+            showToast('🔔 Click 🔒 lock icon → Notifications → Allow', 'info');
+            return;
+        }
+        Notification.requestPermission().then(function(permission) {
+            console.log('📌 Permission result:', permission);
+            if (permission === 'granted') {
+                showToast('🔔 Notifications enabled!', 'success');
+                showBrowserNotification('🔔 Welcome!', 'Notifications are now enabled.', 'success');
+            } else {
+                showToast('⚠️ Please allow notifications from browser settings.', 'warning');
+                showToast('🔔 Click 🔒 lock icon → Notifications → Allow', 'info');
+            }
+        });
+        return;
+    }
+    
+    // ✅ Firefox
+    if (isFirefoxBrowser) {
+        console.log('🦊 Firefox detected');
+        if (Notification.permission === 'granted') {
+            showToast('🔔 Notifications enabled!', 'success');
+            showBrowserNotification('🔔 Welcome!', 'Notifications are enabled.', 'success');
+            return;
+        }
+        if (Notification.permission === 'denied') {
+            showToast('⚠️ Please allow notifications from browser settings.', 'warning');
+            showToast('🔔 Click 🔒 lock icon → Permissions → Notifications → Allow', 'info');
+            return;
+        }
+        Notification.requestPermission().then(function(permission) {
+            if (permission === 'granted') {
+                showToast('🔔 Notifications enabled!', 'success');
+                showBrowserNotification('🔔 Welcome!', 'Notifications are enabled.', 'success');
+            } else {
+                showToast('⚠️ Please allow notifications from browser settings.', 'warning');
+                showToast('🔔 Firefox: Click 🔒 lock icon → Permissions → Notifications → Allow', 'info');
+            }
+        });
+        return;
+    }
+    
+    if (Notification.permission === 'granted') {
+        showToast('🔔 Notifications enabled!', 'success');
+        return;
+    }
+    if (Notification.permission === 'denied') {
+        showToast('⚠️ Please allow notifications from browser settings.', 'warning');
+        return;
+    }
+    Notification.requestPermission().then(function(permission) {
+        if (permission === 'granted') {
+            showToast('🔔 Notifications enabled!', 'success');
+        } else {
+            showToast('⚠️ Please allow notifications from browser settings.', 'warning');
+        }
+    });
+}
+
 // ======================= LOAD BELL NOTIFICATIONS =======================
 function loadBellNotifications() {
     const listContainer = document.getElementById('notificationList');
@@ -2327,8 +2635,10 @@ function markAllNotificationsRead() {
     showToast(`✅ ${unread.length} marked as read`, 'success');
 }
 
-// ======================= addNotification FUNCTION =======================
+// ======================= 🔥 ADD NOTIFICATION (COMPLETE FIX) =======================
 function addNotification(title, message, category, priority, targetRole, targetUserId, targetUserName) {
+    console.log(`📝 addNotification: ${title}`);
+    
     category = category || 'General';
     priority = priority || 'Normal';
     targetRole = targetRole || 'all';
@@ -2366,9 +2676,12 @@ function addNotification(title, message, category, priority, targetRole, targetU
     window.notifications.unshift(newNotif);
     localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
     updateNotificationBell();
-    showToast('🔔 ' + title, 'success');
     
-    // ✅ Show popup if target matches current user
+    // ✅ SHOW NOTIFICATION IMMEDIATELY
+    const notifType = priority === 'Critical' ? 'error' : priority === 'Urgent' ? 'warning' : 'success';
+    showNotification('🔔 ' + title + (message ? ': ' + message : ''), notifType);
+    
+    // ✅ SHOW POPUP FOR TARGET USER
     let shouldShowPopup = false;
     
     if (targetRole === 'all') {
@@ -2381,27 +2694,46 @@ function addNotification(title, message, category, priority, targetRole, targetU
         shouldShowPopup = true;
     }
     
-    if (shouldShowPopup && 'Notification' in window) {
+    // ✅ Browser Notification for target
+    if (shouldShowPopup && 'Notification' in window && !isApkOrWebView()) {
         if (Notification.permission === 'granted') {
             try {
                 const notif = new Notification('🔔 ' + title, {
                     body: message,
-                    icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
+                    icon: getNotificationIcon()
                 });
+                notif.onclick = function() {
+                    window.focus();
+                    if (typeof openModule === 'function') openModule(19);
+                };
             } catch(e) {}
-        } else if (Notification.permission === 'default') {
+        } else if (Notification.permission === 'default' && !isApkOrWebView()) {
             Notification.requestPermission().then(function(perm) {
                 if (perm === 'granted') {
-                    const notif = new Notification('🔔 ' + title, {
-                        body: message,
-                        icon: 'https://karanpatilpatil37.github.io/wingsconventnagpur/favicon.ico'
-                    });
+                    try {
+                        const notif = new Notification('🔔 ' + title, {
+                            body: message,
+                            icon: getNotificationIcon()
+                        });
+                        notif.onclick = function() {
+                            window.focus();
+                            if (typeof openModule === 'function') openModule(19);
+                        };
+                    } catch(e) {}
                 }
             });
         }
     }
     
-    // ✅ Save to Supabase - SILENT (NO console error)
+    // ✅ In-window popup for APK/Mobile
+    if (isApkOrWebView() || isMobileBrowser()) {
+        setTimeout(() => {
+            showInWindowPopup('🔔 ' + title + (message ? ': ' + message : ''), 
+                priority === 'Critical' ? 'error' : priority === 'Urgent' ? 'warning' : 'success');
+        }, 500);
+    }
+    
+    // ✅ Save to Supabase
     const supabase = getSupabaseClient();
     if (supabase && navigator.onLine) {
         const dbData = {
@@ -2419,11 +2751,9 @@ function addNotification(title, message, category, priority, targetRole, targetU
             created_at: newNotif.createdAt,
             updated_at: new Date().toISOString()
         };
-        
         supabase.from('notifications').upsert(dbData, { onConflict: 'id' })
             .then(function(result) {
                 if (result.error) {
-                    // 🔥 SILENT - Add to pending queue WITHOUT console error
                     if (typeof addToPendingQueue === 'function') {
                         addToPendingQueue('notifications', 'upsert', newNotif);
                     }
@@ -3102,265 +3432,6 @@ async function initNotificationBell() {
     }, 30000);
 }
 
-// ======================= ✅ UPDATED: REQUEST PERMISSION (Android WebView Fix) =======================
-function requestNotificationPermission() {
-    if ('Notification' in window) {
-        if (Notification.permission === 'default') {
-            Notification.requestPermission().then(function(permission) {
-                if (permission === 'granted') {
-                    showToast('🔔 Notifications enabled!', 'success');
-                } else {
-                    showToast('⚠️ Please allow notifications in browser settings', 'warning');
-                }
-            });
-        } else if (Notification.permission === 'denied') {
-            console.log('🔔 Notification permission denied in WebView');
-            showToast('🔔 Notifications are not available in this app', 'info');
-        } else if (Notification.permission === 'granted') {
-            showToast('🔔 Notifications enabled!', 'success');
-        }
-    } else {
-        console.log('🔔 Notification API not supported');
-        showToast('🔔 Notifications not supported in this browser', 'info');
-    }
-}
-
-// ======================= OPEN NOTIFICATION MODULE =======================
-function openNotificationModule() {
-    document.getElementById('dashboardView').style.display = 'none';
-    document.getElementById('moduleView').style.display = 'block';
-    document.getElementById('moduleTitle').textContent = 'Notifications';
-    loadNotificationsModule();
-}
-
-// ======================= LOAD NOTIFICATIONS MODULE =======================
-async function loadNotificationsModule() {
-    await loadNotificationsFromSupabase();
-    
-    const userNotifications = getUserNotifications();
-    const total = userNotifications.length;
-    const unread = userNotifications.filter(n => !n.read).length;
-    const read = total - unread;
-    
-    let content = `
-        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
-            <div>
-                <span style="background:#10b981; color:white; padding:4px 12px; border-radius:20px; font-size:10px;">
-                    <i class="fas fa-wifi"></i> ${navigator.onLine ? 'Online' : 'Offline'}
-                </span>
-                <span style="margin-left:8px; font-size:12px; color:var(--text-secondary);">
-                    <strong>${window.notifications.length}</strong> Total
-                </span>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-warning btn-sm" onclick="markAllNotificationsRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
-                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier' || currentUser.role === 'accountant')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()"><i class="fas fa-bell"></i> Send Notification</button>` : ''}
-                <button class="btn btn-success btn-sm" onclick="refreshNotifications()"><i class="fas fa-sync-alt"></i> Refresh</button>
-                <button class="btn btn-info btn-sm" onclick="exportNotificationsCSV()"><i class="fas fa-file-csv"></i> CSV</button>
-            </div>
-        </div>
-        
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;">
-            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
-                <div style="font-size:24px; font-weight:700;">${total}</div>
-                <div style="font-size:12px; color:var(--text-secondary);">Total</div>
-            </div>
-            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
-                <div style="font-size:24px; font-weight:700; color:#f59e0b;">${unread}</div>
-                <div style="font-size:12px; color:var(--text-secondary);">Unread</div>
-            </div>
-            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
-                <div style="font-size:24px; font-weight:700; color:#10b981;">${read}</div>
-                <div style="font-size:12px; color:var(--text-secondary);">Read</div>
-            </div>
-        </div>
-        
-        <div id="notificationListFull"></div>
-    `;
-    
-    document.getElementById('moduleContent').innerHTML = content;
-    renderFullNotificationList(userNotifications);
-    updateNotificationBell();
-}
-
-function renderFullNotificationList(notifications) {
-    const container = document.getElementById('notificationListFull');
-    if (!container) return;
-    
-    if (notifications.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center; padding:60px; background:var(--bg-surface); border-radius:20px;">
-                <i class="fas fa-bell-slash" style="font-size:48px; color:#94a3b8;"></i>
-                <h3 style="margin-top:16px;">No Notifications</h3>
-                <p style="color:var(--text-secondary);">${navigator.onLine ? 'No notifications in Supabase.' : 'Offline - Connect to internet to load data.'}</p>
-                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier' || currentUser.role === 'accountant')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()" style="margin-top:12px;"><i class="fas fa-bell"></i> Send First Notification</button>` : ''}
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '';
-    for (let n of notifications) {
-        const priorityColor = n.priority === 'Critical' ? '#ef4444' : 
-                            n.priority === 'Urgent' ? '#f97316' : 
-                            n.priority === 'Important' ? '#f59e0b' : '#94a3b8';
-        
-        let targetBadge = '';
-        if (n.targetRole && n.targetRole !== 'all') {
-            targetBadge = `<span style="background:#8b5cf6; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:6px;">🎯 ${n.targetRole}</span>`;
-        }
-        if (n.targetUserName) {
-            targetBadge += `<span style="background:#10b981; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:4px;">👤 ${n.targetUserName}</span>`;
-        }
-        
-        html += `
-            <div class="data-card" style="margin-bottom:12px; ${!n.read ? 'border-left:3px solid #2563eb;' : ''}">
-                <div style="display:flex; gap:12px; flex-wrap:wrap; padding:12px;">
-                    <div style="width:44px; height:44px; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                        <i class="fas fa-bell" style="color:white; font-size:20px;"></i>
-                    </div>
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                            <h3 style="font-size:15px; margin:0; ${!n.read ? 'color:#2563eb;' : ''}">${escapeHtml(n.title)} ${targetBadge}</h3>
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <span class="badge ${n.read ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 12px; border-radius:20px; background:${n.read ? '#10b981' : '#f59e0b'}; color:white;">${n.read ? 'Read' : 'Unread'}</span>
-                                <span style="font-size:10px; color:${priorityColor};">
-                                    <span class="priority-dot priority-${n.priority ? n.priority.toLowerCase() : 'normal'}"></span>${n.priority || 'Normal'}
-                                </span>
-                            </div>
-                        </div>
-                        <p style="font-size:12px; margin:4px 0 0; color:var(--text-secondary);">${escapeHtml(n.message)}</p>
-                        <div style="display:flex; gap:12px; margin-top:6px; font-size:10px; color:#94a3b8; flex-wrap:wrap;">
-                            <span><i class="far fa-clock"></i> ${formatTimeAgo(n.date)}</span>
-                            ${n.category ? `<span>📁 ${escapeHtml(n.category)}</span>` : ''}
-                            ${n.senderName ? `<span>From: ${escapeHtml(n.senderName)}</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; padding:0 12px 12px 12px;">
-                    <button class="action-chip" onclick="markNotificationRead('${n.id}')">
-                        <i class="fas ${n.read ? 'fa-envelope-open' : 'fa-envelope'}"></i> ${n.read ? 'Mark Unread' : 'Mark Read'}
-                    </button>
-                    ${(currentUser && currentUser.role === 'admin') ? `<button class="action-chip" onclick="deleteNotification('${n.id}')" style="border-color:#dc2626; color:#dc2626;"><i class="fas fa-trash"></i> Delete</button>` : ''}
-                    <button class="action-chip" onclick="shareNotification('${n.id}')" style="border-color:#25D366; color:#25D366;"><i class="fab fa-whatsapp"></i> Share</button>
-                </div>
-            </div>
-        `;
-    }
-    
-    container.innerHTML = html;
-}
-
-// ======================= EXPORT FUNCTIONS =======================
-function exportNotificationsCSV() {
-    let userNotifications = getUserNotifications();
-    if (userNotifications.length === 0) {
-        showToast('No notifications to export!', 'warning');
-        return;
-    }
-    
-    let csv = "ID,Date,Title,Message,Category,Priority,Status,Sender,Target Role,Target User\n";
-    for (let n of userNotifications) {
-        csv += `"${n.id || ''}","${n.date || ''}","${n.title.replace(/,/g, ' ')}","${n.message.replace(/,/g, ' ')}","${n.category || 'General'}","${n.priority || 'Normal'}",${n.read ? 'Read' : 'Unread'},"${n.senderName || 'System'}","${n.targetRole || 'all'}","${n.targetUserName || ''}"\n`;
-    }
-    
-    let blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `notifications_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    showToast('✅ CSV exported!', 'success');
-}
-
-function shareNotification(id) {
-    let n = window.notifications.find(notif => notif.id == id);
-    if (n) {
-        let message = `🔔 *${n.title}*\n\n${n.message}\n\n📅 ${new Date(n.date).toLocaleDateString()}\n🏫 Wings Convent School`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-    }
-}
-
-function deleteNotification(id) {
-    Swal.fire({
-        title: 'Delete Notification?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Delete',
-        confirmButtonColor: '#ef4444'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.notifications = window.notifications.filter(n => n.id != id);
-            localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
-            loadNotificationsModule();
-            updateNotificationBell();
-            showToast('✅ Deleted successfully!', 'success');
-        }
-    });
-}
-
-function refreshNotifications() {
-    showToast('🔄 Refreshing notifications...', 'info');
-    loadNotificationsFromSupabase().then(function() {
-        loadNotificationsModule();
-        updateNotificationBell();
-        showToast('✅ Refreshed!', 'success');
-    }).catch(function(err) {
-        showToast('❌ Error refreshing notifications', 'error');
-    });
-}
-
-// ======================= GENERATE USER OPTIONS =======================
-function generateUserOptions() {
-    let options = '';
-    let userMap = {};
-    
-    if (window.users && window.users.length > 0) {
-        for (let user of window.users) {
-            if (!userMap[user.id]) {
-                userMap[user.id] = true;
-                let roleDisplay = user.role_display || user.role || 'user';
-                options += `<option value="${user.id}">${user.name} (${roleDisplay})</option>`;
-            }
-        }
-    }
-    
-    if (window.students && window.students.length > 0) {
-        for (let student of window.students) {
-            if (!userMap[student.id]) {
-                userMap[student.id] = true;
-                options += `<option value="${student.id}">${student.name} (Student)</option>`;
-            }
-        }
-    }
-    
-    if (window.employees && window.employees.length > 0) {
-        for (let emp of window.employees) {
-            if (!userMap[emp.id]) {
-                userMap[emp.id] = true;
-                let roleDisplay = emp.designation || emp.role || 'Employee';
-                options += `<option value="${emp.id}">${emp.name} (${roleDisplay})</option>`;
-            }
-        }
-    }
-    
-    return options;
-}
-
-// ======================= TOGGLE SPECIFIC USER SECTION =======================
-function toggleSpecificUserSection(modalId) {
-    const target = document.getElementById(`notifTarget_${modalId}`)?.value;
-    const section = document.getElementById(`specificUserSection_${modalId}`);
-    if (section) {
-        section.style.display = target === 'specific' ? 'block' : 'none';
-    }
-}
-
-// ======================= CLOSE NOTIFICATION MODAL =======================
-function closeNotifModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.remove();
-}
-
 // ======================= CREATE NOTIFICATION BELL =======================
 function createNotificationBell() {
     if (document.getElementById('notificationBellContainer')) {
@@ -3520,7 +3591,7 @@ window.sendNotificationFromModal = sendNotificationFromModal;
 window.closeNotifModal = closeNotifModal;
 window.exportNotificationsCSV = exportNotificationsCSV;
 window.shareNotification = shareNotification;
-window.deleteNotification = deleteNotification;
+window.deleteNotification = deleteNotification;  // ✅ YEH LINE HONI CHAHIYE
 window.refreshNotifications = refreshNotifications;
 window.openNotificationModule = openNotificationModule;
 window.loadNotificationsFromSupabase = loadNotificationsFromSupabase;
@@ -3542,6 +3613,689 @@ console.log('   ✅ Specific User gets pop-up');
 console.log('   ✅ target_user_name NOT saved to Supabase');
 console.log('   ✅ Silent Pending Queue (No console logs)');
 console.log('   ✅ Android WebView Notification Permission Fix');
+
+// ======================= 🔥 OPEN NOTIFICATION MODULE =======================
+function openNotificationModule() {
+    console.log('🔔 openNotificationModule called...');
+    
+    // ✅ Check if user is logged in
+    if (!currentUser) {
+        showToast('⚠️ Please login first', 'error');
+        return;
+    }
+    
+    // ✅ Switch to module view
+    const dashboardView = document.getElementById('dashboardView');
+    const moduleView = document.getElementById('moduleView');
+    const moduleTitle = document.getElementById('moduleTitle');
+    
+    if (dashboardView) dashboardView.style.display = 'none';
+    if (moduleView) moduleView.style.display = 'block';
+    if (moduleTitle) moduleTitle.textContent = '🔔 Notifications';
+    
+    // ✅ Load notifications
+    if (typeof loadNotificationsModule === 'function') {
+        loadNotificationsModule();
+    } else {
+        // ✅ Fallback: Load directly
+        loadNotificationsFromSupabase().then(function() {
+            renderNotificationsUI();
+            updateNotificationBell();
+        });
+    }
+}
+
+// ======================= 🔥 RENDER NOTIFICATIONS UI (FALLBACK) =======================
+function renderNotificationsUI() {
+    console.log('🎨 renderNotificationsUI called...');
+    
+    const userNotifications = getUserNotifications();
+    const total = userNotifications.length;
+    const unread = userNotifications.filter(n => !n.read).length;
+    const read = total - unread;
+    
+    let content = `
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+            <div>
+                <span style="background:#10b981; color:white; padding:4px 12px; border-radius:20px; font-size:10px;">
+                    <i class="fas fa-wifi"></i> ${navigator.onLine ? 'Online' : 'Offline'}
+                </span>
+                <span style="margin-left:8px; font-size:12px; color:var(--text-secondary);">
+                    <strong>${window.notifications.length}</strong> Total
+                </span>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-warning btn-sm" onclick="markAllNotificationsRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
+                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier' || currentUser.role === 'accountant')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()"><i class="fas fa-bell"></i> Send Notification</button>` : ''}
+                <button class="btn btn-success btn-sm" onclick="refreshNotifications()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <button class="btn btn-info btn-sm" onclick="exportNotificationsCSV()"><i class="fas fa-file-csv"></i> CSV</button>
+            </div>
+        </div>
+        
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;">
+            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
+                <div style="font-size:24px; font-weight:700;">${total}</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Total</div>
+            </div>
+            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
+                <div style="font-size:24px; font-weight:700; color:#f59e0b;">${unread}</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Unread</div>
+            </div>
+            <div style="background:var(--bg-surface); padding:16px; border-radius:16px; text-align:center;">
+                <div style="font-size:24px; font-weight:700; color:#10b981;">${read}</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Read</div>
+            </div>
+        </div>
+        
+        <div id="notificationListFull"></div>
+    `;
+    
+    const moduleContent = document.getElementById('moduleContent');
+    if (moduleContent) {
+        moduleContent.innerHTML = content;
+        renderFullNotificationList(userNotifications);
+    }
+    updateNotificationBell();
+}
+
+// ======================= 🔥 RENDER FULL NOTIFICATION LIST (FALLBACK) =======================
+function renderFullNotificationList(notifications) {
+    const container = document.getElementById('notificationListFull');
+    if (!container) return;
+    
+    if (notifications.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:60px; background:var(--bg-surface); border-radius:20px;">
+                <i class="fas fa-bell-slash" style="font-size:48px; color:#94a3b8;"></i>
+                <h3 style="margin-top:16px;">No Notifications</h3>
+                <p style="color:var(--text-secondary);">${navigator.onLine ? 'No notifications in Supabase.' : 'Offline - Connect to internet to load data.'}</p>
+                ${(currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher' || currentUser.role === 'cashier' || currentUser.role === 'accountant')) ? `<button class="btn btn-primary btn-sm" onclick="showSendNotificationForm()" style="margin-top:12px;"><i class="fas fa-bell"></i> Send First Notification</button>` : ''}
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    for (let n of notifications) {
+        const priorityColor = n.priority === 'Critical' ? '#ef4444' : 
+                            n.priority === 'Urgent' ? '#f97316' : 
+                            n.priority === 'Important' ? '#f59e0b' : '#94a3b8';
+        
+        let targetBadge = '';
+        if (n.targetRole && n.targetRole !== 'all') {
+            targetBadge = `<span style="background:#8b5cf6; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:6px;">🎯 ${n.targetRole}</span>`;
+        }
+        if (n.targetUserName) {
+            targetBadge += `<span style="background:#10b981; color:white; padding:2px 8px; border-radius:20px; font-size:8px; margin-left:4px;">👤 ${n.targetUserName}</span>`;
+        }
+        
+        html += `
+            <div class="data-card" style="margin-bottom:12px; ${!n.read ? 'border-left:3px solid #2563eb;' : ''}">
+                <div style="display:flex; gap:12px; flex-wrap:wrap; padding:12px;">
+                    <div style="width:44px; height:44px; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="fas fa-bell" style="color:white; font-size:20px;"></i>
+                    </div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                            <h3 style="font-size:15px; margin:0; ${!n.read ? 'color:#2563eb;' : ''}">${escapeHtml(n.title)} ${targetBadge}</h3>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <span class="badge ${n.read ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 12px; border-radius:20px; background:${n.read ? '#10b981' : '#f59e0b'}; color:white;">${n.read ? 'Read' : 'Unread'}</span>
+                                <span style="font-size:10px; color:${priorityColor};">
+                                    <span class="priority-dot priority-${n.priority ? n.priority.toLowerCase() : 'normal'}"></span>${n.priority || 'Normal'}
+                                </span>
+                            </div>
+                        </div>
+                        <p style="font-size:12px; margin:4px 0 0; color:var(--text-secondary);">${escapeHtml(n.message)}</p>
+                        <div style="display:flex; gap:12px; margin-top:6px; font-size:10px; color:#94a3b8; flex-wrap:wrap;">
+                            <span><i class="far fa-clock"></i> ${formatTimeAgo(n.date)}</span>
+                            ${n.category ? `<span>📁 ${escapeHtml(n.category)}</span>` : ''}
+                            ${n.senderName ? `<span>From: ${escapeHtml(n.senderName)}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; padding:0 12px 12px 12px;">
+                    <button class="action-chip" onclick="markNotificationRead('${n.id}')">
+                        <i class="fas ${n.read ? 'fa-envelope-open' : 'fa-envelope'}"></i> ${n.read ? 'Mark Unread' : 'Mark Read'}
+                    </button>
+                    ${(currentUser && currentUser.role === 'admin') ? `<button class="action-chip" onclick="deleteNotification('${n.id}')" style="border-color:#dc2626; color:#dc2626;"><i class="fas fa-trash"></i> Delete</button>` : ''}
+                    <button class="action-chip" onclick="shareNotification('${n.id}')" style="border-color:#25D366; color:#25D366;"><i class="fab fa-whatsapp"></i> Share</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+// ======================= 🔥 EXPOSE FUNCTIONS GLOBALLY =======================
+window.openNotificationModule = openNotificationModule;
+window.renderNotificationsUI = renderNotificationsUI;
+window.renderFullNotificationList = renderFullNotificationList;
+window.refreshNotifications = refreshNotifications;
+window.loadNotificationsModule = loadNotificationsModule;
+window.loadNotificationsFromSupabase = loadNotificationsFromSupabase;
+window.updateNotificationBell = updateNotificationBell;
+window.getUserNotifications = getUserNotifications;
+window.markAllNotificationsRead = markAllNotificationsRead;
+window.showSendNotificationForm = showSendNotificationForm;
+window.exportNotificationsCSV = exportNotificationsCSV;
+window.shareNotification = shareNotification;
+window.deleteNotification = deleteNotification;
+window.markNotificationRead = markNotificationRead;
+
+console.log('✅ All notification functions exposed globally');
+// ======================= 🔥 REFRESH NOTIFICATIONS (FIXED) =======================
+function refreshNotifications() {
+    console.log('🔄 refreshNotifications called...');
+    if (typeof showToast === 'function') showToast('🔄 Refreshing notifications...', 'info');
+    
+    loadNotificationsFromSupabase().then(function() {
+        if (typeof loadBellNotifications === 'function' && isBellOpen) loadBellNotifications();
+        const moduleContent = document.getElementById('moduleContent');
+        if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
+            if (typeof loadNotificationsModule === 'function') loadNotificationsModule();
+        }
+        if (typeof updateNotificationBell === 'function') updateNotificationBell();
+        if (typeof showToast === 'function') showToast('✅ Notifications refreshed!', 'success');
+        console.log('✅ Notifications refreshed successfully');
+    }).catch(function(err) {
+        console.error('❌ Refresh error:', err);
+        if (typeof showToast === 'function') showToast('❌ Error refreshing notifications', 'error');
+    });
+}
+
+window.refreshNotifications = refreshNotifications;
+console.log('✅ refreshNotifications function added globally');
+// ======================= 🔥 DELETE NOTIFICATION (FIXED) =======================
+window.deleteNotification = function(id) {
+    console.log(`🗑️ deleteNotification called for: ${id}`);
+    
+    if (!currentUser || currentUser.role !== 'admin') {
+        showToast('⛔ Only administrators can delete notifications!', 'error');
+        return;
+    }
+    
+    let notifToDelete = window.notifications.find(n => n.id == id);
+    if (!notifToDelete) {
+        showToast('❌ Notification not found!', 'error');
+        return;
+    }
+    
+    Swal.fire({
+        title: '🗑️ Delete Notification?',
+        html: `
+            <div style="text-align: left;">
+                <p>Are you sure you want to delete this notification?</p>
+                <div style="background: #f1f5f9; padding: 12px; border-radius: 12px; margin-top: 10px;">
+                    <strong>${escapeHtml(notifToDelete.title)}</strong>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 4px;">${escapeHtml(notifToDelete.message)}</p>
+                </div>
+                <p style="color: #ef4444; font-size: 12px; margin-top: 10px;">
+                    <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!
+                </p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '🗑️ Yes, Delete',
+        cancelButtonText: '❌ Cancel',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        width: window.innerWidth <= 480 ? '95%' : '500px'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            showLoader();
+            
+            try {
+                // STEP 1: Remove from local array
+                window.notifications = window.notifications.filter(n => n.id != id);
+                localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
+                
+                // STEP 2: Delete from Supabase
+                const supabase = getSupabaseClient();
+                if (supabase && navigator.onLine) {
+                    const { error } = await supabase
+                        .from('notifications')
+                        .delete()
+                        .eq('id', id);
+                    
+                    if (error) {
+                        if (typeof addToPendingQueue === 'function') {
+                            addToPendingQueue('notifications', 'delete', { id: id });
+                        }
+                        showToast('⚠️ Failed to delete from cloud. Added to pending queue.', 'warning');
+                    } else {
+                        console.log('✅ Notification deleted from Supabase');
+                    }
+                } else {
+                    if (typeof addToPendingQueue === 'function') {
+                        addToPendingQueue('notifications', 'delete', { id: id });
+                    }
+                    showToast('📴 Offline: Delete will sync when online.', 'warning');
+                }
+                
+                // STEP 3: Update UI
+                updateNotificationBell();
+                
+                // STEP 4: Reload current view
+                const moduleContent = document.getElementById('moduleContent');
+                if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
+                    loadNotificationsModule();
+                } else {
+                    loadBellNotifications();
+                }
+                
+                hideLoader();
+                showToast('✅ Notification deleted successfully!', 'success');
+                
+            } catch(e) {
+                console.error('❌ Delete error:', e);
+                hideLoader();
+                showToast('❌ Error deleting notification: ' + e.message, 'error');
+            }
+        }
+    });
+};
+
+// ✅ Expose globally
+window.deleteNotification = deleteNotification;
+
+console.log('✅ deleteNotification function added successfully!');
+
+// ======================= 🔥 DELETE NOTIFICATION (COMPLETE FIX) =======================
+function deleteNotification(id) {
+    console.log(`🗑️ deleteNotification called for: ${id}`);
+    
+    if (!currentUser || currentUser.role !== 'admin') {
+        showToast('⛔ Only administrators can delete notifications!', 'error');
+        return;
+    }
+    
+    let notifToDelete = window.notifications.find(n => n.id == id);
+    if (!notifToDelete) {
+        showToast('❌ Notification not found!', 'error');
+        return;
+    }
+    
+    // ✅ Confirm before delete
+    Swal.fire({
+        title: '🗑️ Delete Notification?',
+        html: `
+            <div style="text-align: left;">
+                <p>Are you sure you want to delete this notification?</p>
+                <div style="background: #f1f5f9; padding: 12px; border-radius: 12px; margin-top: 10px;">
+                    <strong>${escapeHtml(notifToDelete.title)}</strong>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 4px;">${escapeHtml(notifToDelete.message)}</p>
+                </div>
+                <p style="color: #ef4444; font-size: 12px; margin-top: 10px;">
+                    <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!
+                </p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '🗑️ Yes, Delete',
+        cancelButtonText: '❌ Cancel',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        width: window.innerWidth <= 480 ? '95%' : '500px'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            showLoader();
+            showToast('🔄 Deleting notification...', 'info');
+            
+            try {
+                // ✅ STEP 1: Remove from local array
+                window.notifications = window.notifications.filter(n => n.id != id);
+                localStorage.setItem('cache_notifications', JSON.stringify(window.notifications));
+                
+                // ✅ STEP 2: Delete from Supabase
+                const supabase = getSupabaseClient();
+                if (supabase && navigator.onLine) {
+                    const { error } = await supabase
+                        .from('notifications')
+                        .delete()
+                        .eq('id', id);
+                    
+                    if (error) {
+                        console.error('Supabase delete error:', error);
+                        // Add to pending queue
+                        if (typeof addToPendingQueue === 'function') {
+                            addToPendingQueue('notifications', 'delete', { id: id });
+                        }
+                        showToast('⚠️ Failed to delete from cloud. Added to pending queue.', 'warning');
+                    } else {
+                        console.log('✅ Notification deleted from Supabase');
+                    }
+                } else {
+                    // Offline: Add to pending queue
+                    if (typeof addToPendingQueue === 'function') {
+                        addToPendingQueue('notifications', 'delete', { id: id });
+                    }
+                    showToast('📴 Offline: Delete will sync when online.', 'warning');
+                }
+                
+                // ✅ STEP 3: Update UI
+                updateNotificationBell();
+                
+                // ✅ STEP 4: Reload current view
+                const moduleContent = document.getElementById('moduleContent');
+                if (moduleContent && moduleContent.querySelector('#notificationListFull')) {
+                    loadNotificationsModule();
+                } else {
+                    loadBellNotifications();
+                }
+                
+                hideLoader();
+                showToast('✅ Notification deleted successfully!', 'success');
+                
+            } catch(e) {
+                console.error('❌ Delete error:', e);
+                hideLoader();
+                showToast('❌ Error deleting notification: ' + e.message, 'error');
+            }
+        }
+    });
+}
+
+// ✅ Expose globally
+window.deleteNotification = deleteNotification;
+
+// ======================= 🔥 APK/WEBVIEW DETECTION =======================
+function isApkOrWebView() {
+    const ua = navigator.userAgent;
+    if (/Android/.test(ua) && (/wv/.test(ua) || /WebView/.test(ua))) return true;
+    if (window.navigator.standalone === true) return true;
+    if (window.matchMedia('(display-mode: standalone)').matches) return true;
+    if (document.referrer && document.referrer.includes('android-app://')) return true;
+    return false;
+}
+
+function isMobileBrowser() {
+    return /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+}
+
+function isFirefox() {
+    return navigator.userAgent.includes('Firefox');
+}
+
+function isChrome() {
+    return navigator.userAgent.includes('Chrome') && !isFirefox();
+}
+
+function getNotificationIcon() {
+    const logoUrl = localStorage.getItem('schoolLogoUrl');
+    if (logoUrl && logoUrl.startsWith('http')) return logoUrl;
+    const logoData = localStorage.getItem('schoolLogo');
+    if (logoData && logoData.startsWith('data:image')) return logoData;
+    if (isFirefox()) return 'https://img.icons8.com/color/96/school--v1.png';
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect width="100" height="100" rx="20" fill="#2563eb"/>
+            <text x="50" y="65" font-size="50" text-anchor="middle" fill="white">🏫</text>
+        </svg>
+    `);
+}
+
+function getNotificationIconDataUrl() {
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect width="100" height="100" rx="20" fill="#2563eb"/>
+            <text x="50" y="65" font-size="50" text-anchor="middle" fill="white">🏫</text>
+        </svg>
+    `);
+}
+
+// ======================= 🔥 SHOW NOTIFICATION (COMPLETE) =======================
+function showNotification(msg, type) {
+    console.log(`🔔 showNotification: ${msg} (${type})`);
+    console.log(`📌 Notification.permission:`, Notification.permission);
+    
+    const isApk = isApkOrWebView();
+    const isMobile = isMobileBrowser();
+    
+    const title = type === 'success' ? '✅ Success' : 
+                  type === 'error' ? '❌ Error' : 
+                  type === 'warning' ? '⚠️ Warning' : 'ℹ️ Info';
+    
+    // ✅ 1. ALWAYS show Swal toast
+    if (typeof Swal !== 'undefined') {
+        try {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type || 'success',
+                title: msg,
+                showConfirmButton: false,
+                timer: 3000,
+                customClass: {
+                    popup: isMobile ? 'mobile-swal-popup' : ''
+                }
+            });
+        } catch(e) {
+            console.log('Swal error:', e);
+        }
+    }
+    
+    // ✅ 2. Show In-Window Popup (APK + Desktop)
+    showInWindowPopup(msg, type);
+    
+    // ✅ 3. 🔥🔥🔥 SHOW BROWSER NOTIFICATION 🔥🔥🔥
+    if (!isApk) {
+        console.log('📌 Attempting browser notification...');
+        console.log('📌 Permission:', Notification.permission);
+        
+        if (Notification.permission === 'granted') {
+            console.log('✅ Permission granted, showing notification');
+            showBrowserNotification(title, msg, type);
+        } else if (Notification.permission === 'default') {
+            console.log('⚠️ Permission default, requesting...');
+            requestNotificationPermission();
+        } else {
+            console.log('❌ Permission denied:', Notification.permission);
+        }
+    } else {
+        console.log('📱 APK detected - Using in-window popup only');
+    }
+}
+
+// ======================= 🔥 SHOW BROWSER NOTIFICATION =======================
+function showBrowserNotification(title, message, type) {
+    console.log(`🔔 showBrowserNotification: ${title}`);
+    console.log(`📌 Message: ${message}`);
+    console.log(`📌 Type: ${type}`);
+    
+    if (!('Notification' in window)) {
+        console.log('❌ Notification API not supported');
+        showInWindowPopup(title + ': ' + message, type || 'success');
+        return;
+    }
+    
+    if (Notification.permission !== 'granted') {
+        console.log('⚠️ Permission not granted. Current:', Notification.permission);
+        requestNotificationPermission();
+        return;
+    }
+    
+    try {
+        const icon = getNotificationIcon();
+        console.log('📸 Using icon:', icon);
+        
+        const notif = new Notification(title, {
+            body: message || '',
+            icon: icon,
+            badge: icon,
+            vibrate: [200, 100, 200],
+            requireInteraction: true,
+            silent: false,
+            tag: 'wings_notification_' + Date.now()
+        });
+        
+        console.log('✅ Browser notification created successfully!');
+        
+        notif.onclick = function() {
+            console.log('👆 Notification clicked');
+            window.focus();
+            notif.close();
+            if (typeof openModule === 'function') {
+                openModule(19);
+            }
+        };
+        
+        setTimeout(function() {
+            try { notif.close(); } catch(e) {}
+        }, 10000);
+        
+        playNotificationSound();
+        return notif;
+        
+    } catch(e) {
+        console.error('❌ Browser notification error:', e);
+        console.log('📌 Error details:', e.message);
+        showInWindowPopup(title + ': ' + message, type || 'success');
+        return null;
+    }
+}
+
+// ======================= 🔥 IN-WINDOW POPUP =======================
+function showInWindowPopup(msg, type) {
+    console.log(`💬 showInWindowPopup: ${msg} (${type})`);
+    
+    const existing = document.getElementById('inWindowPopup');
+    if (existing) existing.remove();
+    
+    const isApk = isApkOrWebView();
+    const isMobile = isMobileBrowser();
+    
+    const colors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#2563eb' };
+    const icons = { success: '✅', warning: '⚠️', error: '❌', info: 'ℹ️' };
+    const color = colors[type] || '#2563eb';
+    const icon = icons[type] || 'ℹ️';
+    
+    const popup = document.createElement('div');
+    popup.id = 'inWindowPopup';
+    popup.style.cssText = `
+        position: fixed;
+        bottom: ${isMobile ? '80px' : '20px'};
+        ${isMobile ? 'left: 50%; transform: translateX(-50%);' : 'right: 20px;'}
+        background: var(--bg-surface, #ffffff);
+        border-radius: ${isMobile ? '16px' : '16px'};
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        z-index: 999999;
+        max-width: ${isMobile ? '92%' : '400px'};
+        width: ${isMobile ? '340px' : 'auto'};
+        animation: slideUpPopup 0.5s ease;
+        border-left: 5px solid ${color};
+        overflow: hidden;
+        font-family: 'Segoe UI', Arial, sans-serif;
+    `;
+    
+    if (!document.getElementById('popupStyle')) {
+        const style = document.createElement('style');
+        style.id = 'popupStyle';
+        style.textContent = `
+            @keyframes slideUpPopup {
+                from { opacity: 0; transform: ${isMobile ? 'translateX(-50%)' : 'translateX(0)'} translateY(30px); }
+                to { opacity: 1; transform: ${isMobile ? 'translateX(-50%)' : 'translateX(0)'} translateY(0); }
+            }
+            @keyframes slideDownPopup {
+                from { opacity: 1; transform: ${isMobile ? 'translateX(-50%)' : 'translateX(0)'} translateY(0); }
+                to { opacity: 0; transform: ${isMobile ? 'translateX(-50%)' : 'translateX(0)'} translateY(30px); }
+            }
+            .popup-content { padding: ${isMobile ? '12px 14px' : '14px 18px'}; display: flex; align-items: center; gap: ${isMobile ? '10px' : '12px'}; }
+            .popup-icon { font-size: ${isMobile ? '20px' : '24px'}; flex-shrink: 0; width: ${isMobile ? '36px' : '40px'}; height: ${isMobile ? '36px' : '40px'}; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: ${color}15; }
+            .popup-text { flex: 1; font-size: ${isMobile ? '13px' : '14px'}; color: var(--text-primary, #1e293b); line-height: 1.3; word-break: break-word; }
+            .popup-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: ${isMobile ? '16px' : '18px'}; padding: 4px 8px; border-radius: 50%; flex-shrink: 0; }
+            .popup-progress { height: ${isMobile ? '3px' : '3px'}; width: 100%; animation: progressBarPopup 4s linear forwards; }
+            @keyframes progressBarPopup { from { width: 100%; } to { width: 0%; } }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    popup.innerHTML = `
+        <div class="popup-content">
+            <div class="popup-icon">${icon}</div>
+            <div class="popup-text">${msg}</div>
+            <button class="popup-close" onclick="this.closest('#inWindowPopup').remove()">✕</button>
+        </div>
+        <div class="popup-progress" style="background: ${color};"></div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    if ((isApk || isMobile) && navigator.vibrate) {
+        navigator.vibrate([50, 30, 50]);
+    }
+    
+    setTimeout(() => {
+        if (popup.parentNode) {
+            popup.style.animation = 'slideDownPopup 0.4s ease';
+            setTimeout(() => { if (popup.parentNode) popup.remove(); }, 400);
+        }
+    }, 4000);
+}
+
+// ======================= 🔥 PLAY NOTIFICATION SOUND =======================
+function playNotificationSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.1;
+        
+        oscillator.start();
+        setTimeout(function() {
+            oscillator.stop();
+            audioCtx.close();
+        }, 200);
+    } catch(e) {
+        console.log('Sound play error:', e);
+    }
+}
+
+// ======================= 🔥 AUTO CHECK PERMISSION =======================
+function checkNotificationPermissionOnLoad() {
+    console.log('🔔 Checking notification permission on load...');
+    
+    const isApk = isApkOrWebView();
+    
+    if (isApk) {
+        console.log('📱 APK - Auto-granting permission');
+        if ('Notification' in window) {
+            Notification.permission = 'granted';
+            console.log('✅ Permission set to:', Notification.permission);
+            setTimeout(function() {
+                showBrowserNotification('🔔 Wings Convent App', 'Notifications are enabled!', 'success');
+            }, 2000);
+        }
+        return;
+    }
+    
+    if ('Notification' in window) {
+        console.log('📌 Current permission:', Notification.permission);
+        if (Notification.permission === 'granted') {
+            console.log('✅ Already granted');
+            showBrowserNotification('🔔 Welcome!', 'Notifications are enabled.', 'success');
+        } else if (Notification.permission === 'default') {
+            console.log('⚠️ Not set, will request later');
+            setTimeout(function() {
+                requestNotificationPermission();
+            }, 5000);
+        } else {
+            console.log('❌ Permission denied');
+        }
+    }
+}
+
+// ✅ Call on load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkNotificationPermissionOnLoad, 2000);
+});
 
 // ======================= PART 03-A Notification ENDS HERE ====================================================================================
 // ======================= PART 03-B- START HERE ==============================================================
@@ -47900,6 +48654,8 @@ window.getUserById = getUserById;
 window.toggleSpecificUserSection = toggleSpecificUserSection;
 window.filterSpecificUsers = filterSpecificUsers;
 window.startNotificationListenerFallback = startNotificationListenerFallback;
+// Part 22 ke end mein yeh line add karo
+window.deleteNotification = deleteNotification;
 
 console.log('✅ PART 22 COMPLETE - NO target_user_name in Supabase!');
 console.log('📌 Features:');
